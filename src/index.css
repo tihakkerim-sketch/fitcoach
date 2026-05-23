@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Surfaces */
+    --background: 220 20% 97%;
+    --foreground: 224 47% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 47% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 47% 10%;
+
+    /* Brand */
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Supporting surfaces */
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 224 47% 15%;
+    --muted: 220 14% 95%;
+    --muted-foreground: 220 9% 48%;
+    --accent: 220 14% 92%;
+    --accent-foreground: 224 47% 12%;
+
+    /* Functional */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --ring: 221 83% 53%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Surfaces — deep navy hierarchy */
+    --background: 228 20% 5%;
+    --foreground: 213 31% 90%;
+    --card: 228 20% 8%;
+    --card-foreground: 213 31% 90%;
+    --popover: 228 20% 9%;
+    --popover-foreground: 213 31% 90%;
+
+    /* Brand */
+    --primary: 217 91% 62%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Supporting surfaces */
+    --secondary: 228 20% 12%;
+    --secondary-foreground: 213 31% 90%;
+    --muted: 228 20% 11%;
+    --muted-foreground: 215 15% 52%;
+    --accent: 228 20% 13%;
+    --accent-foreground: 213 31% 90%;
+
+    /* Functional */
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 228 20% 14%;
+    --input: 228 20% 12%;
+    --ring: 217 91% 62%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Premium slim scrollbar */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/30;
+  }
+}
+
+@layer utilities {
+  /* Colored glow shadows — light */
+  .glow-blue   { box-shadow: 0 4px 20px -4px rgba(59,  130, 246, 0.18); }
+  .glow-green  { box-shadow: 0 4px 20px -4px rgba(16,  185, 129, 0.18); }
+  .glow-purple { box-shadow: 0 4px 20px -4px rgba(139,  92, 246, 0.18); }
+  .glow-orange { box-shadow: 0 4px 20px -4px rgba(249, 115,  22, 0.18); }
+  .glow-rose   { box-shadow: 0 4px 20px -4px rgba(244,  63,  94, 0.18); }
+  .glow-amber  { box-shadow: 0 4px 20px -4px rgba(245, 158,  11, 0.18); }
+
+  /* Colored glow shadows — dark (stronger) */
+  .dark .glow-blue   { box-shadow: 0 4px 28px -4px rgba(59,  130, 246, 0.30); }
+  .dark .glow-green  { box-shadow: 0 4px 28px -4px rgba(16,  185, 129, 0.30); }
+  .dark .glow-purple { box-shadow: 0 4px 28px -4px rgba(139,  92, 246, 0.30); }
+  .dark .glow-orange { box-shadow: 0 4px 28px -4px rgba(249, 115,  22, 0.30); }
+  .dark .glow-rose   { box-shadow: 0 4px 28px -4px rgba(244,  63,  94, 0.30); }
+  .dark .glow-amber  { box-shadow: 0 4px 28px -4px rgba(245, 158,  11, 0.30); }
+
+  /* Gradient brand backgrounds */
+  .gradient-brand {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  }
+  .gradient-brand-green {
+    background: linear-gradient(135deg, #10b981, #3b82f6);
+  }
+  .gradient-brand-orange {
+    background: linear-gradient(135deg, #f97316, #ef4444);
+  }
+}

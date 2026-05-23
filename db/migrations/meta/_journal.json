@@ -1,0 +1,48 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1778350395844,
+      "tag": "0000_moaning_obadiah_stane",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1778356418096,
+      "tag": "0001_past_ozymandias",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1746878400000,
+      "tag": "0002_session_completion_note",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1746882000000,
+      "tag": "0003_weekly_goals",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1746885600000,
+      "tag": "0004_performance_os",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1746889200000,
+      "tag": "0005_habit_log_unique",
+      "breakpoints": true
+    }
+  ]
+}

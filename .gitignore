@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-electron/
+out/
+release/
+
+# Local env & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Local databases (the app DB lives in userData, but never commit any *.db)
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Electron-builder artifacts
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.snap
+*.deb
+*.rpm
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+
+# Personal docs and scripts — review individually before un-ignoring
+fitness_app_prompt.md
+FITCOACH_GUIDE.md
+scripts/seed-profile.js

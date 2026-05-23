@@ -1,0 +1,1 @@
+ALTER TABLE `coach_conversations` ADD `title` text DEFAULT 'New chat' NOT NULL;
