@@ -17,5 +17,6 @@
       "@shared/*": ["./src/types/*"]
     }
   },
-  "include": ["electron", "db", "src/types"]
+  "include": ["electron", "db", "src/types"],
+  "exclude": ["**/*.test.ts", "**/*.spec.ts"]
 }

@@ -3,6 +3,7 @@ import { IPC } from '../../src/types/ipc'
 import type { IpcResponse } from '../../src/types/ipc'
 import { getDb, markDirty } from '../../db/index'
 import { activities, trainingPlans, planPhases, planWeeks, planSessions, userProfile, hrZones } from '../../db/schema'
+import { importBackup } from '../lib/importBackup'
 import * as fs from 'fs'
 
 export function registerDataHandlers() {
@@ -52,41 +53,18 @@ export function registerDataHandlers() {
         if (canceled || filePaths.length === 0) return { success: false, error: 'Import cancelled' }
 
         const raw = fs.readFileSync(filePaths[0], 'utf-8')
-        const data = JSON.parse(raw) as Record<string, unknown>
 
-        // Accept both v1 (pre-Phase 2, had coach tables) and v2 backups
-        const version = data.version as number
-        if (!version || (version !== 1 && version !== 2)) {
-          return { success: false, error: 'Unrecognised backup format or version' }
+        let data: Record<string, unknown>
+        try {
+          data = JSON.parse(raw) as Record<string, unknown>
+        } catch {
+          return { success: false, error: 'File is not valid JSON — import cancelled, your data is unchanged' }
         }
 
-        const db = getDb()
-
-        // Clear existing data in dependency order
-        db.delete(planSessions).run()
-        db.delete(planWeeks).run()
-        db.delete(planPhases).run()
-        db.delete(trainingPlans).run()
-        db.delete(activities).run()
-        db.delete(hrZones).run()
-        db.delete(userProfile).run()
-
-        // Re-insert
-        if (Array.isArray(data.userProfile) && data.userProfile.length)
-          db.insert(userProfile).values(data.userProfile as never[]).run()
-        if (Array.isArray(data.hrZones) && data.hrZones.length)
-          db.insert(hrZones).values(data.hrZones as never[]).run()
-        if (Array.isArray(data.activities) && data.activities.length)
-          db.insert(activities).values(data.activities as never[]).run()
-        if (Array.isArray(data.trainingPlans) && data.trainingPlans.length)
-          db.insert(trainingPlans).values(data.trainingPlans as never[]).run()
-        if (Array.isArray(data.planPhases) && data.planPhases.length)
-          db.insert(planPhases).values(data.planPhases as never[]).run()
-        if (Array.isArray(data.planWeeks) && data.planWeeks.length)
-          db.insert(planWeeks).values(data.planWeeks as never[]).run()
-        if (Array.isArray(data.planSessions) && data.planSessions.length)
-          db.insert(planSessions).values(data.planSessions as never[]).run()
-        // v1 backups may contain coachConversations / coachMessages — silently ignored
+        const result = importBackup(getDb(), data)
+        if (!result.success) {
+          return { success: false, error: result.error ?? 'Import failed' }
+        }
 
         markDirty()
         return { success: true, data: undefined }

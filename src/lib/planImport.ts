@@ -110,12 +110,19 @@ export function parsePlanJson(raw: string): ClaudePlan {
   if (!obj.name || typeof obj.name !== 'string') throw new Error('"name" field is required')
   if (!Array.isArray(obj.phases) || obj.phases.length === 0) throw new Error('"phases" must be a non-empty array')
 
+  const MAX_WEEKS_PER_PHASE = 52
+  const MAX_SESSIONS_PER_WEEK = 7
+
   for (const [pi, phase] of obj.phases.entries()) {
     if (!phase.name) throw new Error(`Phase ${pi + 1} is missing "name"`)
-    if (!phase.weeks || typeof phase.weeks !== 'number' || phase.weeks < 1)
-      throw new Error(`Phase ${pi + 1} "weeks" must be a positive number`)
+    if (!phase.weeks || typeof phase.weeks !== 'number' || !Number.isInteger(phase.weeks) || phase.weeks < 1)
+      throw new Error(`Phase ${pi + 1} "weeks" must be a positive whole number`)
+    if (phase.weeks > MAX_WEEKS_PER_PHASE)
+      throw new Error(`Phase ${pi + 1} "weeks" (${phase.weeks}) exceeds the maximum of ${MAX_WEEKS_PER_PHASE}`)
     if (!Array.isArray(phase.sessions))
       throw new Error(`Phase ${pi + 1} "sessions" must be an array`)
+    if (phase.sessions.length > MAX_SESSIONS_PER_WEEK)
+      throw new Error(`Phase ${pi + 1} has ${phase.sessions.length} sessions — the maximum is ${MAX_SESSIONS_PER_WEEK} per week`)
     for (const [si, s] of phase.sessions.entries()) {
       if (!DAY_MAP[s.day]) throw new Error(`Phase ${pi + 1}, session ${si + 1}: invalid "day" "${s.day}"`)
       if (!VALID_TYPES.includes(s.type as SessionType))

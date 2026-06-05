@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
 import * as path from 'path'
 import { initDb, closeDb } from '../db/index'
 import { registerActivityHandlers } from './ipc/activities'
@@ -31,6 +31,22 @@ function createWindow() {
     },
     titleBarStyle: 'default',
     show: false,
+  })
+
+  // ── Navigation hardening ──────────────────────────────────────────────────
+  // The renderer should never navigate away from the app or spawn new windows.
+  // Any external link is handed to the OS browser instead; everything else is
+  // blocked. In dev, allow the Vite dev-server origin so HMR still works.
+  const allowedOrigin = isDev ? 'http://localhost:5173' : null
+
+  win.webContents.on('will-navigate', (event, url) => {
+    if (allowedOrigin && url.startsWith(allowedOrigin)) return
+    event.preventDefault()
+  })
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://')) shell.openExternal(url)
+    return { action: 'deny' }
   })
 
   if (isDev) {
