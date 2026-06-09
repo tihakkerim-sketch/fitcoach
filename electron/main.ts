@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, shell } from 'electron'
+import { app, BrowserWindow, dialog, shell, session } from 'electron'
 import * as path from 'path'
 import { initDb, closeDb } from '../db/index'
 import { registerActivityHandlers } from './ipc/activities'
@@ -27,7 +27,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
     titleBarStyle: 'default',
     show: false,
@@ -68,6 +68,24 @@ process.on('unhandledRejection', (reason) => {
 })
 
 app.whenReady().then(async () => {
+  // ── Content-Security-Policy (production only) ────────────────────────────────
+  // Defense-in-depth: the renderer may only load its own bundled assets. Set via
+  // response headers rather than a <meta> tag so dev (Vite HMR with inline scripts
+  // and a websocket) is left untouched. 'unsafe-inline' for styles is required by
+  // shadcn/Tailwind's injected styles and is safe for a local-only app.
+  if (!isDev) {
+    session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+      cb({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'",
+          ],
+        },
+      })
+    })
+  }
+
   try {
     await initDb()
   } catch (err) {
