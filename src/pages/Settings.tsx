@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Check, Sun, Moon, Monitor } from 'lucide-react'
+import { Check, Sun, Moon, Monitor, Power } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,6 +18,8 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [restDays, setRestDays] = useState<number[]>([])
+  const [autostart, setAutostart] = useState(false)
+  const [autostartBusy, setAutostartBusy] = useState(false)
 
   useEffect(() => {
     invoke<UserProfile | null>(IPC.PROFILE_GET).then(p => {
@@ -26,7 +28,28 @@ export default function Settings() {
         setRestDays(p.fixedRestDays ?? [])
       }
     }).catch(() => {})
+
+    invoke<boolean>(IPC.AUTOSTART_GET)
+      .then(setAutostart)
+      .catch(() => {})
   }, [])
+
+  // Autostart is an OS-level setting, so apply it immediately on toggle rather
+  // than waiting for the "Save Settings" button. Reflect the value the OS
+  // actually reports back, in case the change was rejected.
+  const toggleAutostart = async () => {
+    if (autostartBusy) return
+    const next = !autostart
+    setAutostartBusy(true)
+    try {
+      const applied = await invoke<boolean>(IPC.AUTOSTART_SET, next)
+      setAutostart(applied)
+    } catch {
+      // leave the toggle in its previous state on failure
+    } finally {
+      setAutostartBusy(false)
+    }
+  }
 
   const set = (field: keyof UserProfile, value: unknown) =>
     setProfile(p => ({ ...p, [field]: value }))
@@ -78,6 +101,40 @@ export default function Settings() {
         <p className="text-xs text-muted-foreground">
           "System" follows your operating system's light/dark preference automatically.
         </p>
+      </section>
+
+      {/* Startup */}
+      <section className="space-y-3">
+        <h2 className="font-semibold">Startup</h2>
+        <Separator />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Power className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <Label>Launch FitCoach when I sign in</Label>
+              <p className="text-xs text-muted-foreground">
+                Starts the app automatically after Windows boots.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autostart}
+            aria-label="Launch FitCoach when I sign in"
+            disabled={autostartBusy}
+            onClick={toggleAutostart}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+              autostart ? 'bg-primary' : 'bg-input'
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-background shadow transition-transform ${
+                autostart ? 'translate-x-5' : 'translate-x-0.5'
+              }`}
+            />
+          </button>
+        </div>
       </section>
 
       {/* Profile */}

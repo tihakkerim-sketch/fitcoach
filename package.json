@@ -3,11 +3,53 @@
   "version": "1.0.0",
   "description": "FitCoach Desktop — personal fitness coach",
   "main": "dist-electron/electron/main.js",
+  "build": {
+    "appId": "com.fitcoach.app",
+    "productName": "FitCoach",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "db/migrations",
+        "to": "db/migrations"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/sql.js/dist/sql-wasm.wasm"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
   "scripts": {
     "dev": "concurrently -k \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite",
     "dev:electron": "wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && electron .",
     "build": "vite build && tsc -p tsconfig.electron.json",
+    "make:icon": "node scripts/make-icon.js",
+    "dist": "npm run build && electron-builder --win",
+    "dist:dir": "npm run build && electron-builder --win --dir",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
@@ -50,7 +92,9 @@
     "drizzle-kit": "^0.21.4",
     "electron": "^31.0.2",
     "electron-builder": "^24.13.3",
+    "jimp": "^0.22.12",
     "lucide-react": "^0.395.0",
+    "png-to-ico": "^2.1.8",
     "postcss": "^8.4.38",
     "tailwind-merge": "^2.3.0",
     "tailwindcss": "^3.4.4",

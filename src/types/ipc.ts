@@ -37,6 +37,10 @@ export const IPC = {
   DATA_EXPORT: 'data:export',
   DATA_IMPORT: 'data:import',
 
+  // App settings (OS-level)
+  AUTOSTART_GET: 'settings:autostartGet',
+  AUTOSTART_SET: 'settings:autostartSet',
+
   // Habits
   HABITS_CREATE: 'habits:create',
   HABITS_LIST: 'habits:list',

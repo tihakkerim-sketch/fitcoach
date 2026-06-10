@@ -14,6 +14,7 @@ import { registerBodyHandlers } from './ipc/body'
 import { registerNutritionHandlers } from './ipc/nutrition'
 import { registerRecoveryHandlers } from './ipc/recovery'
 import { registerChallengeHandlers } from './ipc/challenges'
+import { registerSettingsHandlers } from './ipc/settings'
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
@@ -53,7 +54,9 @@ function createWindow() {
     win.loadURL('http://localhost:5173')
     win.webContents.openDevTools()
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'))
+    // main.js lives at dist-electron/electron/ inside the asar; the renderer
+    // bundle is at dist/ (project root). Go up two levels, not one.
+    win.loadFile(path.join(__dirname, '../../dist/index.html'))
   }
 
   win.once('ready-to-show', () => win.show())
@@ -110,6 +113,7 @@ app.whenReady().then(async () => {
   registerNutritionHandlers()
   registerRecoveryHandlers()
   registerChallengeHandlers()
+  registerSettingsHandlers()
 
   createWindow()
 
