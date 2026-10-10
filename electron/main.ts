@@ -8,12 +8,8 @@ import { registerGarminHandlers } from './ipc/garmin'
 import { registerDataHandlers } from './ipc/data'
 import { registerSummaryHandlers } from './ipc/summary'
 import { registerStatsHandlers } from './ipc/stats'
-import { registerHabitHandlers } from './ipc/habits'
 import { registerCheckinHandlers } from './ipc/checkin'
-import { registerBodyHandlers } from './ipc/body'
-import { registerNutritionHandlers } from './ipc/nutrition'
 import { registerRecoveryHandlers } from './ipc/recovery'
-import { registerChallengeHandlers } from './ipc/challenges'
 import { registerSettingsHandlers } from './ipc/settings'
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
@@ -55,7 +51,6 @@ function createWindow() {
 
   if (isDev) {
     win.loadURL('http://localhost:5173')
-    win.webContents.openDevTools()
   } else {
     // main.js lives at dist-electron/electron/ inside the asar; the renderer
     // bundle is at dist/ (project root). Go up two levels, not one.
@@ -135,12 +130,8 @@ function startApp() {
     registerDataHandlers()
     registerSummaryHandlers()
     registerStatsHandlers()
-    registerHabitHandlers()
     registerCheckinHandlers()
-    registerBodyHandlers()
-    registerNutritionHandlers()
     registerRecoveryHandlers()
-    registerChallengeHandlers()
     registerSettingsHandlers()
 
     createWindow()

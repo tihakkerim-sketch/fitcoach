@@ -41,39 +41,15 @@ export const IPC = {
   AUTOSTART_GET: 'settings:autostartGet',
   AUTOSTART_SET: 'settings:autostartSet',
 
-  // Habits
-  HABITS_CREATE: 'habits:create',
-  HABITS_LIST: 'habits:list',
-  HABITS_DELETE: 'habits:delete',
-  HABIT_LOG_TOGGLE: 'habits:logToggle',
-  HABIT_LOGS_GET: 'habits:logsGet',
-
   // Daily Check-in
   CHECKIN_GET: 'checkin:get',
   CHECKIN_UPSERT: 'checkin:upsert',
-
-  // Body Metrics
-  BODY_CREATE: 'body:create',
-  BODY_LIST: 'body:list',
-  BODY_DELETE: 'body:delete',
-
-  // Nutrition
-  NUTRITION_LOG_CREATE: 'nutrition:logCreate',
-  NUTRITION_LOGS_GET:   'nutrition:logsGet',
-  NUTRITION_LOG_DELETE: 'nutrition:logDelete',
 
   // Recovery
   RECOVERY_LOG_UPSERT: 'recovery:upsert',
   RECOVERY_LOGS_GET:   'recovery:logsGet',
   RECOVERY_LOG_DELETE: 'recovery:delete',
 
-  // Daily Challenges
-  CHALLENGES_TODAY_GET:         'challenges:todayGet',
-  CHALLENGE_TOGGLE:             'challenges:toggle',
-  CHALLENGE_POOL_LIST:          'challenges:poolList',
-  CHALLENGE_POOL_ADD:           'challenges:poolAdd',
-  CHALLENGE_POOL_TOGGLE_ACTIVE: 'challenges:poolToggleActive',
-  CHALLENGE_POOL_DELETE:        'challenges:poolDelete',
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
@@ -248,9 +224,6 @@ export interface UserProfile {
   theme: 'light' | 'dark' | 'system'
   weeklyGoalKm?: number
   weeklyGoalSessions?: number
-  dailyCalorieTarget?: number
-  dailyProteinTargetG?: number
-  dailyWaterTargetMl?: number
 }
 
 export interface HrZone {
@@ -318,34 +291,6 @@ export interface SummaryPayload {
   dateTo: string
 }
 
-// ── Habit types ───────────────────────────────────────────────────────────────
-export type HabitColor = 'blue' | 'green' | 'orange' | 'purple' | 'rose'
-
-export interface HabitRow {
-  id: number
-  name: string
-  emoji: string
-  color: HabitColor
-  createdAt: number
-  archivedAt?: number
-}
-
-export interface CreateHabitPayload {
-  name: string
-  emoji: string
-  color: HabitColor
-}
-
-export interface HabitLogRow {
-  id: number
-  habitId: number
-  date: string        // YYYY-MM-DD
-  completedAt: number
-}
-
-/** date → habitId[] of completed habits on that date */
-export type HabitLogsMap = Record<string, number[]>
-
 // ── Check-in types ────────────────────────────────────────────────────────────
 export interface DailyCheckin {
   id: number
@@ -368,30 +313,6 @@ export interface UpsertCheckinPayload {
   eveningRating?: number
   eveningWins?: string
   eveningNote?: string
-}
-
-// ── Nutrition types ───────────────────────────────────────────────────────────
-
-export type NutritionLabel = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | 'Water' | 'Other'
-
-export interface NutritionLogEntry {
-  id: number
-  date: string          // YYYY-MM-DD
-  label?: string
-  calories?: number     // kcal
-  proteinG?: number     // grams
-  waterMl?: number      // millilitres
-  note?: string
-  createdAt: number
-}
-
-export interface CreateNutritionLogPayload {
-  date: string
-  label?: string
-  calories?: number
-  proteinG?: number
-  waterMl?: number
-  note?: string
 }
 
 // ── Recovery types ────────────────────────────────────────────────────────────
@@ -423,50 +344,3 @@ export interface UpsertRecoveryLogPayload {
   // readinessScore is intentionally omitted — always auto-calculated from the other metrics
 }
 
-// ── Daily Challenge types ─────────────────────────────────────────────────────
-
-export type ChallengeCategory = 'fitness' | 'mindset' | 'nutrition' | 'mobility' | 'custom'
-
-export interface ChallengePoolEntry {
-  id: number
-  text: string
-  category: ChallengeCategory
-  isBuiltIn: boolean
-  isActive: boolean
-}
-
-export interface DailyChallenge {
-  id: number
-  date: string           // YYYY-MM-DD
-  poolId?: number        // nullable
-  text: string           // snapshot
-  completed: boolean
-  completedAt?: number
-}
-
-export interface TodayChallengesResult {
-  challenges: DailyChallenge[]
-  streak: number         // consecutive complete days
-}
-
-export interface AddChallengePayload {
-  text: string
-  category: ChallengeCategory
-}
-
-// ── Body metric types ─────────────────────────────────────────────────────────
-export interface BodyMetricRow {
-  id: number
-  date: string
-  weightKg?: number
-  bodyFatPct?: number
-  note?: string
-  createdAt: number
-}
-
-export interface CreateBodyMetricPayload {
-  date: string
-  weightKg?: number
-  bodyFatPct?: number
-  note?: string
-}

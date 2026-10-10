@@ -22,9 +22,6 @@ export function registerProfileHandlers() {
             theme: (row.theme ?? 'dark') as 'light' | 'dark',
             weeklyGoalKm: row.weeklyGoalKm ?? undefined,
             weeklyGoalSessions: row.weeklyGoalSessions ?? undefined,
-            dailyCalorieTarget: row.dailyCalorieTarget ?? undefined,
-            dailyProteinTargetG: row.dailyProteinTargetG ?? undefined,
-            dailyWaterTargetMl: row.dailyWaterTargetMl ?? undefined,
           } as UserProfile,
         }
       } catch (err) {
@@ -54,9 +51,6 @@ export function registerProfileHandlers() {
           theme: payload.theme ?? 'dark',
           weeklyGoalKm: payload.weeklyGoalKm ?? null,
           weeklyGoalSessions: payload.weeklyGoalSessions ?? null,
-          dailyCalorieTarget: payload.dailyCalorieTarget ?? null,
-          dailyProteinTargetG: payload.dailyProteinTargetG ?? null,
-          dailyWaterTargetMl: payload.dailyWaterTargetMl ?? null,
         }
         if (existing) {
           db.update(userProfile).set(data).where(eq(userProfile.id, 1)).run()

@@ -1,12 +1,16 @@
 /**
- * Daily automatic backup of the SQLite file — free of `electron` imports so it
- * can be unit-tested with a temp directory.
+ * Daily automatic backup of the SQLite database — free of `electron` imports so
+ * it can be unit-tested with a temp directory.
  *
- * Called BEFORE the database is opened/migrated, so the copy is the untouched
- * state from the last run. One file per local calendar day, oldest pruned.
+ * Called right after the database is opened and BEFORE migrations, so the copy
+ * is the untouched state from the last run. One file per local calendar day,
+ * oldest pruned. Uses `VACUUM INTO` (a plain file copy would be incomplete in
+ * WAL mode).
  */
 import * as fs from 'fs'
 import * as path from 'path'
+import type { DatabaseSync } from 'node:sqlite'
+import { vacuumInto } from '../../db/migrations'
 
 const BACKUP_RE = /^fitcoach-\d{4}-\d{2}-\d{2}\.db$/
 
@@ -14,21 +18,23 @@ const BACKUP_RE = /^fitcoach-\d{4}-\d{2}-\d{2}\.db$/
  * @param today  local date as YYYY-MM-DD (NOT UTC)
  * @param keep   how many dated backups to retain
  * @returns path of the newly created backup, or null if none was created
+ *          (empty/new database, or today's backup already exists)
  */
 export function rotateDailyBackup(
-  dbPath: string,
+  db: DatabaseSync,
   backupDir: string,
   today: string,
   keep = 14
 ): string | null {
-  if (!fs.existsSync(dbPath)) return null
+  const hasTables = db.prepare("SELECT 1 AS x FROM sqlite_master WHERE type='table' LIMIT 1").get() !== undefined
+  if (!hasTables) return null
 
   fs.mkdirSync(backupDir, { recursive: true })
 
   const target = path.join(backupDir, `fitcoach-${today}.db`)
   let created: string | null = null
   if (!fs.existsSync(target)) {
-    fs.copyFileSync(dbPath, target)
+    vacuumInto(db, target)
     created = target
   }
 

@@ -4,16 +4,17 @@
  *   v1 / v2: activities, plans (phases/weeks/sessions), userProfile, hrZones
  *   v3     : v2 + habits, habitLogs, dailyCheckins, recoveryLogs, nutritionLogs,
  *            bodyMetrics, challengePool, dailyChallenges
+ *   v4     : userProfile, hrZones, activities, plans, dailyCheckins, recoveryLogs
+ *            (modules removed in Phase 1; their keys in v3 files are ignored on import)
  */
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { TxDb } from './transaction'
 import {
   activities, trainingPlans, planPhases, planWeeks, planSessions,
-  userProfile, hrZones, habits, habitLogs, dailyCheckins, recoveryLogs,
-  nutritionLogs, bodyMetrics, challengePool, dailyChallenges,
+  userProfile, hrZones, dailyCheckins, recoveryLogs,
 } from '../../db/schema'
 
-export const BACKUP_VERSION = 3
+export const BACKUP_VERSION = 4
 
 export interface BackupTable {
   key: string
@@ -32,17 +33,11 @@ export const BACKUP_TABLES: readonly BackupTable[] = [
   { key: 'planPhases',      table: planPhases,      legacy: true  },
   { key: 'planWeeks',       table: planWeeks,       legacy: true  },
   { key: 'planSessions',    table: planSessions,    legacy: true  },
-  { key: 'habits',          table: habits,          legacy: false },
-  { key: 'habitLogs',       table: habitLogs,       legacy: false },
   { key: 'dailyCheckins',   table: dailyCheckins,   legacy: false },
   { key: 'recoveryLogs',    table: recoveryLogs,    legacy: false },
-  { key: 'nutritionLogs',   table: nutritionLogs,   legacy: false },
-  { key: 'bodyMetrics',     table: bodyMetrics,     legacy: false },
-  { key: 'challengePool',   table: challengePool,   legacy: false },
-  { key: 'dailyChallenges', table: dailyChallenges, legacy: false },
 ]
 
-/** Build the full v3 backup object (all tables) from the database. */
+/** Build the full v4 backup object (all tables) from the database. */
 export function exportBackup(db: TxDb): Record<string, unknown> {
   const out: Record<string, unknown> = {
     exportedAt: new Date().toISOString(),

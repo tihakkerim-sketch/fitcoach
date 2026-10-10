@@ -8,10 +8,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LogActivityModal } from '@/components/activities/LogActivityModal'
-import { HabitsWidget } from '@/components/habits/HabitsWidget'
-import { NutritionWidget } from '@/components/nutrition/NutritionWidget'
 import { RecoveryWidget } from '@/components/recovery/RecoveryWidget'
-import { ChallengesWidget } from '@/components/challenges/ChallengesWidget'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type {
@@ -576,17 +573,9 @@ export default function Dashboard() {
             <CheckinBanner checkin={checkin} onNavigate={() => navigate('/checkin')} />
           )}
 
-          {/* Habits */}
-          <HabitsWidget />
-
           {/* Recovery */}
           <RecoveryWidget />
 
-          {/* Nutrition */}
-          <NutritionWidget />
-
-          {/* Challenges */}
-          <ChallengesWidget />
 
           {/* Empty right-column state */}
           {checkinLoaded && !checkin?.morningEnergy && (
@@ -674,7 +663,7 @@ export default function Dashboard() {
           <div>
             <p className="font-semibold text-lg">Ready to begin?</p>
             <p className="text-sm text-muted-foreground mt-1.5 max-w-xs mx-auto leading-relaxed">
-              Log a workout, set up habits, and start your daily check-in to unlock your command center.
+              Log a workout and start your daily check-in to unlock your command center.
             </p>
           </div>
           <Button variant="gradient" onClick={() => setLogOpen(true)}>

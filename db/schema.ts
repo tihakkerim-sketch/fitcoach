@@ -103,9 +103,6 @@ export const userProfile = sqliteTable('user_profile', {
   theme: text('theme').notNull().default('dark'),
   weeklyGoalKm: real('weekly_goal_km'),
   weeklyGoalSessions: integer('weekly_goal_sessions'),
-  dailyCalorieTarget: integer('daily_calorie_target'),
-  dailyProteinTargetG: real('daily_protein_target_g'),
-  dailyWaterTargetMl: integer('daily_water_target_ml'),
 })
 
 export const hrZones = sqliteTable('hr_zones', {
@@ -116,23 +113,7 @@ export const hrZones = sqliteTable('hr_zones', {
   label: text('label').notNull(),
 })
 
-// ── Performance OS ───────────────────────────────────────────────────────────
-
-export const habits = sqliteTable('habits', {
-  id:         integer('id').primaryKey({ autoIncrement: true }),
-  name:       text('name').notNull(),
-  emoji:      text('emoji').notNull().default('⚡'),
-  color:      text('color').notNull().default('blue'),  // blue|green|orange|purple|rose
-  createdAt:  integer('created_at').notNull(),
-  archivedAt: integer('archived_at'),
-})
-
-export const habitLogs = sqliteTable('habit_logs', {
-  id:          integer('id').primaryKey({ autoIncrement: true }),
-  habitId:     integer('habit_id').notNull().references(() => habits.id, { onDelete: 'cascade' }),
-  date:        text('date').notNull(),         // YYYY-MM-DD
-  completedAt: integer('completed_at').notNull(),
-})
+// ── Check-ins & Recovery ─────────────────────────────────────────────────────
 
 export const dailyCheckins = sqliteTable('daily_checkins', {
   id:                integer('id').primaryKey({ autoIncrement: true }),
@@ -160,43 +141,3 @@ export const recoveryLogs = sqliteTable('recovery_logs', {
   createdAt:      integer('created_at').notNull(),
   updatedAt:      integer('updated_at').notNull(),
 })
-
-export const nutritionLogs = sqliteTable('nutrition_logs', {
-  id:         integer('id').primaryKey({ autoIncrement: true }),
-  date:       text('date').notNull(),       // YYYY-MM-DD
-  label:      text('label'),                // Breakfast | Lunch | Dinner | Snack | Water | Other
-  calories:   integer('calories'),          // kcal
-  proteinG:   real('protein_g'),            // grams
-  waterMl:    integer('water_ml'),          // millilitres
-  note:       text('note'),
-  createdAt:  integer('created_at').notNull(),
-})
-
-export const bodyMetrics = sqliteTable('body_metrics', {
-  id:          integer('id').primaryKey({ autoIncrement: true }),
-  date:        text('date').notNull(),   // YYYY-MM-DD
-  weightKg:    real('weight_kg'),
-  bodyFatPct:  real('body_fat_pct'),
-  note:        text('note'),
-  createdAt:   integer('created_at').notNull(),
-})
-
-// ── Daily Challenges ──────────────────────────────────────────────────────────
-
-export const challengePool = sqliteTable('challenge_pool', {
-  id:        integer('id').primaryKey({ autoIncrement: true }),
-  text:      text('text').notNull(),
-  category:  text('category').notNull().default('fitness'), // fitness|mindset|nutrition|mobility|custom
-  isBuiltIn: integer('is_built_in').notNull().default(0),   // 1 = cannot be deleted
-  isActive:  integer('is_active').notNull().default(1),     // 1 = eligible for daily picks
-})
-
-export const dailyChallenges = sqliteTable('daily_challenges', {
-  id:          integer('id').primaryKey({ autoIncrement: true }),
-  date:        text('date').notNull(),            // YYYY-MM-DD
-  poolId:      integer('pool_id'),               // nullable — pool entry may later be deleted
-  text:        text('text').notNull(),            // snapshot of text at generation time
-  completed:   integer('completed').notNull().default(0),  // 0 | 1
-  completedAt: integer('completed_at'),
-})
-

@@ -2,7 +2,7 @@ import { useEffect, useState, type ElementType } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import {
   Activity, LayoutDashboard, CalendarDays, FileDown,
-  TrendingUp, Settings, Moon, Sun, Monitor, Zap, Scale, Utensils, BatteryCharging, Swords,
+  TrendingUp, Settings, Moon, Sun, Monitor, BatteryCharging,
 } from 'lucide-react'
 import { LogActivityModal } from '@/components/activities/LogActivityModal'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -22,12 +22,8 @@ const navGroups: NavGroup[] = [
   {
     heading: 'Performance',
     items: [
-      { to: '/habits',     label: 'Habits',     Icon: Zap,      color: 'orange' },
       { to: '/checkin',   label: 'Check-in',  Icon: Sun,      color: 'orange' },
-      { to: '/challenges', label: 'Challenges', Icon: Swords,   color: 'orange' },
-      { to: '/nutrition', label: 'Nutrition', Icon: Utensils,        color: 'green'  },
       { to: '/recovery',  label: 'Recovery',  Icon: BatteryCharging, color: 'purple' },
-      { to: '/body',      label: 'Body',      Icon: Scale,           color: 'green'  },
     ],
   },
   {

@@ -1,8 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   activities, userProfile, hrZones, trainingPlans, planPhases, planWeeks, planSessions,
-  habits, habitLogs, dailyCheckins, recoveryLogs, nutritionLogs, bodyMetrics,
-  challengePool, dailyChallenges,
+  dailyCheckins, recoveryLogs,
 } from '../../db/schema'
 import { importBackup, type Db } from './importBackup'
 import { exportBackup, BACKUP_VERSION } from './backupFormat'
@@ -98,7 +97,7 @@ describe('importBackup', () => {
     expect(profile[0].theme).toBe('light')
   })
 
-  // ── Backup format v3 ───────────────────────────────────────────────────────
+  // ── Backup format v4 ───────────────────────────────────────────────────────
 
   // One row in EVERY table (FK-consistent).
   function seedEverything(d: Db) {
@@ -111,14 +110,8 @@ describe('importBackup', () => {
     d.insert(planSessions).values({
       id: 6, weekId: 5, dayOfWeek: 1, type: 'running', status: 'completed', linkedActivityId: 7,
     }).run()
-    d.insert(habits).values({ id: 8, name: 'Stretch', createdAt: 9 }).run()
-    d.insert(habitLogs).values({ id: 9, habitId: 8, date: '2026-07-07', completedAt: 10 }).run()
     d.insert(dailyCheckins).values({ id: 10, date: '2026-07-07', createdAt: 1, updatedAt: 2 }).run()
     d.insert(recoveryLogs).values({ id: 11, date: '2026-07-07', hrvRmssd: 55.5, createdAt: 1, updatedAt: 2 }).run()
-    d.insert(nutritionLogs).values({ id: 12, date: '2026-07-07', calories: 500, createdAt: 1 }).run()
-    d.insert(bodyMetrics).values({ id: 13, date: '2026-07-07', weightKg: 70.5, createdAt: 1 }).run()
-    d.insert(challengePool).values({ id: 14, text: 'Do 20 push-ups', category: 'fitness' }).run()
-    d.insert(dailyChallenges).values({ id: 15, date: '2026-07-07', poolId: 14, text: 'Do 20 push-ups' }).run()
   }
 
   function dump(d: Db) {
@@ -130,29 +123,23 @@ describe('importBackup', () => {
       planPhases: d.select().from(planPhases).all(),
       planWeeks: d.select().from(planWeeks).all(),
       planSessions: d.select().from(planSessions).all(),
-      habits: d.select().from(habits).all(),
-      habitLogs: d.select().from(habitLogs).all(),
       dailyCheckins: d.select().from(dailyCheckins).all(),
       recoveryLogs: d.select().from(recoveryLogs).all(),
-      nutritionLogs: d.select().from(nutritionLogs).all(),
-      bodyMetrics: d.select().from(bodyMetrics).all(),
-      challengePool: d.select().from(challengePool).all(),
-      dailyChallenges: d.select().from(dailyChallenges).all(),
     }
   }
 
-  async function v3File(): Promise<Record<string, unknown>> {
+  async function v4File(): Promise<Record<string, unknown>> {
     const src = await makeDb()
     seedEverything(src)
     return JSON.parse(JSON.stringify(exportBackup(src))) as Record<string, unknown>
   }
 
-  it('exports version 3 containing every table', async () => {
+  it('exports version 4 containing every table', async () => {
     const src = await makeDb()
     seedEverything(src)
     const exported = exportBackup(src)
-    expect(exported.version).toBe(3)
-    expect(BACKUP_VERSION).toBe(3)
+    expect(exported.version).toBe(4)
+    expect(BACKUP_VERSION).toBe(4)
     for (const [key, rows] of Object.entries(dump(src))) {
       expect(rows.length, 'seed ' + key).toBeGreaterThan(0)
       expect(Array.isArray(exported[key]), key).toBe(true)
@@ -160,24 +147,23 @@ describe('importBackup', () => {
     }
   })
 
-  it('v3 round-trip restores every table', async () => {
+  it('v4 round-trip restores every table', async () => {
     const src = await makeDb()
     seedEverything(src)
     const file = JSON.parse(JSON.stringify(exportBackup(src))) as Record<string, unknown>
 
     // Target already holds different data in several tables (plus beforeEach data)
     db.insert(recoveryLogs).values({ id: 99, date: '2020-01-01', createdAt: 1, updatedAt: 1 }).run()
-    db.insert(habits).values({ id: 98, name: 'Old habit', createdAt: 1 }).run()
+    db.insert(dailyCheckins).values({ id: 98, date: '2020-01-02', createdAt: 1, updatedAt: 1 }).run()
 
     const result = importBackup(db, file)
     expect(result.success).toBe(true)
     expect(dump(db)).toEqual(dump(src))
   })
 
-  it('v2 import replaces the original 7 tables but leaves newer tables untouched', () => {
+  it('v2 import replaces the original 7 tables but leaves check-ins/recovery untouched', () => {
     db.insert(recoveryLogs).values({ id: 5, date: '2026-01-01', createdAt: 1, updatedAt: 1 }).run()
-    db.insert(habits).values({ id: 1, name: 'Keep me', createdAt: 1 }).run()
-    db.insert(challengePool).values({ id: 1, text: 'Keep', category: 'fitness' }).run()
+    db.insert(dailyCheckins).values({ id: 1, date: '2026-01-01', morningIntention: 'Keep me', createdAt: 1, updatedAt: 1 }).run()
 
     const result = importBackup(db, {
       version: 2,
@@ -191,8 +177,7 @@ describe('importBackup', () => {
     const rec = db.select().from(recoveryLogs).all()
     expect(rec).toHaveLength(1)
     expect(rec[0].id).toBe(5)
-    expect(db.select().from(habits).all()[0].name).toBe('Keep me')
-    expect(db.select().from(challengePool).all()).toHaveLength(1)
+    expect(db.select().from(dailyCheckins).all()[0].morningIntention).toBe('Keep me')
   })
 
   it('v1 import is accepted too', () => {
@@ -202,7 +187,7 @@ describe('importBackup', () => {
   })
 
   it('rejects a malformed v3 file and changes nothing', async () => {
-    const file = await v3File()
+    const file = await v4File()
     file.recoveryLogs = 'x'
 
     db.insert(recoveryLogs).values({ id: 5, date: '2026-01-01', createdAt: 1, updatedAt: 1 }).run()
@@ -214,9 +199,9 @@ describe('importBackup', () => {
     expect(dump(db)).toEqual(before)
   })
 
-  it('rejects a v3 file with a missing table and changes nothing', async () => {
-    const file = await v3File()
-    delete file.habits
+  it('rejects a v4 file with a missing table and changes nothing', async () => {
+    const file = await v4File()
+    delete file.dailyCheckins
     const before = dump(db)
 
     const result = importBackup(db, file)
@@ -224,18 +209,32 @@ describe('importBackup', () => {
     expect(dump(db)).toEqual(before)
   })
 
-  it('a v3 file whose insert fails midway leaves original data intact', async () => {
-    const file = await v3File()
+  it('a v4 file whose insert fails midway leaves original data intact', async () => {
+    const file = await v4File()
     // Fails late in the insert order (after most tables were already replaced)
-    ;(file.dailyChallenges as Record<string, unknown>[])[0].text = null
+    ;(file.recoveryLogs as Record<string, unknown>[])[0].createdAt = null
 
     db.insert(recoveryLogs).values({ id: 5, date: '2026-01-01', createdAt: 1, updatedAt: 1 }).run()
-    db.insert(habits).values({ id: 1, name: 'Original habit', createdAt: 1 }).run()
+    db.insert(dailyCheckins).values({ id: 1, date: '2026-01-01', createdAt: 1, updatedAt: 1 }).run()
     const before = dump(db)
 
     const result = importBackup(db, file)
     expect(result.success).toBe(false)
     expect(result.error).toMatch(/previous data was restored/i)
     expect(dump(db)).toEqual(before)
+  })
+
+  it('imports an old v3 file: removed-table keys are ignored, the rest is restored', async () => {
+    const file = await v4File()
+    file.version = 3
+    file.habits = [{ id: 1, name: 'Gone', emoji: 'x', color: 'blue', createdAt: 1 }]
+    file.habitLogs = [{ id: 1, habitId: 1, date: '2026-07-07', completedAt: 1 }]
+    file.nutritionLogs = 'not even an array'
+    ;(file.userProfile as Record<string, unknown>[])[0].dailyCalorieTarget = 2500
+
+    const result = importBackup(db, file)
+    expect(result.success).toBe(true)
+    expect(db.select().from(recoveryLogs).all()).toHaveLength(1)
+    expect(db.select().from(activities).all()[0].date).toBe('2026-07-07')
   })
 })

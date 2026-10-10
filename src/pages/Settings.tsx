@@ -240,56 +240,6 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* Nutrition Targets */}
-      <section className="space-y-3">
-        <h2 className="font-semibold">Nutrition</h2>
-        <Separator />
-        <p className="text-xs text-muted-foreground">
-          Daily targets shown as progress bars on the Nutrition page and Dashboard widget. Leave blank to track without a goal.
-        </p>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="space-y-1">
-            <Label htmlFor="cal-target">Calories (kcal)</Label>
-            <Input
-              id="cal-target"
-              type="number"
-              min={0}
-              max={10000}
-              step={50}
-              placeholder="e.g. 2000"
-              value={profile.dailyCalorieTarget ?? ''}
-              onChange={e => set('dailyCalorieTarget', e.target.value ? Number(e.target.value) : undefined)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="protein-target">Protein (g)</Label>
-            <Input
-              id="protein-target"
-              type="number"
-              min={0}
-              max={500}
-              step={5}
-              placeholder="e.g. 150"
-              value={profile.dailyProteinTargetG ?? ''}
-              onChange={e => set('dailyProteinTargetG', e.target.value ? Number(e.target.value) : undefined)}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="water-target">Water (ml)</Label>
-            <Input
-              id="water-target"
-              type="number"
-              min={0}
-              max={10000}
-              step={250}
-              placeholder="e.g. 2500"
-              value={profile.dailyWaterTargetMl ?? ''}
-              onChange={e => set('dailyWaterTargetMl', e.target.value ? Number(e.target.value) : undefined)}
-            />
-          </div>
-        </div>
-      </section>
-
       <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
         {saved ? <><Check className="h-4 w-4 mr-2" /> Saved</> : saving ? 'Saving…' : 'Save Settings'}
       </Button>

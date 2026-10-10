@@ -14,15 +14,6 @@
       "dist-electron/**/*",
       "package.json"
     ],
-    "extraResources": [
-      {
-        "from": "db/migrations",
-        "to": "db/migrations"
-      }
-    ],
-    "asarUnpack": [
-      "node_modules/sql.js/dist/sql-wasm.wasm"
-    ],
     "win": {
       "icon": "build/icon.ico",
       "target": [
@@ -50,8 +41,6 @@
     "make:icon": "node scripts/make-icon.js",
     "dist": "npm run build && electron-builder --win",
     "dist:dir": "npm run build && electron-builder --win --dir",
-    "db:generate": "drizzle-kit generate",
-    "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
@@ -66,8 +55,7 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tabs": "^1.0.4",
     "date-fns": "^3.6.0",
-    "drizzle-orm": "^0.30.10",
-    "electron-store": "^8.2.0",
+    "drizzle-orm": "^0.45.4",
     "fast-xml-parser": "^5.7.3",
     "fit-file-parser": "^1.9.1",
     "react": "^18.3.1",
@@ -75,23 +63,20 @@
     "react-hook-form": "^7.51.5",
     "react-router-dom": "^6.23.1",
     "recharts": "^2.12.7",
-    "sql.js": "^1.12.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.1",
-    "@types/node": "^20.14.2",
+    "@types/node": "^24.19.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@types/sql.js": "^1.4.9",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "concurrently": "^8.2.2",
-    "drizzle-kit": "^0.21.4",
-    "electron": "^31.0.2",
-    "electron-builder": "^24.13.3",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
     "jimp": "^0.22.12",
     "lucide-react": "^0.395.0",
     "png-to-ico": "^2.1.8",
@@ -101,7 +86,7 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.4.5",
     "vite": "^5.3.1",
-    "vitest": "^1.6.0",
+    "vitest": "^3.2.7",
     "wait-on": "^7.2.0"
   }
 }

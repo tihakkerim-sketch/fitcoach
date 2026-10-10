@@ -8,7 +8,8 @@
  * everything back automatically.
  *
  * Versions: v1/v2 replace only the original 7 tables (newer tables are left
- * untouched); v3 replaces all tables.
+ * untouched); v3/v4 replace all current tables. Keys of tables that no longer
+ * exist (habits, nutrition, body, challenges in v3 files) are ignored.
  */
 import { getTableColumns } from 'drizzle-orm'
 import { BACKUP_TABLES, type BackupTable } from './backupFormat'
@@ -36,21 +37,22 @@ function isPlainObject(v: unknown): boolean {
 export function importBackup(db: Db, data: Record<string, unknown>): ImportResult {
   // ── Version gate ──────────────────────────────────────────────────────────
   const version = data.version as number
-  if (version !== 1 && version !== 2 && version !== 3) {
+  if (version !== 1 && version !== 2 && version !== 3 && version !== 4) {
     return { success: false, error: 'Unrecognised backup format or version — import cancelled, your data is unchanged' }
   }
 
-  // v1/v2 only know the original tables; v3 knows them all.
-  const tables: BackupTable[] = BACKUP_TABLES.filter(t => version === 3 || t.legacy)
+  // v1/v2 only know the original tables; v3/v4 know all current ones.
+  const full = version >= 3
+  const tables: BackupTable[] = BACKUP_TABLES.filter(t => full || t.legacy)
 
   // ── Validate shape BEFORE touching the DB ───────────────────────────────────
-  // Every present table key must be an array of objects. A v3 file must contain
+  // Every present table key must be an array of objects. A v3/v4 file must contain
   // every table (a missing one would silently wipe that table). A malformed file
   // is rejected before a single row is deleted.
   for (const { key } of tables) {
     const value = data[key]
     if (value === undefined) {
-      if (version === 3) {
+      if (full) {
         return { success: false, error: `Backup field "${key}" is missing — import cancelled, your data is unchanged` }
       }
       continue
@@ -76,7 +78,7 @@ export function importBackup(db: Db, data: Record<string, unknown>): ImportResul
         }
       }
     })
-    // v1 backups may contain coachConversations / coachMessages — silently ignored
+    // Keys of removed tables (coach*, habits*, nutrition, body, challenges) are silently ignored
     return { success: true }
   } catch (importErr) {
     return {
