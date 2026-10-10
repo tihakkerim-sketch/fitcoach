@@ -25,3 +25,7 @@ Aktueller Umbau: siehe `docs/AUDIT-2026-10.md` (Phasenplan + Entscheidungen in A
 - Migrationen: `db/migrations/meta/_journal.json` hat kaputte Zeitstempel; Schema-Reparatur läuft über `applySchemaPatches()` in `db/index.ts`. Wird in Phase 1 durch eine saubere Baseline ersetzt – bis dahin keine neuen Drizzle-Migrationen generieren.
 - `main.js` liegt unter `dist-electron/electron/main.js`; WASM-Pfad über `require.resolve('sql.js')`.
 - Mehrschrittige Schreibvorgänge immer in einer Transaktion.
+- sql.js `export()` setzt PRAGMAs zurück → `foreign_keys = ON` danach neu setzen (passiert in `flushDb`).
+- Transaktionen: `runInTransaction` aus `electron/lib/transaction.ts` (drizzle `db.transaction`, synchron mit sql-js).
+- App ohne echte Daten testen: Vite starten, dann `npx electron . --user-data-dir=<tempordner>`.
+- Backup-Format v3 = alle Tabellen (`electron/lib/backupFormat.ts`); neue Tabellen dort eintragen.
