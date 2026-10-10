@@ -1,93 +1,84 @@
 /**
- * Pure, side-effect-light backup import logic — deliberately free of any
- * `electron` imports so it can be unit-tested against an in-memory database.
+ * Pure backup import logic — deliberately free of any `electron` imports so it
+ * can be unit-tested against an in-memory database.
  *
  * Safety contract: existing data must NEVER be lost to a malformed or partially
- * invalid backup. The function validates shape first (failing before any delete),
- * snapshots all current rows, and restores them if any insert throws.
+ * invalid backup. The shape is validated first (failing before any delete), and
+ * the whole replace then runs inside ONE transaction, so any failure rolls
+ * everything back automatically.
+ *
+ * Versions: v1/v2 replace only the original 7 tables (newer tables are left
+ * untouched); v3 replaces all tables.
  */
-import { drizzle } from 'drizzle-orm/sql-js'
-import * as schema from '../../db/schema'
-import {
-  activities, trainingPlans, planPhases, planWeeks, planSessions,
-  userProfile, hrZones,
-} from '../../db/schema'
+import { getTableColumns } from 'drizzle-orm'
+import { BACKUP_TABLES, type BackupTable } from './backupFormat'
+import { runInTransaction, type TxDb } from './transaction'
 
-export type Db = ReturnType<typeof drizzle<typeof schema>>
+export type Db = TxDb
 
 export interface ImportResult {
   success: boolean
   error?: string
 }
 
-// Tables restored/replaced by an import, in foreign-key-safe insert order.
-const TABLE_KEYS = [
-  'userProfile', 'hrZones', 'activities',
-  'trainingPlans', 'planPhases', 'planWeeks', 'planSessions',
-] as const
+// SQLite limits bound parameters per statement — insert large tables in chunks.
+const MAX_PARAMS_PER_INSERT = 900
+
+function isPlainObject(v: unknown): boolean {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
 
 /**
- * Replace all data with the contents of a parsed backup object.
- * On any failure the previous data is restored and `success: false` is returned.
+ * Replace data with the contents of a parsed backup object.
+ * On any failure the transaction is rolled back, the previous data stays
+ * exactly as it was, and `success: false` is returned.
  */
 export function importBackup(db: Db, data: Record<string, unknown>): ImportResult {
   // ── Version gate ──────────────────────────────────────────────────────────
   const version = data.version as number
-  if (!version || (version !== 1 && version !== 2)) {
+  if (version !== 1 && version !== 2 && version !== 3) {
     return { success: false, error: 'Unrecognised backup format or version — import cancelled, your data is unchanged' }
   }
 
+  // v1/v2 only know the original tables; v3 knows them all.
+  const tables: BackupTable[] = BACKUP_TABLES.filter(t => version === 3 || t.legacy)
+
   // ── Validate shape BEFORE touching the DB ───────────────────────────────────
-  // Every present table key must be an array. A malformed file is rejected
-  // before a single row is deleted, so existing data is never at risk.
-  for (const key of TABLE_KEYS) {
-    if (data[key] !== undefined && !Array.isArray(data[key])) {
+  // Every present table key must be an array of objects. A v3 file must contain
+  // every table (a missing one would silently wipe that table). A malformed file
+  // is rejected before a single row is deleted.
+  for (const { key } of tables) {
+    const value = data[key]
+    if (value === undefined) {
+      if (version === 3) {
+        return { success: false, error: `Backup field "${key}" is missing — import cancelled, your data is unchanged` }
+      }
+      continue
+    }
+    if (!Array.isArray(value) || !value.every(isPlainObject)) {
       return { success: false, error: `Backup field "${key}" is malformed — import cancelled, your data is unchanged` }
     }
   }
 
-  // ── Snapshot current data so we can roll back on any failure ────────────────
-  const snapshot = {
-    userProfile:   db.select().from(userProfile).all(),
-    hrZones:       db.select().from(hrZones).all(),
-    activities:    db.select().from(activities).all(),
-    trainingPlans: db.select().from(trainingPlans).all(),
-    planPhases:    db.select().from(planPhases).all(),
-    planWeeks:     db.select().from(planWeeks).all(),
-    planSessions:  db.select().from(planSessions).all(),
-  }
-
-  const clearAll = () => {
-    db.delete(planSessions).run()
-    db.delete(planWeeks).run()
-    db.delete(planPhases).run()
-    db.delete(trainingPlans).run()
-    db.delete(activities).run()
-    db.delete(hrZones).run()
-    db.delete(userProfile).run()
-  }
-
-  const insertAll = (src: Record<string, unknown>) => {
-    if (Array.isArray(src.userProfile)   && src.userProfile.length)   db.insert(userProfile).values(src.userProfile as never[]).run()
-    if (Array.isArray(src.hrZones)       && src.hrZones.length)       db.insert(hrZones).values(src.hrZones as never[]).run()
-    if (Array.isArray(src.activities)    && src.activities.length)    db.insert(activities).values(src.activities as never[]).run()
-    if (Array.isArray(src.trainingPlans) && src.trainingPlans.length) db.insert(trainingPlans).values(src.trainingPlans as never[]).run()
-    if (Array.isArray(src.planPhases)    && src.planPhases.length)    db.insert(planPhases).values(src.planPhases as never[]).run()
-    if (Array.isArray(src.planWeeks)     && src.planWeeks.length)     db.insert(planWeeks).values(src.planWeeks as never[]).run()
-    if (Array.isArray(src.planSessions)  && src.planSessions.length)  db.insert(planSessions).values(src.planSessions as never[]).run()
-  }
-
   try {
-    clearAll()
-    insertAll(data)
+    runInTransaction(db, () => {
+      // Children before parents
+      for (const { table } of [...tables].reverse()) {
+        db.delete(table).run()
+      }
+      // Parents before children
+      for (const { key, table } of tables) {
+        const rows = data[key]
+        if (!Array.isArray(rows) || rows.length === 0) continue
+        const chunk = Math.max(1, Math.floor(MAX_PARAMS_PER_INSERT / Object.keys(getTableColumns(table)).length))
+        for (let i = 0; i < rows.length; i += chunk) {
+          db.insert(table).values(rows.slice(i, i + chunk) as never[]).run()
+        }
+      }
+    })
     // v1 backups may contain coachConversations / coachMessages — silently ignored
     return { success: true }
   } catch (importErr) {
-    // Roll back to the pre-import snapshot so a bad file never destroys data
-    try {
-      clearAll()
-      insertAll(snapshot as unknown as Record<string, unknown>)
-    } catch { /* restore failed — surface original error below */ }
     return {
       success: false,
       error: `Import failed and your previous data was restored: ${String(importErr)}`,

@@ -4,7 +4,9 @@ import { migrate } from 'drizzle-orm/sql-js/migrator'
 import * as path from 'path'
 import * as fs from 'fs'
 import { app } from 'electron'
+import { format } from 'date-fns'
 import * as schema from './schema'
+import { rotateDailyBackup } from '../electron/lib/backupRotation'
 
 type Db = ReturnType<typeof drizzle<typeof schema>>
 
@@ -22,6 +24,18 @@ export async function initDb(): Promise<void> {
   const wasmPath = path.join(path.dirname(sqlJsMain), 'sql-wasm.wasm')
 
   const SQL = await initSqlJs({ locateFile: () => wasmPath })
+
+  // Daily automatic backup of the untouched pre-start file (before migrate/patch).
+  // A backup failure must never prevent the app from starting.
+  try {
+    rotateDailyBackup(
+      persistPath,
+      path.join(userDataPath, 'backups'),
+      format(new Date(), 'yyyy-MM-dd')   // local date, not UTC
+    )
+  } catch (err) {
+    console.error('Daily backup failed:', err)
+  }
 
   const fileBuffer = fs.existsSync(persistPath) ? fs.readFileSync(persistPath) : null
   sqlDb = new SQL.Database(fileBuffer ?? undefined)
@@ -227,11 +241,20 @@ export function markDirty(): void {
 
 function flushDb(): void {
   if (!sqlDb || !persistPath) return
-  const data = sqlDb.export()
-  const tmp = persistPath + '.tmp'
-  fs.writeFileSync(tmp, Buffer.from(data))
-  fs.renameSync(tmp, persistPath)
-  saveTimer = null
+  try {
+    const data = sqlDb.export()
+    // sql.js export() closes/reopens the DB and resets PRAGMAs — without this,
+    // ON DELETE CASCADE silently stops working after the first save.
+    sqlDb.run('PRAGMA foreign_keys = ON')
+    const tmp = persistPath + '.tmp'
+    fs.writeFileSync(tmp, Buffer.from(data))
+    fs.renameSync(tmp, persistPath)
+    saveTimer = null
+  } catch (err) {
+    // Never throw out of a timer / shutdown hook — the in-memory DB is still
+    // intact and the next markDirty() / closeDb() will retry the write.
+    console.error('Failed to write database file:', err)
+  }
 }
 
 export function closeDb(): void {

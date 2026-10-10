@@ -18,5 +18,5 @@
     }
   },
   "include": ["electron", "db", "src/types"],
-  "exclude": ["**/*.test.ts", "**/*.spec.ts"]
+  "exclude": ["**/*.test.ts", "**/*.spec.ts", "electron/lib/testDb.ts"]
 }

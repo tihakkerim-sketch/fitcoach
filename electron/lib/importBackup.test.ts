@@ -1,72 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createRequire } from 'module'
-import * as path from 'path'
-import initSqlJs from 'sql.js'
-import { drizzle } from 'drizzle-orm/sql-js'
-import * as schema from '../../db/schema'
-import { activities, userProfile } from '../../db/schema'
+import {
+  activities, userProfile, hrZones, trainingPlans, planPhases, planWeeks, planSessions,
+  habits, habitLogs, dailyCheckins, recoveryLogs, nutritionLogs, bodyMetrics,
+  challengePool, dailyChallenges,
+} from '../../db/schema'
 import { importBackup, type Db } from './importBackup'
-
-// ── In-memory DB harness ────────────────────────────────────────────────────
-// Builds a fresh sql.js SQLite database with the subset of the schema the
-// import touches, then wraps it with Drizzle exactly as the app does.
-
-const require = createRequire(import.meta.url)
-
-const CREATE_TABLES = `
-  CREATE TABLE user_profile (
-    id integer PRIMARY KEY, name text, age integer, max_hr integer, resting_hr integer,
-    goal_event text, goal_finish_time text, training_days_per_week integer,
-    fixed_rest_days text, injury_notes text, theme text NOT NULL DEFAULT 'dark',
-    weekly_goal_km real, weekly_goal_sessions integer, daily_calorie_target integer,
-    daily_protein_target_g real, daily_water_target_ml integer
-  );
-  CREATE TABLE hr_zones (
-    id integer PRIMARY KEY AUTOINCREMENT, zone_number integer NOT NULL,
-    min_hr integer NOT NULL, max_hr integer NOT NULL, label text NOT NULL
-  );
-  CREATE TABLE activities (
-    id integer PRIMARY KEY AUTOINCREMENT, type text NOT NULL, date text NOT NULL,
-    created_at integer NOT NULL, source text NOT NULL, garmin_file_name text,
-    avg_hr integer, max_hr integer, duration_min real, start_time text,
-    distance_km real, hr_zone_distribution text, perceived_effort integer,
-    surface_type text, notes text, avg_cadence integer, bedtime text,
-    wake_time text, sleep_quality integer, exercises text, type_label text,
-    raw_garmin_data text
-  );
-  CREATE TABLE training_plans (
-    id integer PRIMARY KEY AUTOINCREMENT, name text NOT NULL, goal_event text,
-    goal_date text, is_active integer NOT NULL DEFAULT 1, created_at integer NOT NULL
-  );
-  CREATE TABLE plan_phases (
-    id integer PRIMARY KEY AUTOINCREMENT,
-    plan_id integer NOT NULL REFERENCES training_plans(id) ON DELETE CASCADE,
-    name text NOT NULL, order_index integer NOT NULL, duration_weeks integer NOT NULL
-  );
-  CREATE TABLE plan_weeks (
-    id integer PRIMARY KEY AUTOINCREMENT,
-    phase_id integer NOT NULL REFERENCES plan_phases(id) ON DELETE CASCADE,
-    week_number integer NOT NULL, notes text
-  );
-  CREATE TABLE plan_sessions (
-    id integer PRIMARY KEY AUTOINCREMENT,
-    week_id integer NOT NULL REFERENCES plan_weeks(id) ON DELETE CASCADE,
-    day_of_week integer NOT NULL, type text NOT NULL, target_duration_min integer,
-    target_hr_zone integer, intensity_label text, coaching_note text,
-    status text NOT NULL DEFAULT 'planned',
-    linked_activity_id integer REFERENCES activities(id) ON DELETE SET NULL,
-    completed_at integer, completion_note text
-  );
-`
+import { exportBackup, BACKUP_VERSION } from './backupFormat'
+import { makeTestDb } from './testDb'
 
 async function makeDb(): Promise<Db> {
-  const sqlJsMain = require.resolve('sql.js')
-  const wasmPath = path.join(path.dirname(sqlJsMain), 'sql-wasm.wasm')
-  const SQL = await initSqlJs({ locateFile: () => wasmPath })
-  const sqlDb = new SQL.Database()
-  sqlDb.run('PRAGMA foreign_keys = ON')
-  sqlDb.exec(CREATE_TABLES)
-  return drizzle(sqlDb, { schema })
+  return makeTestDb()
 }
 
 // A valid activity row (all NOT NULL columns present).
@@ -153,5 +96,146 @@ describe('importBackup', () => {
     const profile = db.select().from(userProfile).all()
     expect(profile[0].name).toBe('Imported')
     expect(profile[0].theme).toBe('light')
+  })
+
+  // ── Backup format v3 ───────────────────────────────────────────────────────
+
+  // One row in EVERY table (FK-consistent).
+  function seedEverything(d: Db) {
+    d.insert(userProfile).values({ id: 1, name: 'Full', theme: 'light' } as never).run()
+    d.insert(hrZones).values({ zoneNumber: 1, minHr: 100, maxHr: 120, label: 'Easy' }).run()
+    d.insert(activities).values(activity(7, '2026-07-07') as never).run()
+    d.insert(trainingPlans).values({ id: 3, name: 'Plan', isActive: 1, createdAt: 5 }).run()
+    d.insert(planPhases).values({ id: 4, planId: 3, name: 'Base', orderIndex: 0, durationWeeks: 1 }).run()
+    d.insert(planWeeks).values({ id: 5, phaseId: 4, weekNumber: 1 }).run()
+    d.insert(planSessions).values({
+      id: 6, weekId: 5, dayOfWeek: 1, type: 'running', status: 'completed', linkedActivityId: 7,
+    }).run()
+    d.insert(habits).values({ id: 8, name: 'Stretch', createdAt: 9 }).run()
+    d.insert(habitLogs).values({ id: 9, habitId: 8, date: '2026-07-07', completedAt: 10 }).run()
+    d.insert(dailyCheckins).values({ id: 10, date: '2026-07-07', createdAt: 1, updatedAt: 2 }).run()
+    d.insert(recoveryLogs).values({ id: 11, date: '2026-07-07', hrvRmssd: 55.5, createdAt: 1, updatedAt: 2 }).run()
+    d.insert(nutritionLogs).values({ id: 12, date: '2026-07-07', calories: 500, createdAt: 1 }).run()
+    d.insert(bodyMetrics).values({ id: 13, date: '2026-07-07', weightKg: 70.5, createdAt: 1 }).run()
+    d.insert(challengePool).values({ id: 14, text: 'Do 20 push-ups', category: 'fitness' }).run()
+    d.insert(dailyChallenges).values({ id: 15, date: '2026-07-07', poolId: 14, text: 'Do 20 push-ups' }).run()
+  }
+
+  function dump(d: Db) {
+    return {
+      userProfile: d.select().from(userProfile).all(),
+      hrZones: d.select().from(hrZones).all(),
+      activities: d.select().from(activities).all(),
+      trainingPlans: d.select().from(trainingPlans).all(),
+      planPhases: d.select().from(planPhases).all(),
+      planWeeks: d.select().from(planWeeks).all(),
+      planSessions: d.select().from(planSessions).all(),
+      habits: d.select().from(habits).all(),
+      habitLogs: d.select().from(habitLogs).all(),
+      dailyCheckins: d.select().from(dailyCheckins).all(),
+      recoveryLogs: d.select().from(recoveryLogs).all(),
+      nutritionLogs: d.select().from(nutritionLogs).all(),
+      bodyMetrics: d.select().from(bodyMetrics).all(),
+      challengePool: d.select().from(challengePool).all(),
+      dailyChallenges: d.select().from(dailyChallenges).all(),
+    }
+  }
+
+  async function v3File(): Promise<Record<string, unknown>> {
+    const src = await makeDb()
+    seedEverything(src)
+    return JSON.parse(JSON.stringify(exportBackup(src))) as Record<string, unknown>
+  }
+
+  it('exports version 3 containing every table', async () => {
+    const src = await makeDb()
+    seedEverything(src)
+    const exported = exportBackup(src)
+    expect(exported.version).toBe(3)
+    expect(BACKUP_VERSION).toBe(3)
+    for (const [key, rows] of Object.entries(dump(src))) {
+      expect(rows.length, 'seed ' + key).toBeGreaterThan(0)
+      expect(Array.isArray(exported[key]), key).toBe(true)
+      expect((exported[key] as unknown[]).length, key).toBe(rows.length)
+    }
+  })
+
+  it('v3 round-trip restores every table', async () => {
+    const src = await makeDb()
+    seedEverything(src)
+    const file = JSON.parse(JSON.stringify(exportBackup(src))) as Record<string, unknown>
+
+    // Target already holds different data in several tables (plus beforeEach data)
+    db.insert(recoveryLogs).values({ id: 99, date: '2020-01-01', createdAt: 1, updatedAt: 1 }).run()
+    db.insert(habits).values({ id: 98, name: 'Old habit', createdAt: 1 }).run()
+
+    const result = importBackup(db, file)
+    expect(result.success).toBe(true)
+    expect(dump(db)).toEqual(dump(src))
+  })
+
+  it('v2 import replaces the original 7 tables but leaves newer tables untouched', () => {
+    db.insert(recoveryLogs).values({ id: 5, date: '2026-01-01', createdAt: 1, updatedAt: 1 }).run()
+    db.insert(habits).values({ id: 1, name: 'Keep me', createdAt: 1 }).run()
+    db.insert(challengePool).values({ id: 1, text: 'Keep', category: 'fitness' }).run()
+
+    const result = importBackup(db, {
+      version: 2,
+      activities: [activity(50, '2026-06-01')],
+      // newer-table keys in a v2 file must be ignored
+      recoveryLogs: [{ id: 77, date: '1999-01-01', createdAt: 1, updatedAt: 1 }],
+    })
+
+    expect(result.success).toBe(true)
+    expect(db.select().from(activities).all()).toHaveLength(1)
+    const rec = db.select().from(recoveryLogs).all()
+    expect(rec).toHaveLength(1)
+    expect(rec[0].id).toBe(5)
+    expect(db.select().from(habits).all()[0].name).toBe('Keep me')
+    expect(db.select().from(challengePool).all()).toHaveLength(1)
+  })
+
+  it('v1 import is accepted too', () => {
+    const result = importBackup(db, { version: 1, activities: [activity(60, '2026-06-02')] })
+    expect(result.success).toBe(true)
+    expect(db.select().from(activities).all()[0].date).toBe('2026-06-02')
+  })
+
+  it('rejects a malformed v3 file and changes nothing', async () => {
+    const file = await v3File()
+    file.recoveryLogs = 'x'
+
+    db.insert(recoveryLogs).values({ id: 5, date: '2026-01-01', createdAt: 1, updatedAt: 1 }).run()
+    const before = dump(db)
+
+    const result = importBackup(db, file)
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/malformed/i)
+    expect(dump(db)).toEqual(before)
+  })
+
+  it('rejects a v3 file with a missing table and changes nothing', async () => {
+    const file = await v3File()
+    delete file.habits
+    const before = dump(db)
+
+    const result = importBackup(db, file)
+    expect(result.success).toBe(false)
+    expect(dump(db)).toEqual(before)
+  })
+
+  it('a v3 file whose insert fails midway leaves original data intact', async () => {
+    const file = await v3File()
+    // Fails late in the insert order (after most tables were already replaced)
+    ;(file.dailyChallenges as Record<string, unknown>[])[0].text = null
+
+    db.insert(recoveryLogs).values({ id: 5, date: '2026-01-01', createdAt: 1, updatedAt: 1 }).run()
+    db.insert(habits).values({ id: 1, name: 'Original habit', createdAt: 1 }).run()
+    const before = dump(db)
+
+    const result = importBackup(db, file)
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/previous data was restored/i)
+    expect(dump(db)).toEqual(before)
   })
 })

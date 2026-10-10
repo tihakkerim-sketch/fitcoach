@@ -2,8 +2,9 @@ import { ipcMain, dialog } from 'electron'
 import { IPC } from '../../src/types/ipc'
 import type { IpcResponse } from '../../src/types/ipc'
 import { getDb, markDirty } from '../../db/index'
-import { activities, trainingPlans, planPhases, planWeeks, planSessions, userProfile, hrZones } from '../../db/schema'
 import { importBackup } from '../lib/importBackup'
+import { exportBackup } from '../lib/backupFormat'
+import { format } from 'date-fns'
 import * as fs from 'fs'
 
 export function registerDataHandlers() {
@@ -12,21 +13,12 @@ export function registerDataHandlers() {
     async (): Promise<IpcResponse<string>> => {
       try {
         const db = getDb()
-        const result = {
-          exportedAt: new Date().toISOString(),
-          version: 2,
-          activities: db.select().from(activities).all(),
-          trainingPlans: db.select().from(trainingPlans).all(),
-          planPhases: db.select().from(planPhases).all(),
-          planWeeks: db.select().from(planWeeks).all(),
-          planSessions: db.select().from(planSessions).all(),
-          userProfile: db.select().from(userProfile).all(),
-          hrZones: db.select().from(hrZones).all(),
-        }
+        // Full v3 backup: every table (see electron/lib/backupFormat.ts)
+        const result = exportBackup(db)
 
         const { filePath, canceled } = await dialog.showSaveDialog({
           title: 'Export FitCoach Data',
-          defaultPath: `fitcoach-backup-${new Date().toISOString().split('T')[0]}.json`,
+          defaultPath: `fitcoach-backup-${format(new Date(), 'yyyy-MM-dd')}.json`,
           filters: [{ name: 'JSON', extensions: ['json'] }],
         })
 

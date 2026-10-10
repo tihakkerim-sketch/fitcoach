@@ -18,6 +18,9 @@ import { registerSettingsHandlers } from './ipc/settings'
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
+// Kept so a second launch can focus the existing window
+let mainWindow: BrowserWindow | null = null
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
@@ -60,6 +63,30 @@ function createWindow() {
   }
 
   win.once('ready-to-show', () => win.show())
+
+  // Windows logoff / shutdown: Electron may not emit before-quit, so flush the
+  // in-memory database to disk right away.
+  win.on('session-end', () => closeDb())
+
+  mainWindow = win
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null
+  })
+}
+
+// ── Single instance ──────────────────────────────────────────────────────────
+// Two instances would each hold the whole DB in memory and overwrite each
+// other's file → data loss. The second launch just focuses the first window.
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  })
+  startApp()
 }
 
 process.on('unhandledRejection', (reason) => {
@@ -70,57 +97,59 @@ process.on('unhandledRejection', (reason) => {
   )
 })
 
-app.whenReady().then(async () => {
-  // ── Content-Security-Policy (production only) ────────────────────────────────
-  // Defense-in-depth: the renderer may only load its own bundled assets. Set via
-  // response headers rather than a <meta> tag so dev (Vite HMR with inline scripts
-  // and a websocket) is left untouched. 'unsafe-inline' for styles is required by
-  // shadcn/Tailwind's injected styles and is safe for a local-only app.
-  if (!isDev) {
-    session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
-      cb({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'",
-          ],
-        },
+function startApp() {
+  app.whenReady().then(async () => {
+    // ── Content-Security-Policy (production only) ────────────────────────────────
+    // Defense-in-depth: the renderer may only load its own bundled assets. Set via
+    // response headers rather than a <meta> tag so dev (Vite HMR with inline scripts
+    // and a websocket) is left untouched. 'unsafe-inline' for styles is required by
+    // shadcn/Tailwind's injected styles and is safe for a local-only app.
+    if (!isDev) {
+      session.defaultSession.webRequest.onHeadersReceived((details, cb) => {
+        cb({
+          responseHeaders: {
+            ...details.responseHeaders,
+            'Content-Security-Policy': [
+              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'",
+            ],
+          },
+        })
       })
+    }
+
+    try {
+      await initDb()
+    } catch (err) {
+      dialog.showErrorBox(
+        'Database Error',
+        `Failed to initialize database:\n${String(err)}\n\nThe app cannot start.`
+      )
+      app.quit()
+      return
+    }
+
+    registerActivityHandlers()
+    registerPlanHandlers()
+    registerProfileHandlers()
+    registerGarminHandlers()
+    registerDataHandlers()
+    registerSummaryHandlers()
+    registerStatsHandlers()
+    registerHabitHandlers()
+    registerCheckinHandlers()
+    registerBodyHandlers()
+    registerNutritionHandlers()
+    registerRecoveryHandlers()
+    registerChallengeHandlers()
+    registerSettingsHandlers()
+
+    createWindow()
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
-  }
-
-  try {
-    await initDb()
-  } catch (err) {
-    dialog.showErrorBox(
-      'Database Error',
-      `Failed to initialize database:\n${String(err)}\n\nThe app cannot start.`
-    )
-    app.quit()
-    return
-  }
-
-  registerActivityHandlers()
-  registerPlanHandlers()
-  registerProfileHandlers()
-  registerGarminHandlers()
-  registerDataHandlers()
-  registerSummaryHandlers()
-  registerStatsHandlers()
-  registerHabitHandlers()
-  registerCheckinHandlers()
-  registerBodyHandlers()
-  registerNutritionHandlers()
-  registerRecoveryHandlers()
-  registerChallengeHandlers()
-  registerSettingsHandlers()
-
-  createWindow()
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
+}
 
 app.on('before-quit', () => closeDb())
 

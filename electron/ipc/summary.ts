@@ -13,7 +13,7 @@ import {
 } from '../../db/schema'
 import { eq, and, gte, lte } from 'drizzle-orm'
 import * as fs from 'fs'
-import { parseISO, getDay } from 'date-fns'
+import { parseISO, getDay, format } from 'date-fns'
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 // dayOfWeek in DB: 1=Mon … 7=Sun
@@ -40,7 +40,7 @@ function buildMarkdown(dateFrom: string, dateTo: string): string {
   push(
     '# FitCoach Weekly Training Summary',
     `**Period:** ${dateFrom} → ${dateTo}`,
-    `**Generated:** ${new Date().toISOString().split('T')[0]}`,
+    `**Generated:** ${format(new Date(), 'yyyy-MM-dd')}`,
     '',
     '---',
     '',

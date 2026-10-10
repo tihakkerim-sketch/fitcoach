@@ -4,6 +4,7 @@ import type { UserProfile, HrZone, IpcResponse } from '../../src/types/ipc'
 import { getDb, markDirty } from '../../db/index'
 import { userProfile, hrZones } from '../../db/schema'
 import { eq } from 'drizzle-orm'
+import { runInTransaction } from '../lib/transaction'
 
 export function registerProfileHandlers() {
   ipcMain.handle(
@@ -88,17 +89,20 @@ export function registerProfileHandlers() {
     async (_e, zones: HrZone[]): Promise<IpcResponse<void>> => {
       try {
         const db = getDb()
-        db.delete(hrZones).run()
-        for (const z of zones) {
-          db.insert(hrZones)
-            .values({
-              zoneNumber: z.zoneNumber,
-              minHr: z.minHr,
-              maxHr: z.maxHr,
-              label: z.label,
-            })
-            .run()
-        }
+        // One transaction: a failing insert must not leave the zones deleted
+        runInTransaction(db, () => {
+          db.delete(hrZones).run()
+          for (const z of zones) {
+            db.insert(hrZones)
+              .values({
+                zoneNumber: z.zoneNumber,
+                minHr: z.minHr,
+                maxHr: z.maxHr,
+                label: z.label,
+              })
+              .run()
+          }
+        })
         markDirty()
         return { success: true, data: undefined }
       } catch (err) {

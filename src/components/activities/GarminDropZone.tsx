@@ -30,7 +30,7 @@ export function GarminDropZone({ onParsed }: Props) {
       const uint8 = new Uint8Array(buffer)
       const result = await invoke<Partial<CreateActivityPayload>>(IPC.GARMIN_PARSE, {
         fileName: file.name,
-        data: Array.from(uint8),
+        data: uint8,
       })
       setFileName(file.name)
       onParsed({ ...result, source: 'garmin_import', garminFileName: file.name })
