@@ -6,15 +6,18 @@
  *            bodyMetrics, challengePool, dailyChallenges
  *   v4     : userProfile, hrZones, activities, plans, dailyCheckins, recoveryLogs
  *            (modules removed in Phase 1; their keys in v3 files are ignored on import)
+ *   v5     : wie v4, aber Plan-Modell v2: trainingPlans (mit startDate), planWeeks (planId/weekIndex),
+ *            planSessions (neue Spalten); kein planPhases. Dateien v1–v4 mit Phasen-Plänen werden
+ *            beim Import per convertLegacyPlans umgewandelt.
  */
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { TxDb } from './transaction'
 import {
-  activities, trainingPlans, planPhases, planWeeks, planSessions,
+  activities, trainingPlans, planWeeks, planSessions,
   userProfile, hrZones, dailyCheckins, recoveryLogs,
 } from '../../db/schema'
 
-export const BACKUP_VERSION = 4
+export const BACKUP_VERSION = 5
 
 export interface BackupTable {
   key: string
@@ -30,14 +33,13 @@ export const BACKUP_TABLES: readonly BackupTable[] = [
   { key: 'hrZones',         table: hrZones,         legacy: true  },
   { key: 'activities',      table: activities,      legacy: true  },
   { key: 'trainingPlans',   table: trainingPlans,   legacy: true  },
-  { key: 'planPhases',      table: planPhases,      legacy: true  },
   { key: 'planWeeks',       table: planWeeks,       legacy: true  },
   { key: 'planSessions',    table: planSessions,    legacy: true  },
   { key: 'dailyCheckins',   table: dailyCheckins,   legacy: false },
   { key: 'recoveryLogs',    table: recoveryLogs,    legacy: false },
 ]
 
-/** Build the full v4 backup object (all tables) from the database. */
+/** Build the full v5 backup object (all tables) from the database. */
 export function exportBackup(db: TxDb): Record<string, unknown> {
   const out: Record<string, unknown> = {
     exportedAt: new Date().toISOString(),

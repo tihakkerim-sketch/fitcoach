@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
-  activities, userProfile, hrZones, trainingPlans, planPhases, planWeeks, planSessions,
+  activities, userProfile, hrZones, trainingPlans, planWeeks, planSessions,
   dailyCheckins, recoveryLogs,
 } from '../../db/schema'
 import { importBackup, type Db } from './importBackup'
@@ -97,18 +97,18 @@ describe('importBackup', () => {
     expect(profile[0].theme).toBe('light')
   })
 
-  // ── Backup format v4 ───────────────────────────────────────────────────────
+  // ── Backup format v4/v5 ───────────────────────────────────────────────────────
 
   // One row in EVERY table (FK-consistent).
   function seedEverything(d: Db) {
     d.insert(userProfile).values({ id: 1, name: 'Full', theme: 'light' } as never).run()
     d.insert(hrZones).values({ zoneNumber: 1, minHr: 100, maxHr: 120, label: 'Easy' }).run()
     d.insert(activities).values(activity(7, '2026-07-07') as never).run()
-    d.insert(trainingPlans).values({ id: 3, name: 'Plan', isActive: 1, createdAt: 5 }).run()
-    d.insert(planPhases).values({ id: 4, planId: 3, name: 'Base', orderIndex: 0, durationWeeks: 1 }).run()
-    d.insert(planWeeks).values({ id: 5, phaseId: 4, weekNumber: 1 }).run()
+    d.insert(trainingPlans).values({ id: 3, name: 'Plan', startDate: '2026-07-06', isActive: 1, createdAt: 5 }).run()
+    d.insert(planWeeks).values({ id: 5, planId: 3, weekIndex: 0, phase: 'Base' }).run()
     d.insert(planSessions).values({
-      id: 6, weekId: 5, dayOfWeek: 1, type: 'running', status: 'completed', linkedActivityId: 7,
+      id: 6, weekId: 5, dayOfWeek: 2, type: 'running', status: 'completed', linkedActivityId: 7, matchSource: 'manual',
+      targetDistanceKm: 8, steps: '[]',
     }).run()
     d.insert(dailyCheckins).values({ id: 10, date: '2026-07-07', createdAt: 1, updatedAt: 2 }).run()
     d.insert(recoveryLogs).values({ id: 11, date: '2026-07-07', hrvRmssd: 55.5, createdAt: 1, updatedAt: 2 }).run()
@@ -120,7 +120,6 @@ describe('importBackup', () => {
       hrZones: d.select().from(hrZones).all(),
       activities: d.select().from(activities).all(),
       trainingPlans: d.select().from(trainingPlans).all(),
-      planPhases: d.select().from(planPhases).all(),
       planWeeks: d.select().from(planWeeks).all(),
       planSessions: d.select().from(planSessions).all(),
       dailyCheckins: d.select().from(dailyCheckins).all(),
@@ -134,12 +133,82 @@ describe('importBackup', () => {
     return JSON.parse(JSON.stringify(exportBackup(src))) as Record<string, unknown>
   }
 
-  it('exports version 4 containing every table', async () => {
+  // Datei im alten Format (v4 mit Phasen), Rest der Tabellen wie in v5
+  async function legacyV4File(): Promise<Record<string, unknown>> {
+    const file = await v4File()
+    file.version = 4
+    file.trainingPlans = [{ id: 3, name: 'Plan', goalEvent: null, goalDate: null, isActive: 1, createdAt: new Date('2026-07-08T10:00:00').getTime() }]
+    file.planPhases = [{ id: 4, planId: 3, name: 'Base', orderIndex: 0, durationWeeks: 1 }]
+    file.planWeeks = [{ id: 5, phaseId: 4, weekNumber: 1, notes: 'Woche' }]
+    file.planSessions = [
+      { id: 6, weekId: 5, dayOfWeek: 2, type: 'running', targetDurationMin: 40, targetHrZone: 2, intensityLabel: 'Easy',
+        coachingNote: null, status: 'completed', linkedActivityId: 7, completedAt: 9, completionNote: null },
+      { id: 8, weekId: 5, dayOfWeek: 4, type: 'rest', targetDurationMin: null, targetHrZone: null, intensityLabel: null,
+        coachingNote: null, status: 'planned', linkedActivityId: null, completedAt: null, completionNote: null },
+    ]
+    return file
+  }
+
+  it('v4 mit Phasen wird ins neue Plan-Modell umgewandelt statt abgelehnt', async () => {
+    const file = await legacyV4File() // Aktivität 7 liegt am 2026-07-07 (Di) = Woche 0, Tag 2
+    const result = importBackup(db, file)
+    expect(result.success).toBe(true)
+    const plans = db.select().from(trainingPlans).all()
+    expect(plans).toHaveLength(1)
+    expect(plans[0].startDate).toBe('2026-07-06')
+    expect(plans[0].isActive).toBe(0)
+    expect(db.select().from(planWeeks).all()).toMatchObject([{ planId: 3, weekIndex: 0, phase: 'Base', notes: 'Woche' }])
+    const sessions = db.select().from(planSessions).all()
+    expect(sessions).toHaveLength(2)
+    expect(sessions[0]).toMatchObject({ id: 6, title: 'Easy', linkedActivityId: 7, matchSource: 'manual', status: 'completed' })
+  })
+
+  it('v4 ohne planPhases-Feld gilt als leer (Wochen ohne Phase werden ignoriert)', async () => {
+    const file = await legacyV4File()
+    delete file.planPhases
+    const result = importBackup(db, file)
+    expect(result.success).toBe(true)
+    expect(db.select().from(trainingPlans).all()).toHaveLength(1)
+    expect(db.select().from(planWeeks).all()).toHaveLength(0)
+    expect(db.select().from(planSessions).all()).toHaveLength(0)
+  })
+
+  it('v5-Rundlauf behält Startdatum und Zeilenzahlen', async () => {
+    const src = await makeDb()
+    seedEverything(src)
+    const file = JSON.parse(JSON.stringify(exportBackup(src))) as Record<string, unknown>
+    expect(file.version).toBe(5)
+    expect(file.planPhases).toBeUndefined()
+    const result = importBackup(db, file)
+    expect(result.success).toBe(true)
+    expect(db.select().from(trainingPlans).all()[0].startDate).toBe('2026-07-06')
+    expect(db.select().from(planWeeks).all()).toHaveLength(1)
+    expect(db.select().from(planSessions).all()).toHaveLength(1)
+  })
+
+  it('v5 ohne planWeeks-Feld wird abgelehnt, Daten bleiben', async () => {
+    const file = await v4File()
+    delete file.planWeeks
+    const before = dump(db)
+    const result = importBackup(db, file)
+    expect(result.success).toBe(false)
+    expect(dump(db)).toEqual(before)
+  })
+
+  it('unbekannte Version 6 wird abgelehnt', async () => {
+    const file = await v4File()
+    file.version = 6
+    const before = dump(db)
+    expect(importBackup(db, file).success).toBe(false)
+    expect(dump(db)).toEqual(before)
+  })
+
+  it('exports version 5 containing every table', async () => {
     const src = await makeDb()
     seedEverything(src)
     const exported = exportBackup(src)
-    expect(exported.version).toBe(4)
-    expect(BACKUP_VERSION).toBe(4)
+    expect(exported.version).toBe(5)
+    expect(BACKUP_VERSION).toBe(5)
     for (const [key, rows] of Object.entries(dump(src))) {
       expect(rows.length, 'seed ' + key).toBeGreaterThan(0)
       expect(Array.isArray(exported[key]), key).toBe(true)
@@ -225,7 +294,7 @@ describe('importBackup', () => {
   })
 
   it('imports an old v3 file: removed-table keys are ignored, the rest is restored', async () => {
-    const file = await v4File()
+    const file = await legacyV4File()
     file.version = 3
     file.habits = [{ id: 1, name: 'Gone', emoji: 'x', color: 'blue', createdAt: 1 }]
     file.habitLogs = [{ id: 1, habitId: 1, date: '2026-07-07', completedAt: 1 }]

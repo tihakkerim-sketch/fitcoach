@@ -7,12 +7,14 @@
  * the whole replace then runs inside ONE transaction, so any failure rolls
  * everything back automatically.
  *
- * Versions: v1/v2 replace only the original 7 tables (newer tables are left
- * untouched); v3/v4 replace all current tables. Keys of tables that no longer
+ * Versions: v1/v2 replace only the original tables (newer tables are left
+ * untouched); v3–v5 replace all current tables. v1–v4 contain the old phase-based
+ * plans; those are converted to the plan-v2 model (`convertLegacyPlans`) before validation. Keys of tables that no longer
  * exist (habits, nutrition, body, challenges in v3 files) are ignored.
  */
 import { getTableColumns } from 'drizzle-orm'
 import { BACKUP_TABLES, type BackupTable } from './backupFormat'
+import { convertLegacyPlans } from './legacyPlan'
 import { runInTransaction, type TxDb } from './transaction'
 
 export type Db = TxDb
@@ -29,20 +31,61 @@ function isPlainObject(v: unknown): boolean {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
+const LEGACY_PLAN_KEYS = ['trainingPlans', 'planPhases', 'planWeeks', 'planSessions', 'activities'] as const
+
+/**
+ * v1–v4: ersetzt die alten Phasen-Pläne durch Plan-v2-Zeilen. `planPhases` darf fehlen (= leer).
+ * Gibt eine Fehlermeldung zurück, wenn ein Plan-Feld kaputt ist (vor jeder Änderung an der DB).
+ */
+function upgradeLegacyPlans(data: Record<string, unknown>, strict: boolean): string | null {
+  for (const key of LEGACY_PLAN_KEYS) {
+    const v = data[key]
+    if (v === undefined) {
+      if (strict && key !== 'planPhases') return `Backup field "${key}" is missing — import cancelled, your data is unchanged`
+      continue
+    }
+    if (!Array.isArray(v) || !v.every(isPlainObject)) {
+      return `Backup field "${key}" is malformed — import cancelled, your data is unchanged`
+    }
+  }
+  const list = (key: string) => (Array.isArray(data[key]) ? data[key] : []) as never[]
+  try {
+    const converted = convertLegacyPlans({
+      plans: list('trainingPlans'), phases: list('planPhases'), weeks: list('planWeeks'),
+      sessions: list('planSessions'), activities: list('activities'),
+    })
+    data.trainingPlans = converted.plans
+    data.planWeeks = converted.weeks
+    data.planSessions = converted.sessions
+    delete data.planPhases
+  } catch (err) {
+    return `Backup plans could not be converted: ${String(err)} — import cancelled, your data is unchanged`
+  }
+  return null
+}
+
 /**
  * Replace data with the contents of a parsed backup object.
  * On any failure the transaction is rolled back, the previous data stays
  * exactly as it was, and `success: false` is returned.
  */
-export function importBackup(db: Db, data: Record<string, unknown>): ImportResult {
+export function importBackup(db: Db, backup: Record<string, unknown>): ImportResult {
+  let data = backup
   // ── Version gate ──────────────────────────────────────────────────────────
   const version = data.version as number
-  if (version !== 1 && version !== 2 && version !== 3 && version !== 4) {
+  if (version !== 1 && version !== 2 && version !== 3 && version !== 4 && version !== 5) {
     return { success: false, error: 'Unrecognised backup format or version — import cancelled, your data is unchanged' }
   }
 
-  // v1/v2 only know the original tables; v3/v4 know all current ones.
+  // v1/v2 only know the original tables; v3+ know all current ones.
   const full = version >= 3
+
+  // v1–v4: alte Phasen-Pläne umwandeln (auf einer Kopie, das Eingabeobjekt bleibt unverändert)
+  if (version <= 4) {
+    data = { ...data }
+    const planError = upgradeLegacyPlans(data, full)
+    if (planError) return { success: false, error: planError }
+  }
   const tables: BackupTable[] = BACKUP_TABLES.filter(t => full || t.legacy)
 
   // ── Validate shape BEFORE touching the DB ───────────────────────────────────
