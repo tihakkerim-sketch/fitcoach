@@ -55,6 +55,10 @@ export const IPC = {
   // Stats
   STATS_GET: 'stats:get',
 
+  // Coach
+  COACH_STATUS: 'coach:status',
+  COACH_APPLY_CHANGES: 'coach:applyChanges',
+
   // Export
   EXPORT_GENERATE_SUMMARY: 'export:generateSummary',
   EXPORT_SAVE_MD: 'export:saveMd',

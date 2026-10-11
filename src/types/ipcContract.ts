@@ -18,6 +18,7 @@ import type {
   StatsResult, DailyCheckin, RecoveryLog, ActivitySplit, ActivityStreams, ImportFileResult,
   IntervalsStatus, SyncResult,
 } from './ipc'
+import type { CoachStatus } from '../shared/coach/types'
 
 // ── Building blocks ───────────────────────────────────────────────────────────
 
@@ -253,6 +254,26 @@ export const linkSessionActivitySchema = z.object({
 })
 export type LinkSessionActivityPayload = z.infer<typeof linkSessionActivitySchema>
 
+// ── Coach ─────────────────────────────────────────────────────────────────────
+
+/** Einheiten-Felder ohne Wochentag (Datum kommt aus der Änderung). */
+const coachSessionFields = sessionBaseSchema.omit({ dayOfWeek: true })
+
+/** Eine Änderung aus der Claude-Antwort (bereits in App-Felder übersetzt). */
+export const coachChangeSchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('update'), sessionId: id, set: coachSessionFields.partial() }),
+  z.object({ action: z.literal('move'), sessionId: id, date: dateString }),
+  z.object({ action: z.literal('remove'), sessionId: id }),
+  z.object({ action: z.literal('add'), date: dateString, session: coachSessionFields }),
+])
+export type CoachChange = z.infer<typeof coachChangeSchema>
+
+export const coachApplySchema = z.object({
+  planId: id,
+  changes: z.array(coachChangeSchema).min(1).max(100),
+})
+export type CoachApplyPayload = z.infer<typeof coachApplySchema>
+
 // ── Export ────────────────────────────────────────────────────────────────────
 
 export const summarySchema = z.object({ dateFrom: dateString, dateTo: dateString })
@@ -362,6 +383,9 @@ export const ipcInputs = {
 
   [IPC.STATS_GET]: z.undefined(),
 
+  [IPC.COACH_STATUS]: z.undefined(),
+  [IPC.COACH_APPLY_CHANGES]: coachApplySchema,
+
   [IPC.EXPORT_GENERATE_SUMMARY]: summarySchema,
   [IPC.EXPORT_SAVE_MD]: saveMdSchema,
 
@@ -417,6 +441,9 @@ export interface IpcResults {
   [IPC.PLANS_ADAPT]: AdaptPlanResult
 
   [IPC.STATS_GET]: StatsResult
+
+  [IPC.COACH_STATUS]: CoachStatus
+  [IPC.COACH_APPLY_CHANGES]: { applied: number }
 
   [IPC.EXPORT_GENERATE_SUMMARY]: string
   [IPC.EXPORT_SAVE_MD]: string

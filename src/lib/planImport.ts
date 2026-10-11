@@ -32,25 +32,25 @@ const DAY_MAP: Record<string, number> = {
 type Obj = Record<string, unknown>
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v)
 
-class ImportError extends Error {}
+export class ImportError extends Error {}
 const fail = (where: string, msg: string): never => {
   throw new ImportError(where ? `${where}: ${msg}` : msg)
 }
 
 /** Zahl oder fehlend; alles andere ist ein Fehler. */
-function optNum(v: unknown, field: string, where: string): number | undefined {
+export function optNum(v: unknown, field: string, where: string): number | undefined {
   if (v === undefined || v === null) return undefined
   if (typeof v !== 'number' || !Number.isFinite(v)) return fail(where, `"${field}" muss eine Zahl sein.`)
   return v
 }
 
-function optStr(v: unknown, field: string, where: string): string | undefined {
+export function optStr(v: unknown, field: string, where: string): string | undefined {
   if (v === undefined || v === null) return undefined
   if (typeof v !== 'string') return fail(where, `"${field}" muss ein Text sein.`)
   return v
 }
 
-function parsePaceField(v: unknown, where: string): { fast: number; slow: number } | undefined {
+export function parsePaceField(v: unknown, where: string): { fast: number; slow: number } | undefined {
   if (v === undefined || v === null || v === '') return undefined
   const range = typeof v === 'string' ? parsePaceRange(v) : null
   if (!range) return fail(where, `Pace "${String(v)}" ist ungültig (Format 5:30 oder 5:30-5:50).`)
@@ -79,7 +79,7 @@ function parseStep(raw: unknown, where: string): Obj {
   return out
 }
 
-function parseSteps(raw: unknown, where: string): unknown[] | undefined {
+export function parseSteps(raw: unknown, where: string): unknown[] | undefined {
   if (raw === undefined || raw === null) return undefined
   if (!Array.isArray(raw)) return fail(where, '"steps" muss eine Liste sein.')
   return raw.map((item, i) => {
