@@ -1,14 +1,15 @@
 import { useState, useCallback, useRef } from 'react'
-import { Upload } from 'lucide-react'
+import { Upload, Check, Copy, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type { ImportFileResult } from '@/types/ipc'
 import { cn } from '@/lib/utils'
+import { emitDataChanged } from '@/lib/dataEvents'
 
 interface Props {
-  /** Wird nach jedem Import mit der Ergebnisliste aufgerufen (z. B. zum Neuladen der Liste). */
-  onImported: (results: ImportFileResult[]) => void
+  /** Optional: wird nach jedem Import mit der Ergebnisliste aufgerufen. */
+  onImported?: (results: ImportFileResult[]) => void
 }
 
 const isGarminFile = (f: File) => /\.(fit|tcx)$/i.test(f.name)
@@ -36,7 +37,8 @@ export function GarminDropZone({ onImported }: Props) {
       })))
       const res = await invoke(IPC.GARMIN_IMPORT_FILES, { files: payload })
       setResults(res)
-      onImported(res)
+      emitDataChanged()
+      onImported?.(res)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import fehlgeschlagen.')
     } finally {
@@ -90,13 +92,28 @@ export function GarminDropZone({ onImported }: Props) {
       )}
 
       {results && (
-        <div className="text-xs text-muted-foreground text-center">
-          <p className="font-medium text-foreground">
+        <div className="w-full max-w-xl text-xs">
+          <p className="text-center font-medium text-foreground">
             {created} neu · {duplicates} doppelt · {failed.length} Fehler
           </p>
-          {failed.map(f => (
-            <p key={f.fileName} className="text-destructive">{f.fileName}: {f.message}</p>
-          ))}
+          <ul className="mt-2 vspace-1">
+            {results.map((r, i) => (
+              <li key={`${r.fileName}-${i}`} className="flex items-start gap-2">
+                {r.status === 'created' && <Check className="h-3.5 w-3.5 mt-0.5 shrink-0 text-emerald-500" />}
+                {r.status === 'duplicate' && <Copy className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />}
+                {r.status === 'error' && <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-destructive" />}
+                <span className="min-w-0 break-words">
+                  <span className="font-medium text-foreground">{r.fileName}</span>
+                  <span className={r.status === 'error' ? 'text-destructive' : 'text-muted-foreground'}>
+                    {' – '}
+                    {r.status === 'created' ? 'neu importiert'
+                      : r.status === 'duplicate' ? (r.message ?? 'doppelt, übersprungen')
+                      : (r.message ?? 'Fehler')}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
       {error && <p className="text-xs text-destructive">{error}</p>}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { onDataChanged } from '@/lib/dataEvents'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Zap, Moon, Activity, Heart, ChevronRight } from 'lucide-react'
@@ -71,6 +72,7 @@ export function RecoveryWidget() {
   }, [today])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => onDataChanged(() => { void load() }), [load])
 
   if (!loaded) return null
 
@@ -110,6 +112,13 @@ export function RecoveryWidget() {
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0 group-hover:translate-x-0.5 transition-transform" />
       </div>
+
+      {log?.sleepHours != null && (
+        <p className="text-[11px] text-muted-foreground mb-2">
+          Schlaf {log.sleepHours.toFixed(1).replace('.', ',')} h
+          {log.source === 'intervals_icu' && ' · intervals.icu'}
+        </p>
+      )}
 
       {/* Metric pills */}
       {hasAny && (

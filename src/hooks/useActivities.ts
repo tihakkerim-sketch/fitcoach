@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { invoke } from '@/lib/ipc'
+import { onDataChanged } from '@/lib/dataEvents'
 import { IPC } from '@/types/ipc'
 import type { ActivityRow, ActivityType, ActivitySource } from '@/types/ipc'
 
@@ -41,6 +42,8 @@ export function useActivities() {
   useEffect(() => {
     load(page, filters)
   }, [page, filters, load])
+
+  useEffect(() => onDataChanged(() => { void load(page, filters) }), [page, filters, load])
 
   const refresh = useCallback(() => load(page, filters), [page, filters, load])
 

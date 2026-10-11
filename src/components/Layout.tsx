@@ -7,6 +7,8 @@ import {
 import { LogActivityModal } from '@/components/activities/LogActivityModal'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
+import { autoSyncOnce } from '@/hooks/useIntervalsSync'
+import { emitDataChanged } from '@/lib/dataEvents'
 
 type NavColor = 'blue' | 'green' | 'purple' | 'orange' | 'slate'
 type NavItem  = { to: string; label: string; Icon: ElementType; color: NavColor }
@@ -77,6 +79,9 @@ const TOGGLE_NEXT = {
 export function Layout() {
   const { theme, toggle } = useTheme()
   const [quickLogOpen, setQuickLogOpen] = useState(false)
+
+  // intervals.icu: einmal pro App-Start automatisch synchronisieren (Fehler zeigt die Sync-Leiste)
+  useEffect(() => { void autoSyncOnce() }, [])
 
   // Global keyboard shortcut: N → open log activity modal
   useEffect(() => {
@@ -184,7 +189,7 @@ export function Layout() {
       <LogActivityModal
         open={quickLogOpen}
         onClose={() => setQuickLogOpen(false)}
-        onSaved={() => setQuickLogOpen(false)}
+        onSaved={() => { setQuickLogOpen(false); emitDataChanged() }}
       />
     </div>
   )

@@ -25,8 +25,8 @@ export function ActivityFilters({ filters, onApply }: Props) {
   const [type, setType] = useState<ActivityType | ''>(filters.type ?? '')
   const [dateFrom, setDateFrom] = useState(filters.dateFrom ?? '')
   const [dateTo, setDateTo] = useState(filters.dateTo ?? '')
-  const [source, setSource] = useState<'manual' | 'garmin_import' | ''>(
-    (filters.source as 'manual' | 'garmin_import' | '') ?? ''
+  const [source, setSource] = useState<'manual' | 'garmin_import' | 'intervals_icu' | ''>(
+    (filters.source as 'manual' | 'garmin_import' | 'intervals_icu' | '') ?? ''
   )
 
   const apply = () => {
@@ -34,7 +34,7 @@ export function ActivityFilters({ filters, onApply }: Props) {
       type: type || undefined,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
-      source: (source || undefined) as 'manual' | 'garmin_import' | undefined,
+      source: (source || undefined) as 'manual' | 'garmin_import' | 'intervals_icu' | undefined,
     })
   }
 
@@ -88,7 +88,7 @@ export function ActivityFilters({ filters, onApply }: Props) {
 
       <div className="vspace-1">
         <Label className="text-xs">Source</Label>
-        <Select value={source || '_any'} onValueChange={v => setSource(v === '_any' ? '' : v as 'manual' | 'garmin_import')}>
+        <Select value={source || '_any'} onValueChange={v => setSource(v === '_any' ? '' : v as 'manual' | 'garmin_import' | 'intervals_icu')}>
           <SelectTrigger className="h-8 w-36 text-sm">
             <SelectValue />
           </SelectTrigger>
@@ -96,6 +96,7 @@ export function ActivityFilters({ filters, onApply }: Props) {
             <SelectItem value="_any">Any source</SelectItem>
             <SelectItem value="manual">Manual</SelectItem>
             <SelectItem value="garmin_import">Garmin</SelectItem>
+            <SelectItem value="intervals_icu">intervals.icu</SelectItem>
           </SelectContent>
         </Select>
       </div>

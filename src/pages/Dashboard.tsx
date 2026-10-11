@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { onDataChanged } from '@/lib/dataEvents'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
@@ -239,6 +240,10 @@ export default function Dashboard() {
   useEffect(() => {
     loadStats(); loadProfile(); loadPlan(); loadCheckin(); loadRecovery()
   }, [loadStats, loadProfile, loadPlan, loadCheckin, loadRecovery])
+
+  // Nach Import/Sync neu laden
+  useEffect(() => onDataChanged(() => { loadStats(); loadPlan(); loadRecovery() }),
+    [loadStats, loadPlan, loadRecovery])
 
   const handleActivitySaved = useCallback(() => { setLogOpen(false); loadStats() }, [loadStats])
   const handlePlanChanged   = useCallback(() => { loadPlan(); loadStats() }, [loadPlan, loadStats])

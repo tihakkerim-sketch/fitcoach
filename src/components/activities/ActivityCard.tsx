@@ -9,6 +9,7 @@ import { IPC } from '@/types/ipc'
 import type { ActivityRow } from '@/types/ipc'
 import { useToast } from '@/contexts/ToastContext'
 import { cn } from '@/lib/utils'
+import { ActivityDetails } from '@/components/activities/ActivityDetails'
 
 interface Props {
   activity: ActivityRow
@@ -130,6 +131,9 @@ export function ActivityCard({ activity, onDeleted }: Props) {
             {activity.source === 'garmin_import' && (
               <Badge variant="outline" className="text-xs">Garmin</Badge>
             )}
+            {activity.source === 'intervals_icu' && (
+              <Badge variant="outline" className="text-xs">intervals.icu</Badge>
+            )}
             <span className="text-sm font-medium">
               {format(new Date(activity.date), 'EEE, MMM d, yyyy')}
             </span>
@@ -203,6 +207,22 @@ export function ActivityCard({ activity, onDeleted }: Props) {
                 <p className="font-medium capitalize">{activity.surfaceType}</p>
               </div>
             )}
+            {(activity.elevationGainM != null || activity.elevationLossM != null) && (
+              <div>
+                <p className="text-xs text-muted-foreground">Höhenmeter</p>
+                <p className="font-medium">
+                  {activity.elevationGainM != null && `↑ ${Math.round(activity.elevationGainM)} m`}
+                  {activity.elevationGainM != null && activity.elevationLossM != null && '  '}
+                  {activity.elevationLossM != null && `↓ ${Math.round(activity.elevationLossM)} m`}
+                </p>
+              </div>
+            )}
+            {activity.movingTimeMin != null && (
+              <div>
+                <p className="text-xs text-muted-foreground">Bewegungszeit</p>
+                <p className="font-medium">{formatDuration(activity.movingTimeMin)}</p>
+              </div>
+            )}
             {activity.avgCadence && (
               <div>
                 <p className="text-xs text-muted-foreground">Cadence</p>
@@ -216,6 +236,10 @@ export function ActivityCard({ activity, onDeleted }: Props) {
               </div>
             )}
           </div>
+
+          {(activity.source !== 'manual' || activity.type === 'running') && (
+            <ActivityDetails activityId={activity.id} />
+          )}
 
           {activity.exercises && (activity.exercises as unknown as string).length > 0 && (() => {
             try {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useForm, FormProvider, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
@@ -44,12 +44,11 @@ interface Props {
   open: boolean
   onClose: () => void
   onSaved: () => void
-  prefill?: Partial<CreateActivityPayload>
 }
 
 type AnyFormData = Record<string, unknown>
 
-export function LogActivityModal({ open, onClose, onSaved, prefill }: Props) {
+export function LogActivityModal({ open, onClose, onSaved }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('running')
   const [saving, setSaving] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
@@ -62,18 +61,6 @@ export function LogActivityModal({ open, onClose, onSaved, prefill }: Props) {
       exercises: [],
     },
   })
-
-  // When prefill changes (Garmin import), set the tab and values
-  useEffect(() => {
-    if (prefill) {
-      const t = prefill.type ?? 'running'
-      setActiveTab(t as Tab)
-      methods.reset({
-        date: prefill.date ?? format(new Date(), 'yyyy-MM-dd'),
-        ...prefill,
-      })
-    }
-  }, [prefill, methods])
 
   // Reset form when switching tabs so validation matches the new schema
   const handleTabChange = (tab: string) => {
@@ -89,9 +76,7 @@ export function LogActivityModal({ open, onClose, onSaved, prefill }: Props) {
       const payload: CreateActivityPayload = {
         ...(data as Partial<CreateActivityPayload>),
         type: activeTab,
-        source: prefill?.source ?? 'manual',
-        garminFileName: prefill?.garminFileName,
-        rawGarminData: prefill?.rawGarminData,
+        source: 'manual',
       } as CreateActivityPayload
       await invoke(IPC.ACTIVITIES_CREATE, payload)
       onSaved()

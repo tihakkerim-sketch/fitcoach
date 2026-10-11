@@ -9,6 +9,7 @@ import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type { UserProfile } from '@/types/ipc'
 import { useTheme } from '@/contexts/ThemeContext'
+import { IntervalsSettings } from '@/components/settings/IntervalsSettings'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -136,6 +137,9 @@ export default function Settings() {
           </button>
         </div>
       </section>
+
+      {/* intervals.icu */}
+      <IntervalsSettings />
 
       {/* Profile */}
       <section className="vspace-3">

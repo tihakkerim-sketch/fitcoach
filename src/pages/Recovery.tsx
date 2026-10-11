@@ -16,6 +16,7 @@ import { IPC } from '@/types/ipc'
 import type { RecoveryLog, UpsertRecoveryLogPayload } from '@/types/ipc'
 import { calcReadiness } from '@/lib/recoveryScore'
 import { cn } from '@/lib/utils'
+import { onDataChanged } from '@/lib/dataEvents'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -118,6 +119,7 @@ function EntryForm({
   const [sleep,      setSleep]      = useState(existing?.sleepScore  != null ? String(existing.sleepScore)  : '')
   const [hrv,        setHrv]        = useState(existing?.hrvRmssd   != null ? String(existing.hrvRmssd)    : '')
   const [rhr,        setRhr]        = useState(existing?.restingHr  != null ? String(existing.restingHr)   : '')
+  const [sleepH,      setSleepH]     = useState(existing?.sleepHours != null ? String(existing.sleepHours) : '')
   const [note,       setNote]       = useState(existing?.note       ?? '')
   const [saving,     setSaving]     = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
@@ -128,11 +130,12 @@ function EntryForm({
     setSleep(existing?.sleepScore  != null ? String(existing.sleepScore)  : '')
     setHrv(existing?.hrvRmssd   != null ? String(existing.hrvRmssd)    : '')
     setRhr(existing?.restingHr  != null ? String(existing.restingHr)   : '')
+    setSleepH(existing?.sleepHours != null ? String(existing.sleepHours) : '')
     setNote(existing?.note ?? '')
     setConfirmDel(false)
   }, [existing, date])
 
-  const hasAnyValue = [bb, sleep, hrv, rhr].some(v => v.trim() !== '')
+  const hasAnyValue = [bb, sleep, hrv, rhr, sleepH].some(v => v.trim() !== '')
 
   // Live readiness preview while the user fills in values
   const liveReadiness = calcReadiness({
@@ -152,7 +155,11 @@ function EntryForm({
         sleepScore:  parseNum(sleep),
         hrvRmssd:    parseNum(hrv),
         restingHr:   parseNum(rhr),
+        // Schlafdauer immer mitschicken, sonst ginge der Sync-Wert beim Speichern verloren
+        sleepHours:  sleepH.trim() ? Math.min(24, parseNum(sleepH.replace(',', '.')) ?? 0) : undefined,
         note:        note.trim() || undefined,
+        // Herkunft beibehalten (z. B. intervals.icu), wenn nur nachbearbeitet wird
+        source:      existing?.source,
       }
       const log = await invoke(IPC.RECOVERY_LOG_UPSERT, payload)
       onSaved(log)
@@ -208,6 +215,14 @@ function EntryForm({
           <Input id="rec-rhr" type="number" min={30} max={120}
             placeholder="e.g. 48" value={rhr}
             onChange={e => setRhr(e.target.value)} />
+        </div>
+        <div className="vspace-1">
+          <Label htmlFor="rec-sleeph" className="text-xs flex items-center gap-1.5">
+            <Moon className="h-3 w-3 text-indigo-500" /> Schlafdauer (h)
+          </Label>
+          <Input id="rec-sleeph" type="number" min={0} max={24} step={0.1}
+            placeholder="z. B. 7,5" value={sleepH}
+            onChange={e => setSleepH(e.target.value)} />
         </div>
         <div className="vspace-1">
           <Label className="text-xs text-muted-foreground">Note (optional)</Label>
@@ -401,7 +416,6 @@ export default function Recovery() {
   // ── Data loading ────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
-    setLoading(true)
     try {
       const data = await invoke(IPC.RECOVERY_LOGS_GET, {
         dateFrom: format(subDays(new Date(), 13), 'yyyy-MM-dd'),
@@ -414,6 +428,7 @@ export default function Recovery() {
   }, [])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => onDataChanged(() => { void load() }), [load])
 
   const handleSaved = (log: RecoveryLog) => {
     setLogs(prev => {
@@ -504,6 +519,22 @@ export default function Recovery() {
           unit="bpm"
         />
       </div>
+
+      {todayLog && (todayLog.sleepHours != null || todayLog.source === 'intervals_icu') && (
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          {todayLog.sleepHours != null && (
+            <span className="inline-flex items-center gap-1.5">
+              <Moon className="h-3.5 w-3.5 text-indigo-500" />
+              Schlafdauer: <span className="font-semibold text-foreground">
+                {todayLog.sleepHours.toFixed(1).replace('.', ',')} h
+              </span>
+            </span>
+          )}
+          {todayLog.source === 'intervals_icu' && (
+            <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold">Quelle: intervals.icu</span>
+          )}
+        </div>
+      )}
 
       {/* ── Entry form ─────────────────────────────────────────────────── */}
       <EntryForm
