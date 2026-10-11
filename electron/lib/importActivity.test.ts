@@ -55,6 +55,14 @@ describe('saveImported', () => {
       .toEqual({ status: 'duplicate', activityId: first.activityId })
   })
 
+  it('file-imported run found again by sync gets the external id (no re-download next time)', () => {
+    const first = saveImported(db, run(), { fileName: 'a.tcx', source: 'garmin_import' })
+    const again = saveImported(db, run(), { externalId: 'icu:i9', source: 'intervals_icu' })
+    expect(again).toEqual({ status: 'duplicate', activityId: first.activityId })
+    const act = db.select().from(activities).get()
+    expect(act).toMatchObject({ externalId: 'icu:i9', source: 'garmin_import' })
+  })
+
   it('without samples: activity only, no splits/streams', () => {
     const p = run(); p.samples = []
     const r = saveImported(db, p, { source: 'garmin_import' })

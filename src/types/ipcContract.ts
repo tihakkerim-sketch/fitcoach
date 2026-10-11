@@ -16,6 +16,7 @@ import type {
   IpcChannel,
   ActivityRow, PlanRow, PlanDetail, PlanTodayResult, SessionRow, AdaptPlanResult, UserProfile, HrZone,
   StatsResult, DailyCheckin, RecoveryLog, ActivitySplit, ActivityStreams, ImportFileResult,
+  IntervalsStatus, SyncResult,
 } from './ipc'
 
 // ── Building blocks ───────────────────────────────────────────────────────────
@@ -119,6 +120,13 @@ export const garminImportFilesSchema = z.object({
   })).min(1).max(50),
 })
 export type GarminImportFilesPayload = z.infer<typeof garminImportFilesSchema>
+
+// ── intervals.icu ─────────────────────────────────────────────────────────────
+
+export const intervalsSetKeySchema = z.object({
+  apiKey: z.string().trim().min(10).max(200),
+})
+export type IntervalsSetKeyPayload = z.infer<typeof intervalsSetKeySchema>
 
 // ── Plans ─────────────────────────────────────────────────────────────────────
 
@@ -331,6 +339,11 @@ export const ipcInputs = {
 
   [IPC.GARMIN_IMPORT_FILES]: garminImportFilesSchema,
 
+  [IPC.INTERVALS_STATUS]: z.undefined(),
+  [IPC.INTERVALS_SET_KEY]: intervalsSetKeySchema,
+  [IPC.INTERVALS_CLEAR_KEY]: z.undefined(),
+  [IPC.INTERVALS_SYNC]: z.undefined(),
+
   [IPC.PLANS_CREATE]: createPlanSchema,
   [IPC.PLANS_CREATE_EMPTY]: createEmptyPlanSchema,
   [IPC.PLANS_UPDATE]: updatePlanSchema,
@@ -381,6 +394,11 @@ export interface IpcResults {
   [IPC.ACTIVITIES_DETAILS]: { splits: ActivitySplit[]; streams: ActivityStreams | null }
 
   [IPC.GARMIN_IMPORT_FILES]: ImportFileResult[]
+
+  [IPC.INTERVALS_STATUS]: IntervalsStatus
+  [IPC.INTERVALS_SET_KEY]: { athleteName?: string }
+  [IPC.INTERVALS_CLEAR_KEY]: void
+  [IPC.INTERVALS_SYNC]: SyncResult
 
   [IPC.PLANS_CREATE]: PlanRow
   [IPC.PLANS_CREATE_EMPTY]: PlanRow

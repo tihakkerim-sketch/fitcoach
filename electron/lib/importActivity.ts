@@ -2,7 +2,8 @@
  * Importierte Aktivität speichern: Duplikat-Prüfung → Aktivität → Splits → Verläufe → Auto-Zuordnung,
  * alles in EINER Transaktion (ganz oder gar nicht). Ohne `electron`-Import.
  */
-import { activitySplits, activityStreams } from '../../db/schema'
+import { and, eq, isNull } from 'drizzle-orm'
+import { activities, activitySplits, activityStreams } from '../../db/schema'
 import type { ActivitySource, CreateActivityPayload } from '../../src/types/ipc'
 import { computeSplits, downsampleStreams } from './activityDetails'
 import { insertActivity } from './activityInsert'
@@ -35,7 +36,15 @@ export function saveImported(db: TxDb, parsed: ParsedActivity, opts: SaveImporte
       distanceKm: a.distanceKm,
       durationMin: a.durationMin,
     })
-    if (dupId !== null) return { status: 'duplicate' as const, activityId: dupId }
+    if (dupId !== null) {
+      // Per Zeit/Distanz gefunden (z. B. vorher als Datei importiert): externe ID nachtragen,
+      // damit der nächste Sync den Lauf schon an der ID erkennt und nichts mehr herunterlädt.
+      if (opts.externalId) {
+        db.update(activities).set({ externalId: opts.externalId })
+          .where(and(eq(activities.id, dupId), isNull(activities.externalId))).run()
+      }
+      return { status: 'duplicate' as const, activityId: dupId }
+    }
 
     const payload: CreateActivityPayload = {
       ...a,

@@ -141,6 +141,21 @@ describe('IPC contract', () => {
     })
   })
 
+  describe('intervals:*', () => {
+    it('setKey trims and needs 10-200 chars', () => {
+      expect(ok(IPC.INTERVALS_SET_KEY, { apiKey: 'a'.repeat(10) })).toBe(true)
+      expect(ok(IPC.INTERVALS_SET_KEY, { apiKey: '   short   ' })).toBe(false)
+      expect(ok(IPC.INTERVALS_SET_KEY, { apiKey: 'a'.repeat(201) })).toBe(false)
+      expect(ipcInputs[IPC.INTERVALS_SET_KEY].parse({ apiKey: '  abcdefghij  ' }).apiKey).toBe('abcdefghij')
+    })
+    it('status, clearKey, sync take no input', () => {
+      for (const c of [IPC.INTERVALS_STATUS, IPC.INTERVALS_CLEAR_KEY, IPC.INTERVALS_SYNC]) {
+        expect(ok(c, undefined)).toBe(true)
+        expect(ok(c, { x: 1 })).toBe(false)
+      }
+    })
+  })
+
   it('ids must be positive integers', () => {
     for (const bad of [0, -1, 1.5, '1', null]) expect(ok(IPC.ACTIVITIES_DELETE, bad)).toBe(false)
     expect(ok(IPC.ACTIVITIES_DELETE, 7)).toBe(true)

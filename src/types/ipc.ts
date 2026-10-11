@@ -29,6 +29,12 @@ export const IPC = {
   // Garmin
   GARMIN_IMPORT_FILES: 'garmin:importFiles',
 
+  // intervals.icu
+  INTERVALS_STATUS: 'intervals:status',
+  INTERVALS_SET_KEY: 'intervals:setKey',
+  INTERVALS_CLEAR_KEY: 'intervals:clearKey',
+  INTERVALS_SYNC: 'intervals:sync',
+
   // Plans
   PLANS_CREATE: 'plans:create',
   PLANS_CREATE_EMPTY: 'plans:createEmpty',
@@ -116,6 +122,25 @@ export interface ImportFileResult {
   status: 'created' | 'duplicate' | 'error'
   activityId?: number
   message?: string
+}
+
+/** Ergebnis eines intervals.icu-Syncs. */
+export interface SyncResult {
+  created: number
+  duplicates: number
+  unavailable: number
+  recoveryDays: number
+  errors: string[]
+  from: string // YYYY-MM-DD
+  to: string   // YYYY-MM-DD
+  at: number   // ms
+}
+
+export interface IntervalsStatus {
+  configured: boolean
+  encryptionAvailable: boolean
+  lastSyncAt?: number
+  lastResult?: SyncResult
 }
 
 // ── Plan types ────────────────────────────────────────────────────────────────

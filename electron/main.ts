@@ -5,6 +5,7 @@ import { registerActivityHandlers } from './ipc/activities'
 import { registerPlanHandlers } from './ipc/plans'
 import { registerProfileHandlers } from './ipc/profile'
 import { registerGarminHandlers } from './ipc/garmin'
+import { registerIntervalsHandlers } from './ipc/intervals'
 import { registerDataHandlers } from './ipc/data'
 import { registerSummaryHandlers } from './ipc/summary'
 import { registerStatsHandlers } from './ipc/stats'
@@ -127,6 +128,7 @@ function startApp() {
     registerPlanHandlers()
     registerProfileHandlers()
     registerGarminHandlers()
+    registerIntervalsHandlers()
     registerDataHandlers()
     registerSummaryHandlers()
     registerStatsHandlers()
