@@ -35,3 +35,5 @@ Aktueller Umbau: siehe `docs/AUDIT-2026-10.md` (Phasenplan + Entscheidungen in A
 - Neue Aktivität → `matchActivity` (Auto-Zuordnung), Löschen → vorher `releaseActivity` (`electron/lib/matchSessions.ts`).
 - Entfernt (Phase 1): Habits, Ernährung, Körper, Challenges. Alte Daten liegen in `backups/vor-v2-alle-tabellen-*.json`.
 - Rauchtest ohne echte Daten: Playwright `_electron.launch({ args: ['.', '--user-data-dir=<temp>'] })` (gepackt: `executablePath: release/win-unpacked/FitCoach.exe`). Port 5173 vorher frei machen, sonst läuft alter Code.
+- Zod 4: `.extend()`/`.partial()` nicht auf Objekten mit `.refine()` – Refine zuletzt anhängen.
+- Unverpackte App lädt immer `http://localhost:5173` → für Rauchtests Vite starten; Testdaten per `window.fitcoach.invoke(...)` aus Playwright anlegen.
