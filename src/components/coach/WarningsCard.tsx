@@ -3,7 +3,7 @@ import type { RampInfo } from '@/shared/coach'
 import { cn } from '@/lib/utils'
 
 export function WarningsCard({ ramp }: { ramp: RampInfo }) {
-  const summary = `Letzte 7 Tage: ${ramp.last7Km.toFixed(1)} km · Schnitt der 4 Wochen davor: ${ramp.avgWeekKmPrev28.toFixed(1)} km pro Woche`
+  const summary = `Letzte 7 Tage: ${ramp.last7Km.toLocaleString('de-AT', { maximumFractionDigits: 1 })} km · Schnitt der 4 Wochen davor: ${ramp.avgWeekKmPrev28.toLocaleString('de-AT', { maximumFractionDigits: 1 })} km pro Woche`
   if (ramp.warnings.length === 0) {
     return (
       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 flex gap-3">

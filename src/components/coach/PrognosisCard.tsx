@@ -46,7 +46,7 @@ export function PrognosisCard({ prognosis: p }: { prognosis: Prognosis | null })
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Basiert auf dem Lauf vom {format(new Date(`${b.date}T12:00:00`), 'dd.MM.yyyy')}: {b.distanceKm.toFixed(1)} km in {formatDuration(b.durationSec)}.
+        Basiert auf dem Lauf vom {format(new Date(`${b.date}T12:00:00`), 'dd.MM.yyyy')}: {b.distanceKm.toLocaleString('de-AT', { maximumFractionDigits: 1 })} km in {formatDuration(b.durationSec)}.
         Schätzung aus Trainingsläufen (Riegel-Formel) – Wettkampfform ist meist schneller.
       </p>
     </div>
