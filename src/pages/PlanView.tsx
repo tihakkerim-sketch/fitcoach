@@ -3,17 +3,19 @@ import { Plus, FileJson, GitBranch } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { PlanCard } from '@/components/plans/PlanCard'
-import { CreatePlanModal } from '@/components/plans/CreatePlanModal'
+import { EmptyPlanModal } from '@/components/plans/EmptyPlanModal'
 import { ImportPlanModal } from '@/components/plans/ImportPlanModal'
 import { AdaptPlanModal } from '@/components/plans/AdaptPlanModal'
 import { usePlans } from '@/hooks/usePlans'
+import { useToast } from '@/contexts/ToastContext'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type { PlanRow } from '@/types/ipc'
 
 export default function PlanView() {
   const { plans, loading, error, refresh } = usePlans()
-  const [createOpen,        setCreateOpen]        = useState(false)
+  const { toast } = useToast()
+  const [emptyOpen,         setEmptyOpen]         = useState(false)
   const [importOpen,        setImportOpen]        = useState(false)
   const [adaptTarget,       setAdaptTarget]       = useState<PlanRow | null>(null)
   const [activateCandidate, setActivateCandidate] = useState<PlanRow | null>(null)
@@ -27,6 +29,8 @@ export default function PlanView() {
     try {
       await invoke(IPC.PLANS_ACTIVATE, activateCandidate.id)
       refresh()
+    } catch (e) {
+      toast({ message: e instanceof Error ? e.message : 'Aktivieren fehlgeschlagen', duration: 6000 })
     } finally {
       setActivating(false)
       setActivateCandidate(null)
@@ -35,49 +39,49 @@ export default function PlanView() {
 
   return (
     <div className="p-6 vspace-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Training Plans</h1>
+          <h1 className="text-2xl font-bold">Trainingspläne</h1>
           <p className="text-sm text-muted-foreground">
-            {plans.length} plan{plans.length !== 1 ? 's' : ''}
-            {currentActive ? ` · Active: ${currentActive.name}` : ''}
+            {plans.length} {plans.length === 1 ? 'Plan' : 'Pläne'}
+            {currentActive ? ` · Aktiv: ${currentActive.name}` : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {currentActive && (
             <Button variant="outline" onClick={() => setAdaptTarget(currentActive)}>
               <GitBranch className="h-4 w-4 mr-2" />
-              Adapt Active Plan
+              Aktiven Plan mit Claude anpassen
             </Button>
           )}
           <Button variant="outline" onClick={() => setImportOpen(true)}>
             <FileJson className="h-4 w-4 mr-2" />
-            Import from Claude
+            Plan aus Claude importieren
           </Button>
-          <Button onClick={() => setCreateOpen(true)}>
+          <Button onClick={() => setEmptyOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Plan
+            Leerer Plan
           </Button>
         </div>
       </div>
 
-      {loading && (
-        <div className="text-muted-foreground text-sm">Loading…</div>
+      {loading && plans.length === 0 && (
+        <div className="text-muted-foreground text-sm">Wird geladen …</div>
       )}
       {error && (
         <div className="text-destructive text-sm">{error}</div>
       )}
 
-      {!loading && plans.length === 0 && (
+      {!loading && !error && plans.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
-          <p>No training plans yet.</p>
+          <p>Noch kein Trainingsplan vorhanden.</p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <FileJson className="h-4 w-4 mr-2" />
-              Import from Claude
+              Plan aus Claude importieren
             </Button>
-            <Button variant="outline" onClick={() => setCreateOpen(true)}>
-              Create manually
+            <Button variant="outline" onClick={() => setEmptyOpen(true)}>
+              Leerer Plan
             </Button>
           </div>
         </div>
@@ -94,9 +98,9 @@ export default function PlanView() {
         ))}
       </div>
 
-      <CreatePlanModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
+      <EmptyPlanModal
+        open={emptyOpen}
+        onClose={() => setEmptyOpen(false)}
         onSaved={refresh}
       />
 
@@ -110,29 +114,28 @@ export default function PlanView() {
         <AdaptPlanModal
           open={!!adaptTarget}
           onClose={() => setAdaptTarget(null)}
-          onSaved={() => { setAdaptTarget(null); refresh() }}
+          onSaved={refresh}
           planId={adaptTarget.id}
           planName={adaptTarget.name}
         />
       )}
 
-      {/* Activate confirmation dialog */}
       <Dialog open={!!activateCandidate} onOpenChange={v => { if (!v) setActivateCandidate(null) }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Switch active plan?</DialogTitle>
+            <DialogTitle>Aktiven Plan wechseln?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             {currentActive
-              ? `"${currentActive.name}" is currently active. It will be deactivated and replaced by "${activateCandidate?.name}".`
-              : `"${activateCandidate?.name}" will become the active plan.`}
+              ? `„${currentActive.name}“ ist aktuell aktiv und wird durch „${activateCandidate?.name}“ ersetzt.`
+              : `„${activateCandidate?.name}“ wird der aktive Plan.`}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setActivateCandidate(null)} disabled={activating}>
-              Cancel
+              Abbrechen
             </Button>
             <Button onClick={confirmActivate} disabled={activating}>
-              {activating ? 'Switching…' : 'Confirm'}
+              {activating ? 'Wird gewechselt …' : 'Bestätigen'}
             </Button>
           </DialogFooter>
         </DialogContent>
