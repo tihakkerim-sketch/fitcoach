@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type { ActivityRow, SessionRow } from '@/types/ipc'
-import { computeDeviation, type DeviationItem } from '@/shared/deviation'
+import { computeDeviation } from '@/shared/deviation'
 import { addDaysStr, formatPace } from '@/shared/planCalendar'
 import { SessionEditForm } from './SessionEditForm'
 import {
-  TYPE_LABEL, TYPE_ICON, TONE_CLASS, fmtDate, num, sessionTargetText, statusLabel, stepsText,
+  TYPE_LABEL, TYPE_ICON, TONE_CLASS, deviationLine, fmtDate, num, sessionTargetText, statusLabel, stepsText,
 } from './sessionFormat'
 
 interface Props {
@@ -29,17 +29,6 @@ type Mode = 'view' | 'edit' | 'pick'
 
 const ACTIVITY_LABEL: Record<string, string> = {
   running: 'Lauf', cycling: 'Rad', strength: 'Kraft', custom: 'Sonstiges', sleep: 'Schlaf',
-}
-
-const signed = (pct: number) => (pct > 0 ? `+${pct}` : pct < 0 ? `−${Math.abs(pct)}` : '±0')
-
-function deviationLine(d: DeviationItem): string {
-  const p = `(${signed(d.pct)} %)`
-  switch (d.field) {
-    case 'distance': return `Distanz ${num(d.planned)} km → ${num(d.actual)} km ${p}`
-    case 'duration': return `Dauer ${num(d.planned)} min → ${num(d.actual)} min ${p}`
-    default: return `Pace ${formatPace(d.planned)}/km → ${formatPace(d.actual)}/km ${p}`
-  }
 }
 
 /** Dialog zu einer Plan-Einheit: Ansicht, Status, Zuordnung, Bearbeiten, Löschen – oder Anlegen. */

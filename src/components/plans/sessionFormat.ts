@@ -2,6 +2,7 @@
 import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
 import { Activity, Dumbbell, Moon, TrendingUp, Zap, type LucideIcon } from 'lucide-react'
+import type { DeviationItem } from '@/shared/deviation'
 import { isMissed, formatPace, mondayOf, addDaysStr } from '@/shared/planCalendar'
 import type { PlanBlock, PlanStep, SessionRow, SessionType } from '@/types/ipc'
 
@@ -109,4 +110,16 @@ export function fmtDate(date: string, pattern = 'dd.MM.yyyy'): string {
 /** Nächster Montag nach `today` (Vorschlag für das Startdatum). */
 export function nextMonday(today: string): string {
   return addDaysStr(mondayOf(today), 7)
+}
+
+const signed = (pct: number) => (pct > 0 ? `+${pct}` : pct < 0 ? `−${Math.abs(pct)}` : '±0')
+
+/** z. B. "Distanz 16 km → 11 km (−31 %)" */
+export function deviationLine(d: DeviationItem): string {
+  const p = `(${signed(d.pct)} %)`
+  switch (d.field) {
+    case 'distance': return `Distanz ${num(d.planned)} km → ${num(d.actual)} km ${p}`
+    case 'duration': return `Dauer ${num(d.planned)} min → ${num(d.actual)} min ${p}`
+    default: return `Pace ${formatPace(d.planned)}/km → ${formatPace(d.actual)}/km ${p}`
+  }
 }

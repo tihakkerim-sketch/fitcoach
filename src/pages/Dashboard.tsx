@@ -3,17 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
   Plus, Activity, TrendingUp, Flame, Dumbbell,
-  CalendarDays, ChevronRight, Moon, CheckCircle2,
-  Zap, Timer, Heart, Sun, Check, AlertTriangle,
+  Moon, Sun, Check, AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LogActivityModal } from '@/components/activities/LogActivityModal'
 import { RecoveryWidget } from '@/components/recovery/RecoveryWidget'
+import { TodayPlanCard } from '@/components/dashboard/TodayPlanCard'
+import { PlanWeekStrip } from '@/components/dashboard/PlanWeekStrip'
+import { SessionDialog } from '@/components/plans/SessionDialog'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type {
-  StatsResult, PlanRow, PlanDetail, SessionRow, SessionType,
-  UserProfile, DailyCheckin, RecoveryLog,
+  StatsResult, PlanTodayResult, UserProfile, DailyCheckin, RecoveryLog,
 } from '@/types/ipc'
 import { cn } from '@/lib/utils'
 import type { LucideIcon } from 'lucide-react'
@@ -25,35 +26,11 @@ function fmt(min: number) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
-function todayPlanDow(): number { const d = new Date().getDay(); return d === 0 ? 7 : d }
-
 function greeting(): string {
   const h = new Date().getHours()
   if (h < 12) return 'Good morning'
   if (h < 17) return 'Good afternoon'
   return 'Good evening'
-}
-
-const DOW_LABEL: Record<number, string> = {
-  1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun',
-}
-
-const SESSION_TYPE_ICON: Record<SessionType, LucideIcon> = {
-  running: TrendingUp, cycling: Zap, strength: Dumbbell, rest: Moon, custom: Activity,
-}
-
-const SESSION_COLORS: Record<SessionType, { chip: string; iconBg: string; iconText: string; border: string; dot: string }> = {
-  running:  { chip: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',           iconBg: 'bg-blue-500/10',    iconText: 'text-blue-500',    border: 'border-blue-500/30',    dot: 'bg-blue-500'    },
-  cycling:  { chip: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',   iconBg: 'bg-emerald-500/10', iconText: 'text-emerald-500', border: 'border-emerald-500/30', dot: 'bg-emerald-500' },
-  strength: { chip: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',      iconBg: 'bg-orange-500/10',  iconText: 'text-orange-500',  border: 'border-orange-500/30',  dot: 'bg-orange-500'  },
-  rest:     { chip: 'bg-slate-500/10 text-slate-500',                             iconBg: 'bg-slate-500/10',   iconText: 'text-slate-400',   border: 'border-slate-400/30',   dot: 'bg-slate-400'   },
-  custom:   { chip: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',      iconBg: 'bg-violet-500/10',  iconText: 'text-violet-500',  border: 'border-violet-500/30',  dot: 'bg-violet-500'  },
-}
-
-function flatSessions(plan: PlanDetail): SessionRow[] {
-  return plan.phases
-    .slice().sort((a, b) => a.orderIndex - b.orderIndex)
-    .flatMap(p => p.weeks.slice().sort((a, b) => a.weekNumber - b.weekNumber).flatMap(w => w.sessions))
 }
 
 // ── Accent system ─────────────────────────────────────────────────────────────
@@ -87,44 +64,6 @@ function ColHeader({ label }: { label: string }) {
   )
 }
 
-// ── Week bar ──────────────────────────────────────────────────────────────────
-
-function WeekBar({ allSessions, todayDow }: { allSessions: SessionRow[]; todayDow: number }) {
-  const WEEK_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5, 6, 7].map((dow, i) => {
-        const sessions   = allSessions.filter(s => s.dayOfWeek === dow)
-        const completed  = sessions.find(s => s.status === 'completed')
-        const planned    = sessions.find(s => s.status === 'planned')
-        const isToday    = dow === todayDow
-        const isPast     = dow < todayDow
-
-        return (
-          <div key={dow} className="flex flex-col items-center gap-1.5 w-7">
-            <div className={cn(
-              'rounded-full transition-all duration-200',
-              isToday ? 'w-3.5 h-3.5 ring-2 ring-primary ring-offset-1 ring-offset-background' : 'w-2.5 h-2.5',
-              completed
-                ? SESSION_COLORS[completed.type].dot
-                : planned
-                ? cn('border-2', isPast ? 'border-muted-foreground/30 bg-transparent' : 'border-primary/40 bg-primary/10')
-                : 'bg-muted/40',
-            )} />
-            <span className={cn(
-              'text-[9px] font-bold uppercase leading-none select-none',
-              isToday ? 'text-foreground' : 'text-muted-foreground/40',
-            )}>
-              {WEEK_LABELS[i]}
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, sub, icon: Icon, color }: {
@@ -139,164 +78,6 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
       <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
       <p className="text-2xl font-bold mt-1 tracking-tight tabular-nums">{value}</p>
       {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
-    </div>
-  )
-}
-
-// ── Today's session card ──────────────────────────────────────────────────────
-
-function TodayCard({ session, onDone }: { session: SessionRow; onDone: () => void }) {
-  const [showNote, setShowNote] = useState(false)
-  const [note,     setNote]     = useState('')
-  const [marking,  setMarking]  = useState(false)
-  const colors = SESSION_COLORS[session.type]
-  const Icon   = SESSION_TYPE_ICON[session.type]
-
-  const markDone = async () => {
-    setMarking(true)
-    try {
-      await invoke(IPC.SESSIONS_UPDATE_STATUS, {
-        sessionId: session.id, status: 'completed', completedAt: Date.now(),
-        completionNote: note.trim() || undefined,
-      })
-      onDone()
-    } catch { /* ignore */ } finally { setMarking(false) }
-  }
-
-  return (
-    <div className={cn('rounded-xl border-2 bg-card overflow-hidden', colors.border)}>
-      <div className="p-5">
-        <div className="flex items-start gap-4">
-          <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center shrink-0', colors.iconBg)}>
-            <Icon className={cn('h-5 w-5', colors.iconText)} />
-          </div>
-          <div className="flex-1 min-w-0 vspace-1.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Today · {DOW_LABEL[session.dayOfWeek]}
-              </span>
-              <span className={cn('text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize', colors.chip)}>
-                {session.type}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap text-sm text-muted-foreground">
-              {session.targetDurationMin && (
-                <span className="flex items-center gap-1">
-                  <Timer className="h-3.5 w-3.5" />{fmt(session.targetDurationMin)}
-                </span>
-              )}
-              {session.targetHrZone && (
-                <span className="flex items-center gap-1">
-                  <Heart className="h-3.5 w-3.5" />Zone {session.targetHrZone}
-                </span>
-              )}
-              {session.intensityLabel && (
-                <span className="text-muted-foreground/70">· {session.intensityLabel}</span>
-              )}
-            </div>
-          </div>
-          <Button
-            size="sm" variant="gradient" className="shrink-0 gap-1.5"
-            onClick={() => setShowNote(v => !v)} disabled={marking}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" /> Done
-          </Button>
-        </div>
-        {session.coachingNote && (
-          <p className="mt-3 text-xs text-muted-foreground italic border-l-2 border-border pl-3 leading-relaxed">
-            {session.coachingNote}
-          </p>
-        )}
-        {showNote && (
-          <div className="mt-4 vspace-3 pt-4 border-t border-border/60">
-            <p className="text-xs font-medium text-muted-foreground">Add a note (optional)</p>
-            <textarea
-              className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-hidden focus:ring-2 focus:ring-ring"
-              rows={2}
-              placeholder="How did it feel? Any PRs?"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setShowNote(false)} disabled={marking}>
-                Cancel
-              </Button>
-              <Button size="sm" variant="gradient" onClick={markDone} disabled={marking}>
-                {marking ? 'Saving…' : 'Save & Complete'}
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ── Rest day card ─────────────────────────────────────────────────────────────
-
-function RestDayCard({ planName }: { planName: string }) {
-  return (
-    <div className="rounded-xl border bg-card p-5 flex items-center gap-4">
-      <div className="w-11 h-11 rounded-xl bg-slate-500/10 flex items-center justify-center shrink-0">
-        <Moon className="h-5 w-5 text-slate-400" />
-      </div>
-      <div>
-        <p className="font-semibold">Rest day</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{planName} · No training today.</p>
-        <p className="text-xs text-muted-foreground">Focus on recovery and sleep.</p>
-      </div>
-    </div>
-  )
-}
-
-// ── No-plan card ──────────────────────────────────────────────────────────────
-
-function NoPlanCard({ onNavigate }: { onNavigate: () => void }) {
-  return (
-    <button
-      onClick={onNavigate}
-      className="group w-full flex items-center gap-4 rounded-xl border border-dashed border-border bg-card p-5 text-left hover:border-primary/40 transition-all"
-    >
-      <div className="w-11 h-11 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
-        <CalendarDays className="h-5 w-5 text-violet-500" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm">No training plan active</p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Create or import a plan to see today's session here →
-        </p>
-      </div>
-    </button>
-  )
-}
-
-// ── Upcoming list ─────────────────────────────────────────────────────────────
-
-function UpcomingList({ sessions }: { sessions: SessionRow[] }) {
-  return (
-    <div className="rounded-xl border bg-card overflow-hidden divide-y divide-border/60">
-      {sessions.map(s => {
-        const colors = SESSION_COLORS[s.type]
-        const Icon   = SESSION_TYPE_ICON[s.type]
-        return (
-          <div key={s.id} className="flex items-center gap-3 px-4 py-3">
-            <span className="text-xs font-bold text-muted-foreground w-7 shrink-0 tabular-nums">
-              {DOW_LABEL[s.dayOfWeek]}
-            </span>
-            <div className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0', colors.iconBg)}>
-              <Icon className={cn('h-3.5 w-3.5', colors.iconText)} />
-            </div>
-            <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full capitalize', colors.chip)}>
-              {s.type}
-            </span>
-            <div className="flex items-center gap-2 flex-1 min-w-0 text-xs text-muted-foreground">
-              {s.targetDurationMin && <span>{fmt(s.targetDurationMin)}</span>}
-              {s.targetHrZone && <span>Z{s.targetHrZone}</span>}
-              {s.intensityLabel && <span className="truncate">{s.intensityLabel}</span>}
-            </div>
-          </div>
-        )
-      })}
     </div>
   )
 }
@@ -428,8 +209,8 @@ export default function Dashboard() {
   const [logOpen,       setLogOpen]       = useState(false)
   const [stats,         setStats]         = useState<StatsResult | null>(null)
   const [profile,       setProfile]       = useState<UserProfile | null>(null)
-  const [activePlan,    setActivePlan]    = useState<PlanRow | null>(null)
-  const [planDetail,    setPlanDetail]    = useState<PlanDetail | null>(null)
+  const [planToday,     setPlanToday]     = useState<PlanTodayResult | null>(null)
+  const [openSessionId, setOpenSessionId] = useState<number | null>(null)
   const [checkin,       setCheckin]       = useState<DailyCheckin | null>(null)
   const [checkinLoaded, setCheckinLoaded] = useState(false)
   const [recoveryLog,   setRecoveryLog]   = useState<RecoveryLog | null>(null)
@@ -440,18 +221,8 @@ export default function Dashboard() {
   const loadProfile = useCallback(() => {
     invoke(IPC.PROFILE_GET).then(p => setProfile(p)).catch(() => {})
   }, [])
-  const loadPlan    = useCallback(async () => {
-    try {
-      const plans  = await invoke(IPC.PLANS_LIST)
-      const active = plans.find(p => p.isActive === 1) ?? null
-      setActivePlan(active)
-      if (active) {
-        const d = await invoke(IPC.PLANS_GET, active.id)
-        setPlanDetail(d)
-      } else {
-        setPlanDetail(null)
-      }
-    } catch { /* optional */ }
+  const loadPlan    = useCallback(() => {
+    invoke(IPC.PLANS_TODAY).then(r => setPlanToday(r)).catch(() => {})
   }, [])
   const loadCheckin = useCallback(() => {
     invoke(IPC.CHECKIN_GET, todayStr)
@@ -470,20 +241,11 @@ export default function Dashboard() {
   }, [loadStats, loadProfile, loadPlan, loadCheckin, loadRecovery])
 
   const handleActivitySaved = useCallback(() => { setLogOpen(false); loadStats() }, [loadStats])
-  const handleSessionDone   = useCallback(() => { loadPlan(); loadStats() }, [loadPlan, loadStats])
+  const handlePlanChanged   = useCallback(() => { loadPlan(); loadStats() }, [loadPlan, loadStats])
 
-  // ── Plan logic ──────────────────────────────────────────────────────────────
-  const todayDow       = todayPlanDow()
-  const allSessions    = planDetail ? flatSessions(planDetail) : []
-  const allPlanned     = allSessions.filter(s => s.status === 'planned')
-  const todaySession   = allPlanned.find(s => s.dayOfWeek === todayDow) ?? null
-
-  const upcomingSessions: SessionRow[] = []
-  for (let offset = 1; offset <= 6 && upcomingSessions.length < 3; offset++) {
-    const dow   = ((todayDow - 1 + offset) % 7) + 1
-    const found = allPlanned.find(s => s.dayOfWeek === dow && s !== todaySession)
-    if (found) upcomingSessions.push(found)
-  }
+  // ── Plan ────────────────────────────────────────────────────────────────────
+  const openSession = planToday?.weekSessions.find(x => x.id === openSessionId) ?? null
+  const todayTraining = planToday?.todaySessions.some(x => x.status === 'planned' && x.type !== 'rest') ?? false
 
   const hasData    = stats && (stats.totalActivities > 0 || stats.totalSleepSessions > 0)
   const weekBucket = stats?.weekly[stats.weekly.length - 1]
@@ -512,21 +274,8 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Week bar — shown when an active plan exists */}
-        {activePlan && allSessions.length > 0 && (
-          <div className="mt-5 flex items-center gap-4">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground shrink-0">
-              This week
-            </p>
-            <WeekBar allSessions={allSessions} todayDow={todayDow} />
-            <div className="flex-1" />
-            <button
-              onClick={() => navigate(`/plan/${activePlan.id}`)}
-              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-            >
-              {activePlan.name} <ChevronRight className="h-3 w-3" />
-            </button>
-          </div>
+        {planToday && (
+          <PlanWeekStrip data={planToday} onOpenSession={x => setOpenSessionId(x.id)} />
         )}
       </div>
 
@@ -535,32 +284,18 @@ export default function Dashboard() {
 
         {/* ── Left: Today's training ──────────────────────────────────── */}
         <div className="vspace-3">
-          <ColHeader label="Today's training" />
+          <ColHeader label="Heute" />
 
           {/* Readiness alert — shown only on training days when score is low */}
-          {activePlan && todaySession && recoveryLog?.readinessScore != null && (
+          {todayTraining && recoveryLog?.readinessScore != null && (
             <ReadinessAlert
               score={recoveryLog.readinessScore}
               onNavigate={() => navigate('/recovery')}
             />
           )}
 
-          {activePlan && todaySession ? (
-            <TodayCard session={todaySession} onDone={handleSessionDone} />
-          ) : activePlan ? (
-            <RestDayCard planName={activePlan.name} />
-          ) : (
-            <NoPlanCard onNavigate={() => navigate('/plan')} />
-          )}
-
-          {/* Upcoming sessions */}
-          {activePlan && upcomingSessions.length > 0 && (
-            <div className="vspace-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                {todaySession ? 'Coming up this week' : 'Next up'}
-              </p>
-              <UpcomingList sessions={upcomingSessions} />
-            </div>
+          {planToday && (
+            <TodayPlanCard data={planToday} onOpenSession={x => setOpenSessionId(x.id)} />
           )}
         </div>
 
@@ -670,6 +405,18 @@ export default function Dashboard() {
             <Plus className="h-4 w-4 mr-2" /> Log your first activity
           </Button>
         </div>
+      )}
+
+      {planToday?.plan && openSession && (
+        <SessionDialog
+          key={openSession.id}
+          plan={planToday.plan}
+          session={openSession}
+          create={null}
+          today={planToday.today}
+          onChanged={handlePlanChanged}
+          onClose={() => setOpenSessionId(null)}
+        />
       )}
 
       <LogActivityModal open={logOpen} onClose={() => setLogOpen(false)} onSaved={handleActivitySaved} />
