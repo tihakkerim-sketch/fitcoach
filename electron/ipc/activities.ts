@@ -4,41 +4,48 @@ import { handle } from './handle'
 import { getDb } from '../../db/index'
 import { activities } from '../../db/schema'
 import { eq, and, gte, lte, desc, asc, sql } from 'drizzle-orm'
+import { runInTransaction } from '../lib/transaction'
+import { matchActivity, releaseActivity } from '../lib/matchSessions'
 
 export function registerActivityHandlers() {
   handle(IPC.ACTIVITIES_CREATE, (payload) => {
     const db = getDb()
-    const [row] = db
-      .insert(activities)
-      .values({
-        type: payload.type,
-        date: payload.date,
-        createdAt: Date.now(),
-        source: payload.source,
-        garminFileName: payload.garminFileName ?? null,
-        avgHr: payload.avgHr ?? null,
-        maxHr: payload.maxHr ?? null,
-        durationMin: payload.durationMin ?? null,
-        startTime: payload.startTime ?? null,
-        distanceKm: payload.distanceKm ?? null,
-        hrZoneDistribution: payload.hrZoneDistribution
-          ? JSON.stringify(payload.hrZoneDistribution)
-          : null,
-        perceivedEffort: payload.perceivedEffort ?? null,
-        surfaceType: payload.surfaceType ?? null,
-        notes: payload.notes ?? null,
-        avgCadence: payload.avgCadence ?? null,
-        bedtime: payload.bedtime ?? null,
-        wakeTime: payload.wakeTime ?? null,
-        sleepQuality: payload.sleepQuality ?? null,
-        exercises: payload.exercises ? JSON.stringify(payload.exercises) : null,
-        typeLabel: payload.typeLabel ?? null,
-        rawGarminData: payload.rawGarminData
-          ? JSON.stringify(payload.rawGarminData)
-          : null,
-      })
-      .returning()
-      .all()
+    // Insert + automatische Zuordnung zur Plan-Einheit: ganz oder gar nicht
+    const row = runInTransaction(db, () => {
+      const [inserted] = db
+        .insert(activities)
+        .values({
+          type: payload.type,
+          date: payload.date,
+          createdAt: Date.now(),
+          source: payload.source,
+          garminFileName: payload.garminFileName ?? null,
+          avgHr: payload.avgHr ?? null,
+          maxHr: payload.maxHr ?? null,
+          durationMin: payload.durationMin ?? null,
+          startTime: payload.startTime ?? null,
+          distanceKm: payload.distanceKm ?? null,
+          hrZoneDistribution: payload.hrZoneDistribution
+            ? JSON.stringify(payload.hrZoneDistribution)
+            : null,
+          perceivedEffort: payload.perceivedEffort ?? null,
+          surfaceType: payload.surfaceType ?? null,
+          notes: payload.notes ?? null,
+          avgCadence: payload.avgCadence ?? null,
+          bedtime: payload.bedtime ?? null,
+          wakeTime: payload.wakeTime ?? null,
+          sleepQuality: payload.sleepQuality ?? null,
+          exercises: payload.exercises ? JSON.stringify(payload.exercises) : null,
+          typeLabel: payload.typeLabel ?? null,
+          rawGarminData: payload.rawGarminData
+            ? JSON.stringify(payload.rawGarminData)
+            : null,
+        })
+        .returning()
+        .all()
+      matchActivity(db, inserted.id)
+      return inserted
+    })
     return deserializeActivity(row)
   })
 
@@ -85,7 +92,12 @@ export function registerActivityHandlers() {
   })
 
   handle(IPC.ACTIVITIES_DELETE, (id) => {
-    getDb().delete(activities).where(eq(activities.id, id)).run()
+    const db = getDb()
+    // Zuordnungen lösen (und freie Läufe desselben Tages nachrücken lassen), dann löschen
+    runInTransaction(db, () => {
+      releaseActivity(db, id)
+      db.delete(activities).where(eq(activities.id, id)).run()
+    })
   })
 }
 
