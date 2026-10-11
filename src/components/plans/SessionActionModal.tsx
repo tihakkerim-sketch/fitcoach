@@ -25,7 +25,7 @@ export function SessionActionModal({ session, onClose, onSaved }: Props) {
   useEffect(() => {
     if (!session) return
     setLinkedId(session.linkedActivityId ? String(session.linkedActivityId) : '_none')
-    invoke<{ activities: ActivityRow[]; total: number }>(IPC.ACTIVITIES_LIST, { limit: 100 })
+    invoke(IPC.ACTIVITIES_LIST, { limit: 100 })
       .then(r => setActivities(r.activities))
       .catch(() => setActivities([]))
   }, [session])

@@ -154,7 +154,7 @@ function EntryForm({
         restingHr:   parseNum(rhr),
         note:        note.trim() || undefined,
       }
-      const log = await invoke<RecoveryLog>(IPC.RECOVERY_LOG_UPSERT, payload)
+      const log = await invoke(IPC.RECOVERY_LOG_UPSERT, payload)
       onSaved(log)
     } catch { /* silent */ } finally {
       setSaving(false)
@@ -403,7 +403,7 @@ export default function Recovery() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await invoke<RecoveryLog[]>(IPC.RECOVERY_LOGS_GET, {
+      const data = await invoke(IPC.RECOVERY_LOGS_GET, {
         dateFrom: format(subDays(new Date(), 13), 'yyyy-MM-dd'),
         dateTo:   todayStr(),
       })

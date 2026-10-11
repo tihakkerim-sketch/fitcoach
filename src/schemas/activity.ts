@@ -3,6 +3,8 @@ import { z } from 'zod'
 const dateField = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Required (YYYY-MM-DD)')
 const timeField = z.string().regex(/^\d{2}:\d{2}$/, 'Required (HH:MM)')
 const hrField   = z.number().int().min(30).max(300)
+// Zod 4: show "Required" only when the field is empty, keep the specific message otherwise
+const requiredMsg = (issue: { input?: unknown }) => (issue.input === undefined ? 'Required' : undefined)
 
 const base = z.object({
   date:  dateField,
@@ -18,7 +20,7 @@ export const hrZoneSchema = z.object({
 })
 
 export const runningSchema = base.extend({
-  durationMin:        z.number({ required_error: 'Required' }).positive().max(1440),
+  durationMin:        z.number({ error: requiredMsg }).positive().max(1440),
   startTime:          timeField.optional(),
   distanceKm:         z.number().positive().max(500).optional(),
   avgHr:              hrField.optional(),
@@ -28,19 +30,19 @@ export const runningSchema = base.extend({
   hrZoneDistribution: hrZoneSchema.optional(),
 }).superRefine((v, ctx) => {
   if (v.avgHr && v.maxHr && v.maxHr < v.avgHr) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max HR must be ≥ Avg HR', path: ['maxHr'] })
+    ctx.addIssue({ code: 'custom', message: 'Max HR must be ≥ Avg HR', path: ['maxHr'] })
   }
 })
 
 export const cyclingSchema = base.extend({
-  durationMin: z.number({ required_error: 'Required' }).positive().max(1440),
+  durationMin: z.number({ error: requiredMsg }).positive().max(1440),
   distanceKm:  z.number().positive().max(1000).optional(),
   avgHr:       hrField.optional(),
   maxHr:       hrField.optional(),
   avgCadence:  z.number().int().min(20).max(200).optional(),
 }).superRefine((v, ctx) => {
   if (v.avgHr && v.maxHr && v.maxHr < v.avgHr) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max HR must be ≥ Avg HR', path: ['maxHr'] })
+    ctx.addIssue({ code: 'custom', message: 'Max HR must be ≥ Avg HR', path: ['maxHr'] })
   }
 })
 
@@ -57,12 +59,12 @@ export const exerciseSchema = z.object({
 })
 
 export const strengthSchema = base.extend({
-  durationMin: z.number({ required_error: 'Required' }).positive().max(1440),
+  durationMin: z.number({ error: requiredMsg }).positive().max(1440),
   exercises:   z.array(exerciseSchema).min(1, 'Add at least one exercise'),
 })
 
 export const customSchema = base.extend({
-  durationMin: z.number({ required_error: 'Required' }).positive().max(1440),
+  durationMin: z.number({ error: requiredMsg }).positive().max(1440),
   typeLabel:   z.string().min(1, 'Activity name required').max(100),
 })
 

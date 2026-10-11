@@ -1,6 +1,6 @@
-import { ipcMain, dialog } from 'electron'
+import { dialog } from 'electron'
 import { IPC } from '../../src/types/ipc'
-import type { IpcResponse, SummaryPayload } from '../../src/types/ipc'
+import { handle } from './handle'
 import { getDb } from '../../db/index'
 import {
   activities,
@@ -240,33 +240,16 @@ function buildMarkdown(dateFrom: string, dateTo: string): string {
 }
 
 export function registerSummaryHandlers() {
-  ipcMain.handle(
-    IPC.EXPORT_GENERATE_SUMMARY,
-    async (_e, payload: SummaryPayload): Promise<IpcResponse<string>> => {
-      try {
-        const md = buildMarkdown(payload.dateFrom, payload.dateTo)
-        return { success: true, data: md }
-      } catch (err) {
-        return { success: false, error: String(err) }
-      }
-    }
-  )
+  handle(IPC.EXPORT_GENERATE_SUMMARY, (payload) => buildMarkdown(payload.dateFrom, payload.dateTo))
 
-  ipcMain.handle(
-    IPC.EXPORT_SAVE_MD,
-    async (_e, payload: { content: string; filename: string }): Promise<IpcResponse<string>> => {
-      try {
-        const { filePath, canceled } = await dialog.showSaveDialog({
-          title: 'Save Training Summary',
-          defaultPath: payload.filename,
-          filters: [{ name: 'Markdown', extensions: ['md'] }],
-        })
-        if (canceled || !filePath) return { success: false, error: 'Cancelled' }
-        fs.writeFileSync(filePath, payload.content, 'utf-8')
-        return { success: true, data: filePath }
-      } catch (err) {
-        return { success: false, error: String(err) }
-      }
-    }
-  )
+  handle(IPC.EXPORT_SAVE_MD, async (payload) => {
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: 'Save Training Summary',
+      defaultPath: payload.filename,
+      filters: [{ name: 'Markdown', extensions: ['md'] }],
+    })
+    if (canceled || !filePath) throw new Error('Cancelled')
+    fs.writeFileSync(filePath, payload.content, 'utf-8')
+    return filePath
+  })
 }

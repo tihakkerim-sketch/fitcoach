@@ -154,7 +154,7 @@ export default function DailyCheckin() {
   // ── Load today's check-in ──────────────────────────────────────────────────
 
   const load = useCallback(async () => {
-    const c = await invoke<DailyCheckin | null>(IPC.CHECKIN_GET, todayDate).catch(() => null)
+    const c = await invoke(IPC.CHECKIN_GET, todayDate).catch(() => null)
     setCheckin(c)
     if (c) {
       // null from DB → undefined for form state (unselected)
@@ -179,7 +179,7 @@ export default function DailyCheckin() {
     setSaving(true)
     setSaveErr(null)
     try {
-      const updated = await invoke<DailyCheckin>(
+      const updated = await invoke(
         IPC.CHECKIN_UPSERT,
         { date: todayDate, ...fields }
       )

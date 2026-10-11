@@ -36,7 +36,7 @@ export default function Export() {
     setCopied(false)
     setSaved(false)
     try {
-      const md = await invoke<string>(IPC.EXPORT_GENERATE_SUMMARY, { dateFrom, dateTo })
+      const md = await invoke(IPC.EXPORT_GENERATE_SUMMARY, { dateFrom, dateTo })
       setPreview(md)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to generate summary')

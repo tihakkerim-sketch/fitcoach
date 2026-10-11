@@ -46,7 +46,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.6.0",
+    "@hookform/resolvers": "^5.9.1",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-scroll-area": "^1.0.5",
@@ -63,7 +63,7 @@
     "react-hook-form": "^7.51.5",
     "react-router-dom": "^6.23.1",
     "recharts": "^2.12.7",
-    "zod": "^3.23.8"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.1",

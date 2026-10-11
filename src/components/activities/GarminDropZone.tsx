@@ -28,7 +28,7 @@ export function GarminDropZone({ onParsed }: Props) {
     try {
       const buffer = await file.arrayBuffer()
       const uint8 = new Uint8Array(buffer)
-      const result = await invoke<Partial<CreateActivityPayload>>(IPC.GARMIN_PARSE, {
+      const result = await invoke(IPC.GARMIN_PARSE, {
         fileName: file.name,
         data: uint8,
       })

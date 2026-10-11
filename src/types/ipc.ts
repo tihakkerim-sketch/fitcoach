@@ -1,10 +1,26 @@
+import type {
+  CreateActivityPayload, ListActivitiesPayload, CreatePlanPayload, AdaptPlanPayload,
+  UpdateSessionStatusPayload, LinkSessionActivityPayload, SummaryPayload,
+  UpsertCheckinPayload, UpsertRecoveryLogPayload,
+  ActivityType, ActivitySource, HrZoneDistribution, StrengthExercise,
+  SessionType, SessionStatus, RecoverySource,
+} from './ipcContract'
+
+// Payload types are derived from the Zod schemas in ipcContract.ts (single source of truth)
+export type {
+  CreateActivityPayload, ListActivitiesPayload, CreatePlanPayload, AdaptPlanPayload,
+  UpdateSessionStatusPayload, LinkSessionActivityPayload, SummaryPayload,
+  UpsertCheckinPayload, UpsertRecoveryLogPayload,
+  ActivityType, ActivitySource, HrZoneDistribution, StrengthExercise,
+  SessionType, SessionStatus, RecoverySource,
+}
+
 // All IPC channel names — no magic strings anywhere else
 export const IPC = {
   // Activities
   ACTIVITIES_CREATE: 'activities:create',
   ACTIVITIES_LIST: 'activities:list',
   ACTIVITIES_GET: 'activities:get',
-  ACTIVITIES_UPDATE: 'activities:update',
   ACTIVITIES_DELETE: 'activities:delete',
 
   // Garmin
@@ -60,88 +76,13 @@ export type IpcResponse<T> =
   | { success: false; error: string }
 
 // ── Activity types ────────────────────────────────────────────────────────────
-export type ActivityType = 'running' | 'cycling' | 'sleep' | 'strength' | 'custom'
-export type ActivitySource = 'manual' | 'garmin_import'
-
-export interface HrZoneDistribution {
-  z1: number; z2: number; z3: number; z4: number; z5: number
-}
-
-export interface StrengthExercise {
-  name: string; sets: number; reps: number
-}
-
-export interface CreateActivityPayload {
-  type: ActivityType
-  date: string
-  source: ActivitySource
-  garminFileName?: string
-  avgHr?: number
-  maxHr?: number
-  durationMin?: number
-  // Running
-  startTime?: string
-  distanceKm?: number
-  hrZoneDistribution?: HrZoneDistribution
-  perceivedEffort?: number
-  surfaceType?: string
-  notes?: string
-  // Cycling
-  avgCadence?: number
-  // Sleep
-  bedtime?: string
-  wakeTime?: string
-  sleepQuality?: number
-  // Strength
-  exercises?: StrengthExercise[]
-  // Custom
-  typeLabel?: string
-  // Garmin raw
-  rawGarminData?: Record<string, unknown>
-}
 
 export interface ActivityRow extends CreateActivityPayload {
   id: number
   createdAt: number
 }
 
-export interface ListActivitiesPayload {
-  type?: ActivityType
-  dateFrom?: string
-  dateTo?: string
-  source?: ActivitySource
-  sortBy?: 'date' | 'duration' | 'avgHr'
-  sortDir?: 'asc' | 'desc'
-  limit?: number
-  offset?: number
-}
-
 // ── Plan types ────────────────────────────────────────────────────────────────
-export type SessionType = 'running' | 'cycling' | 'strength' | 'rest' | 'custom'
-export type SessionStatus = 'planned' | 'completed' | 'skipped'
-
-export interface CreatePlanPayload {
-  name: string
-  goalEvent?: string
-  goalDate?: string
-  phases: Array<{
-    name: string
-    orderIndex: number
-    durationWeeks: number
-    weeks: Array<{
-      weekNumber: number
-      notes?: string
-      sessions: Array<{
-        dayOfWeek: number
-        type: SessionType
-        targetDurationMin?: number
-        targetHrZone?: number
-        intensityLabel?: string
-        coachingNote?: string
-      }>
-    }>
-  }>
-}
 
 export interface PlanRow {
   id: number
@@ -186,22 +127,6 @@ export interface PhaseDetail {
 
 export interface PlanDetail extends PlanRow {
   phases: PhaseDetail[]
-}
-
-export interface UpdateSessionStatusPayload {
-  sessionId: number
-  status: SessionStatus
-  completedAt?: number
-  completionNote?: string
-}
-
-export interface LinkSessionActivityPayload {
-  sessionId: number
-  activityId: number | null
-}
-
-export interface AdaptPlanPayload extends CreatePlanPayload {
-  planId: number   // which existing plan to update
 }
 
 export interface AdaptPlanResult {
@@ -286,11 +211,6 @@ export interface StatsResult {
 }
 
 // ── Export types ──────────────────────────────────────────────────────────────
-export interface SummaryPayload {
-  dateFrom: string
-  dateTo: string
-}
-
 // ── Check-in types ────────────────────────────────────────────────────────────
 export interface DailyCheckin {
   id: number
@@ -305,19 +225,8 @@ export interface DailyCheckin {
   updatedAt: number
 }
 
-export interface UpsertCheckinPayload {
-  date: string
-  morningEnergy?: number
-  morningClarity?: number
-  morningIntention?: string
-  eveningRating?: number
-  eveningWins?: string
-  eveningNote?: string
-}
-
 // ── Recovery types ────────────────────────────────────────────────────────────
 
-export type RecoverySource = 'manual' | 'garmin_import'
 
 export interface RecoveryLog {
   id: number
@@ -332,15 +241,3 @@ export interface RecoveryLog {
   createdAt: number
   updatedAt: number
 }
-
-export interface UpsertRecoveryLogPayload {
-  date: string
-  hrvRmssd?: number
-  bodyBattery?: number
-  sleepScore?: number
-  restingHr?: number
-  note?: string
-  source?: RecoverySource
-  // readinessScore is intentionally omitted — always auto-calculated from the other metrics
-}
-

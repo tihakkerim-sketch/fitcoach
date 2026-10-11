@@ -435,18 +435,18 @@ export default function Dashboard() {
   const [recoveryLog,   setRecoveryLog]   = useState<RecoveryLog | null>(null)
 
   const loadStats   = useCallback(() => {
-    invoke<StatsResult>(IPC.STATS_GET).then(s => setStats(s)).catch(() => {})
+    invoke(IPC.STATS_GET).then(s => setStats(s)).catch(() => {})
   }, [])
   const loadProfile = useCallback(() => {
-    invoke<UserProfile | null>(IPC.PROFILE_GET).then(p => setProfile(p)).catch(() => {})
+    invoke(IPC.PROFILE_GET).then(p => setProfile(p)).catch(() => {})
   }, [])
   const loadPlan    = useCallback(async () => {
     try {
-      const plans  = await invoke<PlanRow[]>(IPC.PLANS_LIST)
+      const plans  = await invoke(IPC.PLANS_LIST)
       const active = plans.find(p => p.isActive === 1) ?? null
       setActivePlan(active)
       if (active) {
-        const d = await invoke<PlanDetail | null>(IPC.PLANS_GET, active.id)
+        const d = await invoke(IPC.PLANS_GET, active.id)
         setPlanDetail(d)
       } else {
         setPlanDetail(null)
@@ -454,13 +454,13 @@ export default function Dashboard() {
     } catch { /* optional */ }
   }, [])
   const loadCheckin = useCallback(() => {
-    invoke<DailyCheckin | null>(IPC.CHECKIN_GET, todayStr)
+    invoke(IPC.CHECKIN_GET, todayStr)
       .then(c => { setCheckin(c); setCheckinLoaded(true) })
       .catch(() => { setCheckinLoaded(true) })
   }, [todayStr])
 
   const loadRecovery = useCallback(() => {
-    invoke<RecoveryLog[]>(IPC.RECOVERY_LOGS_GET, { dateFrom: todayStr, dateTo: todayStr })
+    invoke(IPC.RECOVERY_LOGS_GET, { dateFrom: todayStr, dateTo: todayStr })
       .then(logs => setRecoveryLog(logs[0] ?? null))
       .catch(() => {})
   }, [todayStr])

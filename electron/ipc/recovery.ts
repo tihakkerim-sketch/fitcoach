@@ -1,7 +1,7 @@
-import { ipcMain } from 'electron'
 import { IPC } from '../../src/types/ipc'
-import type { IpcResponse, RecoveryLog, UpsertRecoveryLogPayload } from '../../src/types/ipc'
-import { getDb, markDirty } from '../../db/index'
+import type { RecoveryLog } from '../../src/types/ipc'
+import { handle } from './handle'
+import { getDb } from '../../db/index'
 import { recoveryLogs } from '../../db/schema'
 import { eq, and, gte, lte } from 'drizzle-orm'
 import { calcReadiness } from '../../src/lib/recoveryScore'
@@ -25,94 +25,67 @@ function rowToLog(r: typeof recoveryLogs.$inferSelect): RecoveryLog {
 export function registerRecoveryHandlers() {
   // ── Upsert (create or update for a date) ────────────────────────────────────
 
-  ipcMain.handle(
-    IPC.RECOVERY_LOG_UPSERT,
-    async (_e, payload: UpsertRecoveryLogPayload): Promise<IpcResponse<RecoveryLog>> => {
-      try {
-        const db  = getDb()
-        const now = Date.now()
+  handle(IPC.RECOVERY_LOG_UPSERT, (payload) => {
+    const db  = getDb()
+    const now = Date.now()
 
-        const existing = db.select().from(recoveryLogs)
-          .where(eq(recoveryLogs.date, payload.date))
-          .get()
+    const existing = db.select().from(recoveryLogs)
+      .where(eq(recoveryLogs.date, payload.date))
+      .get()
 
-        // Always auto-calculate readiness from the other metrics
-        const readinessScore = calcReadiness({
-          bodyBattery: payload.bodyBattery,
-          sleepScore:  payload.sleepScore,
-          hrvRmssd:    payload.hrvRmssd,
-          restingHr:   payload.restingHr,
-        })
+    // Always auto-calculate readiness from the other metrics
+    const readinessScore = calcReadiness({
+      bodyBattery: payload.bodyBattery,
+      sleepScore:  payload.sleepScore,
+      hrvRmssd:    payload.hrvRmssd,
+      restingHr:   payload.restingHr,
+    })
 
-        const data = {
-          date:           payload.date,
-          hrvRmssd:       payload.hrvRmssd    ?? null,
-          bodyBattery:    payload.bodyBattery  ?? null,
-          sleepScore:     payload.sleepScore   ?? null,
-          readinessScore: readinessScore       ?? null,
-          restingHr:      payload.restingHr    ?? null,
-          note:           payload.note         ?? null,
-          source:         payload.source       ?? 'manual',
-        }
-
-        if (existing) {
-          db.update(recoveryLogs)
-            .set({ ...data, updatedAt: now })
-            .where(eq(recoveryLogs.id, existing.id))
-            .run()
-        } else {
-          db.insert(recoveryLogs)
-            .values({ ...data, createdAt: now, updatedAt: now })
-            .run()
-        }
-
-        markDirty()
-
-        const row = db.select().from(recoveryLogs)
-          .where(eq(recoveryLogs.date, payload.date))
-          .get()!
-
-        return { success: true, data: rowToLog(row) }
-      } catch (err) {
-        return { success: false, error: String(err) }
-      }
+    const data = {
+      date:           payload.date,
+      hrvRmssd:       payload.hrvRmssd    ?? null,
+      bodyBattery:    payload.bodyBattery  ?? null,
+      sleepScore:     payload.sleepScore   ?? null,
+      readinessScore: readinessScore       ?? null,
+      restingHr:      payload.restingHr    ?? null,
+      note:           payload.note         ?? null,
+      source:         payload.source       ?? 'manual',
     }
-  )
+
+    if (existing) {
+      db.update(recoveryLogs)
+        .set({ ...data, updatedAt: now })
+        .where(eq(recoveryLogs.id, existing.id))
+        .run()
+    } else {
+      db.insert(recoveryLogs)
+        .values({ ...data, createdAt: now, updatedAt: now })
+        .run()
+    }
+
+    const row = db.select().from(recoveryLogs)
+      .where(eq(recoveryLogs.date, payload.date))
+      .get()!
+
+    return rowToLog(row)
+  })
 
   // ── Get range ───────────────────────────────────────────────────────────────
 
-  ipcMain.handle(
-    IPC.RECOVERY_LOGS_GET,
-    async (_e, payload: { dateFrom: string; dateTo: string }): Promise<IpcResponse<RecoveryLog[]>> => {
-      try {
-        const db   = getDb()
-        const rows = db.select().from(recoveryLogs)
-          .where(and(
-            gte(recoveryLogs.date, payload.dateFrom),
-            lte(recoveryLogs.date, payload.dateTo),
-          ))
-          .all()
+  handle(IPC.RECOVERY_LOGS_GET, (payload) => {
+    const rows = getDb().select().from(recoveryLogs)
+      .where(and(
+        gte(recoveryLogs.date, payload.dateFrom),
+        lte(recoveryLogs.date, payload.dateTo),
+      ))
+      .all()
 
-        return { success: true, data: rows.map(rowToLog) }
-      } catch (err) {
-        return { success: false, error: String(err) }
-      }
-    }
-  )
+    return rows.map(rowToLog)
+  })
 
   // ── Delete ──────────────────────────────────────────────────────────────────
 
-  ipcMain.handle(
-    IPC.RECOVERY_LOG_DELETE,
-    async (_e, id: number): Promise<IpcResponse<void>> => {
-      try {
-        const db = getDb()
-        db.delete(recoveryLogs).where(eq(recoveryLogs.id, id)).run()
-        markDirty()
-        return { success: true, data: undefined }
-      } catch (err) {
-        return { success: false, error: String(err) }
-      }
-    }
-  )
+  handle(IPC.RECOVERY_LOG_DELETE, (id) => {
+    getDb().delete(recoveryLogs).where(eq(recoveryLogs.id, id)).run()
+  })
 }

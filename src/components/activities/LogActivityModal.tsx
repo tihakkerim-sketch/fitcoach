@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useForm, FormProvider } from 'react-hook-form'
+import { useForm, FormProvider, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
 import {
@@ -56,7 +56,7 @@ export function LogActivityModal({ open, onClose, onSaved, prefill }: Props) {
 
   const schema = schemaMap[activeTab]
   const methods = useForm<AnyFormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema) as unknown as Resolver<AnyFormData>,
     defaultValues: {
       date: format(new Date(), 'yyyy-MM-dd'),
       exercises: [],

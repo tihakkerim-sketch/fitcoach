@@ -45,11 +45,6 @@ export async function initDb(): Promise<void> {
   db = createDrizzle(conn)
 }
 
-/** @deprecated No-op: writes go straight to the WAL file. Will be removed. */
-export function markDirty(): void {
-  /* intentionally empty */
-}
-
 /** Idempotent (called on `session-end` AND `before-quit`). */
 export function closeDb(): void {
   if (!sqlite) return

@@ -13,7 +13,7 @@ export function usePlanDetail(id: number | null) {
     setLoading(true)
     setError(null)
     try {
-      const data = await invoke<PlanDetail | null>(IPC.PLANS_GET, id)
+      const data = await invoke(IPC.PLANS_GET, id)
       setPlan(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load plan')

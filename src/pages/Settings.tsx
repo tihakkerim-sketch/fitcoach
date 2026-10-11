@@ -22,14 +22,14 @@ export default function Settings() {
   const [autostartBusy, setAutostartBusy] = useState(false)
 
   useEffect(() => {
-    invoke<UserProfile | null>(IPC.PROFILE_GET).then(p => {
+    invoke(IPC.PROFILE_GET).then(p => {
       if (p) {
         setProfile(p)
         setRestDays(p.fixedRestDays ?? [])
       }
     }).catch(() => {})
 
-    invoke<boolean>(IPC.AUTOSTART_GET)
+    invoke(IPC.AUTOSTART_GET)
       .then(setAutostart)
       .catch(() => {})
   }, [])
@@ -42,7 +42,7 @@ export default function Settings() {
     const next = !autostart
     setAutostartBusy(true)
     try {
-      const applied = await invoke<boolean>(IPC.AUTOSTART_SET, next)
+      const applied = await invoke(IPC.AUTOSTART_SET, next)
       setAutostart(applied)
     } catch {
       // leave the toggle in its previous state on failure

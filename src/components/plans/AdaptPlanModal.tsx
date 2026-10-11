@@ -62,7 +62,7 @@ export function AdaptPlanModal({ open, onClose, onSaved, planId, planName }: Pro
     setSaving(true); setSaveError(null)
     try {
       const payload = { planId, ...toCreatePayload(parsed) }
-      const res = await invoke<AdaptPlanResult>(IPC.PLANS_ADAPT, payload)
+      const res = await invoke(IPC.PLANS_ADAPT, payload)
       setResult(res)
       setStep('done')
       onSaved()

@@ -57,7 +57,7 @@ export function ImportPlanModal({ open, onClose, onSaved }: Props) {
     if (!parsed) return
     setSaving(true); setSaveError(null)
     try {
-      await invoke<{ id: number }>(IPC.PLANS_CREATE, toCreatePayload(parsed))
+      await invoke(IPC.PLANS_CREATE, toCreatePayload(parsed))
       onSaved(); handleClose()
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : String(e))

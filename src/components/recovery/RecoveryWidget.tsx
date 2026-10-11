@@ -60,7 +60,7 @@ export function RecoveryWidget() {
 
   const load = useCallback(async () => {
     try {
-      const logs = await invoke<RecoveryLog[]>(IPC.RECOVERY_LOGS_GET, {
+      const logs = await invoke(IPC.RECOVERY_LOGS_GET, {
         dateFrom: today,
         dateTo:   today,
       })

@@ -12,7 +12,7 @@ export function usePlans() {
     setLoading(true)
     setError(null)
     try {
-      const data = await invoke<PlanRow[]>(IPC.PLANS_LIST)
+      const data = await invoke(IPC.PLANS_LIST)
       setPlans(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load plans')

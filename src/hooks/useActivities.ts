@@ -24,7 +24,7 @@ export function useActivities() {
     setLoading(true)
     setError(null)
     try {
-      const result = await invoke<{ activities: ActivityRow[]; total: number }>(IPC.ACTIVITIES_LIST, {
+      const result = await invoke(IPC.ACTIVITIES_LIST, {
         limit: PAGE_SIZE,
         offset: currentPage * PAGE_SIZE,
         ...currentFilters,

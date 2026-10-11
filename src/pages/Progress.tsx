@@ -135,7 +135,7 @@ export default function Progress() {
   const [error, setError]     = useState<string | null>(null)
 
   useEffect(() => {
-    invoke<StatsResult>(IPC.STATS_GET)
+    invoke(IPC.STATS_GET)
       .then(s  => setStats(s))
       .catch(e => setError(e instanceof Error ? e.message : 'Failed to load stats'))
       .finally(() => setLoading(false))

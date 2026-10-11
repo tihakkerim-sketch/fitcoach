@@ -12,20 +12,22 @@ Aktueller Umbau: siehe `docs/AUDIT-2026-10.md` (Phasenplan + Entscheidungen in A
 
 ## Architektur in Kürze
 - `electron/main.ts` – Fenster, CSP (nur prod), registriert IPC-Handler aus `electron/ipc/*` (eine Datei pro Bereich)
+- Neuer IPC-Kanal: in `IPC` eintragen, in `ipcInputs` + `IpcResults` (ipcContract.ts) ergänzen, Handler mit `handle(IPC.X, fn)` aus `electron/ipc/handle.ts` (validiert + verpackt Fehler; Kern in `runHandler.ts`)
 - `electron/lib/*` – reine Logik ohne `electron`-Import → hier testen
-- `db/schema.ts` (Drizzle), `db/index.ts` (sql.js laden/speichern, Migrationen, `markDirty()`)
-- `src/` – React-Renderer; IPC nur über `invoke()` aus `src/lib/ipc.ts`, Kanäle/Typen in `src/types/ipc.ts`
+- `db/schema.ts` (Drizzle), `db/index.ts` (node:sqlite, WAL, Migrationen)
+- `src/` – React-Renderer; IPC nur über `invoke()` aus `src/lib/ipc.ts`, Kanäle in `src/types/ipc.ts`, **IPC-Vertrag** (Zod-Eingabeschema + Ergebnistyp je Kanal) in `src/types/ipcContract.ts`
 
 ## Gotchas
 - **Echte Daten:** `%APPDATA%\FitCoach\fitcoach.db`. Nie direkt ändern. Sicherung vor dem Umbau: `%APPDATA%\FitCoach\backups-manual\`.
-- sql.js hält die DB im RAM; nach jedem Schreib-Handler `markDirty()` aufrufen, sonst wird nichts gespeichert.
+- DB schreibt direkt per WAL (kein markDirty/Flush mehr).
 - Datum immer **lokal** (`date-fns format(..., 'yyyy-MM-dd')`), nie `toISOString()` (UTC → falscher Tag in Österreich).
 - `YYYY-MM-DD`-Strings beim Parsen mit `T12:00:00` ergänzen, damit sich der Tag nicht verschiebt.
 - Wochentage in Plänen: 1=Mo … 7=So.
-- Migrationen: `db/migrations/meta/_journal.json` hat kaputte Zeitstempel; Schema-Reparatur läuft über `applySchemaPatches()` in `db/index.ts`. Wird in Phase 1 durch eine saubere Baseline ersetzt – bis dahin keine neuen Drizzle-Migrationen generieren.
-- `main.js` liegt unter `dist-electron/electron/main.js`; WASM-Pfad über `require.resolve('sql.js')`.
-- Mehrschrittige Schreibvorgänge immer in einer Transaktion.
-- sql.js `export()` setzt PRAGMAs zurück → `foreign_keys = ON` danach neu setzen (passiert in `flushDb`).
-- Transaktionen: `runInTransaction` aus `electron/lib/transaction.ts` (drizzle `db.transaction`, synchron mit sql-js).
-- App ohne echte Daten testen: Vite starten, dann `npx electron . --user-data-dir=<tempordner>`.
-- Backup-Format v3 = alle Tabellen (`electron/lib/backupFormat.ts`); neue Tabellen dort eintragen.
+- **Migrationen** von Hand in `db/migrations.ts` (Version in `PRAGMA user_version`, kein drizzle-kit). Schema-Änderung = neue Migration anhängen + `db/schema.ts` anpassen + Test in `db/migrations.test.ts`. Vor Migrationen auf bestehender DB wird automatisch `backups/vor-migration-*.db` geschrieben.
+- DB-Treiber: `node:sqlite` (in Electron 44 eingebaut, nichts kompilieren) mit eigenem Drizzle-Adapter `db/nodeSqliteAdapter.ts` (bildet better-sqlite3-API nach; `drizzle-orm/better-sqlite3` NICHT direkt importieren – lädt das nicht installierte Paket).
+- vitest braucht ≥ 3, sonst kann es `node:sqlite` nicht laden. Tests nutzen In-Memory-DB mit echten Migrationen (`electron/lib/testDb.ts`).
+- `main.js` liegt unter `dist-electron/electron/main.js`.
+- Mehrschrittige Schreibvorgänge immer in einer Transaktion: `runInTransaction` aus `electron/lib/transaction.ts` (synchron, `BEGIN IMMEDIATE`).
+- App ohne echte Daten testen: Vite starten, dann `npx electron . --user-data-dir=<tempordner>` (Kopie von `fitcoach.db` hineinlegen). Port 5173 muss frei sein (`--strictPort`).
+- Backup-Format v4 = alle Tabellen (`electron/lib/backupFormat.ts`); neue Tabellen dort eintragen. v1–v3 bleiben importierbar.
+- Entfernt (Phase 1): Habits, Ernährung, Körper, Challenges. Alte Daten liegen in `backups/vor-v2-alle-tabellen-*.json`.

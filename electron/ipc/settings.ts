@@ -1,6 +1,6 @@
-import { app, ipcMain } from 'electron'
+import { app } from 'electron'
 import { IPC } from '../../src/types/ipc'
-import type { IpcResponse } from '../../src/types/ipc'
+import { handle } from './handle'
 
 // OS-level app settings that live outside the database.
 //
@@ -15,27 +15,11 @@ import type { IpcResponse } from '../../src/types/ipc'
 // produced executable.
 
 export function registerSettingsHandlers() {
-  ipcMain.handle(
-    IPC.AUTOSTART_GET,
-    async (): Promise<IpcResponse<boolean>> => {
-      try {
-        return { success: true, data: app.getLoginItemSettings().openAtLogin }
-      } catch (err) {
-        return { success: false, error: String(err) }
-      }
-    }
-  )
+  handle(IPC.AUTOSTART_GET, () => app.getLoginItemSettings().openAtLogin)
 
-  ipcMain.handle(
-    IPC.AUTOSTART_SET,
-    async (_e, enabled: unknown): Promise<IpcResponse<boolean>> => {
-      try {
-        app.setLoginItemSettings({ openAtLogin: Boolean(enabled) })
-        // Read the value back so the renderer reflects the OS's actual state
-        return { success: true, data: app.getLoginItemSettings().openAtLogin }
-      } catch (err) {
-        return { success: false, error: String(err) }
-      }
-    }
-  )
+  handle(IPC.AUTOSTART_SET, (enabled) => {
+    app.setLoginItemSettings({ openAtLogin: enabled })
+    // Read the value back so the renderer reflects the OS's actual state
+    return app.getLoginItemSettings().openAtLogin
+  })
 }
