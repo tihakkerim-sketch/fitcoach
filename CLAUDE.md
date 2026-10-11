@@ -25,7 +25,8 @@ Aktueller Umbau: siehe `docs/AUDIT-2026-10.md` (Phasenplan + Entscheidungen in A
 - Wochentage in Plänen: 1=Mo … 7=So.
 - **Migrationen** von Hand in `db/migrations.ts` (Version in `PRAGMA user_version`, kein drizzle-kit). Schema-Änderung = neue Migration anhängen + `db/schema.ts` anpassen + Test in `db/migrations.test.ts`. Vor Migrationen auf bestehender DB wird automatisch `backups/vor-migration-*.db` geschrieben.
 - DB-Treiber: `node:sqlite` (in Electron 44 eingebaut, nichts kompilieren) mit eigenem Drizzle-Adapter `db/nodeSqliteAdapter.ts` (bildet better-sqlite3-API nach; `drizzle-orm/better-sqlite3` NICHT direkt importieren – lädt das nicht installierte Paket).
-- vitest braucht ≥ 3, sonst kann es `node:sqlite` nicht laden. Tests nutzen In-Memory-DB mit echten Migrationen (`electron/lib/testDb.ts`).
+- vitest braucht ≥ 3 (aktuell 5), sonst kann es `node:sqlite` nicht laden. Vite-Config heißt `vite.config.mts`.
+- Tailwind 4 (CSS-first in `src/index.css`, keine tailwind.config). `vspace-N` = eigene Utility mit altem v3-`space-y`-Verhalten. `npx @tailwindcss/upgrade` hat einmal `package.json` geleert → nur mit Git-Sicherung laufen lassen. Tests nutzen In-Memory-DB mit echten Migrationen (`electron/lib/testDb.ts`).
 - `main.js` liegt unter `dist-electron/electron/main.js`.
 - Mehrschrittige Schreibvorgänge immer in einer Transaktion: `runInTransaction` aus `electron/lib/transaction.ts` (synchron, `BEGIN IMMEDIATE`).
 - App ohne echte Daten testen: Vite starten, dann `npx electron . --user-data-dir=<tempordner>` (Kopie von `fitcoach.db` hineinlegen). Port 5173 muss frei sein (`--strictPort`).

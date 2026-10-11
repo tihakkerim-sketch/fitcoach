@@ -171,13 +171,13 @@ function EntryForm({
   }
 
   return (
-    <div className="rounded-xl border bg-card p-5 space-y-4">
+    <div className="rounded-xl border bg-card p-5 vspace-4">
       <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
         {existing ? 'Edit today\'s entry' : 'Log today\'s recovery'}
       </p>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="rec-bb" className="text-xs flex items-center gap-1.5">
             <Zap className="h-3 w-3 text-orange-500" /> Body Battery (0–100)
           </Label>
@@ -185,7 +185,7 @@ function EntryForm({
             placeholder="e.g. 82" value={bb}
             onChange={e => setBb(e.target.value)} />
         </div>
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="rec-sleep" className="text-xs flex items-center gap-1.5">
             <Moon className="h-3 w-3 text-blue-500" /> Sleep Score (0–100)
           </Label>
@@ -193,7 +193,7 @@ function EntryForm({
             placeholder="e.g. 78" value={sleep}
             onChange={e => setSleep(e.target.value)} />
         </div>
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="rec-hrv" className="text-xs flex items-center gap-1.5">
             <Heart className="h-3 w-3 text-violet-500" /> HRV RMSSD (ms)
           </Label>
@@ -201,7 +201,7 @@ function EntryForm({
             placeholder="e.g. 45" value={hrv}
             onChange={e => setHrv(e.target.value)} />
         </div>
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="rec-rhr" className="text-xs flex items-center gap-1.5">
             <Heart className="h-3 w-3 text-rose-500" /> Resting HR (bpm)
           </Label>
@@ -209,7 +209,7 @@ function EntryForm({
             placeholder="e.g. 48" value={rhr}
             onChange={e => setRhr(e.target.value)} />
         </div>
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label className="text-xs text-muted-foreground">Note (optional)</Label>
           <Input id="rec-note" placeholder="e.g. Poor sleep, travel day"
             value={note} onChange={e => setNote(e.target.value)} />
@@ -441,7 +441,7 @@ export default function Recovery() {
   }
 
   return (
-    <div className="p-8 space-y-8 max-w-2xl">
+    <div className="p-8 vspace-8 max-w-2xl">
 
       {/* ── Header + date nav ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">
@@ -515,14 +515,14 @@ export default function Recovery() {
 
       {/* ── Trend charts ───────────────────────────────────────────────── */}
       {logs.length > 0 && (
-        <div className="space-y-4">
+        <div className="vspace-4">
           <ScoreTrendChart data={chartData} />
           <HrvRhrChart data={chartData} />
         </div>
       )}
 
       {logs.length === 0 && (
-        <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center space-y-2">
+        <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center vspace-2">
           <p className="text-3xl">💤</p>
           <p className="font-semibold text-sm">No recovery data yet</p>
           <p className="text-xs text-muted-foreground">

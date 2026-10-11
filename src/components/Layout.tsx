@@ -114,13 +114,13 @@ export function Layout() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+        <nav className="flex-1 px-3 py-4 vspace-4 overflow-y-auto">
           {navGroups.map(({ heading, items }) => (
             <div key={heading}>
               <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
                 {heading}
               </p>
-              <div className="space-y-0.5">
+              <div className="vspace-0.5">
                 {items.map(({ to, label, Icon, color }) => (
                   <NavLink
                     key={to}

@@ -85,7 +85,7 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
 }) {
   const c = ACCENT[color]
   return (
-    <div className={cn('rounded-xl border bg-card p-5 transition-all hover:shadow-sm', c.glow)}>
+    <div className={cn('rounded-xl border bg-card p-5 transition-all hover:shadow-xs', c.glow)}>
       <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-4', c.iconBg)}>
         <Icon className={cn('h-5 w-5', c.iconText)} />
       </div>
@@ -159,7 +159,7 @@ export default function Progress() {
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-8 space-y-8 max-w-5xl">
+      <div className="p-8 vspace-8 max-w-5xl">
 
         {/* Page header */}
         <div>
@@ -169,7 +169,7 @@ export default function Progress() {
 
         {/* Empty state */}
         {noData && (
-          <div className="rounded-2xl border bg-card p-12 text-center space-y-4">
+          <div className="rounded-2xl border bg-card p-12 text-center vspace-4">
             <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center mx-auto">
               <Activity className="h-6 w-6 text-blue-500" />
             </div>
@@ -245,7 +245,7 @@ export default function Progress() {
                   <XAxis dataKey="label" tick={axisStyle} axisLine={false} tickLine={false} />
                   <YAxis unit=" km"      tick={axisStyle} axisLine={false} tickLine={false} />
                   <Tooltip
-                    formatter={(v: number, name: string) => [`${v.toFixed(1)} km`, name]}
+                    formatter={(v, name) => [`${Number(v).toFixed(1)} km`, String(name)]}
                     contentStyle={tooltipStyle}
                     cursor={{ fill: 'hsl(var(--muted))' }}
                   />
@@ -265,7 +265,7 @@ export default function Progress() {
                   <XAxis dataKey="label" tick={axisStyle} axisLine={false} tickLine={false} />
                   <YAxis unit=" min"     tick={axisStyle} axisLine={false} tickLine={false} />
                   <Tooltip
-                    formatter={(v: number, name: string) => [fmt(v), name]}
+                    formatter={(v, name) => [fmt(Number(v)), String(name)]}
                     contentStyle={tooltipStyle}
                     cursor={{ stroke: 'hsl(var(--border))' }}
                   />
@@ -289,7 +289,7 @@ export default function Progress() {
                     <XAxis dataKey="label" tick={axisStyle} axisLine={false} tickLine={false} />
                     <YAxis              tick={axisStyle} axisLine={false} tickLine={false} />
                     <Tooltip
-                      formatter={(v: number) => [v.toLocaleString(), 'Load']}
+                      formatter={(v) => [Number(v).toLocaleString(), 'Load']}
                       contentStyle={tooltipStyle}
                       cursor={{ fill: 'hsl(var(--muted))' }}
                     />
@@ -354,7 +354,7 @@ export default function Progress() {
                         cx="50%" cy="50%"
                         outerRadius={80} innerRadius={38}
                         paddingAngle={3}
-                        label={({ type, percent }) => `${type} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                         labelLine={false}
                       >
                         {stats.byType.map((_, i) => (
@@ -376,7 +376,7 @@ export default function Progress() {
                       <XAxis type="number" unit=" min" tick={axisStyle} axisLine={false} tickLine={false} />
                       <YAxis type="category" dataKey="zone" tick={{ fontSize: 12 }} width={32} axisLine={false} tickLine={false} />
                       <Tooltip
-                        formatter={(v: number) => [fmt(v), 'Time']}
+                        formatter={(v) => [fmt(Number(v)), 'Time']}
                         contentStyle={tooltipStyle}
                         cursor={{ fill: 'hsl(var(--muted))' }}
                       />

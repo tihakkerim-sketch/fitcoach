@@ -31,7 +31,7 @@ export function PlanCard({ plan, onRefresh, onActivateRequest }: Props) {
 
   return (
     <div
-      className={`rounded-lg border bg-card p-4 space-y-3 transition-colors ${plan.isActive ? 'border-primary ring-1 ring-primary' : ''}`}
+      className={`rounded-lg border bg-card p-4 vspace-3 transition-colors ${plan.isActive ? 'border-primary ring-1 ring-primary' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">

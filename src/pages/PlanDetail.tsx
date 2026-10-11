@@ -30,7 +30,7 @@ export default function PlanDetail() {
 
   if (!plan) {
     return (
-      <div className="p-6 space-y-3">
+      <div className="p-6 vspace-3">
         <p className="text-muted-foreground">Plan not found.</p>
         <Button variant="outline" onClick={() => navigate('/plan')}>← Back to plans</Button>
       </div>
@@ -47,7 +47,7 @@ export default function PlanDetail() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="shrink-0 border-b px-6 py-4 space-y-2">
+      <div className="shrink-0 border-b px-6 py-4 vspace-2">
         <Button variant="ghost" size="sm" className="mb-1 -ml-2 text-muted-foreground" onClick={() => navigate('/plan')}>
           <ArrowLeft className="h-4 w-4 mr-1" /> All plans
         </Button>
@@ -93,7 +93,7 @@ export default function PlanDetail() {
 
         {/* Adherence bar */}
         {adherencePct !== null && (
-          <div className="mt-4 space-y-1.5">
+          <div className="mt-4 vspace-1.5">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Adherence

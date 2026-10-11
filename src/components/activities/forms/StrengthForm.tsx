@@ -10,9 +10,9 @@ export function StrengthForm() {
   const { fields, append, remove } = useFieldArray({ control, name: 'exercises' })
 
   return (
-    <div className="space-y-4">
+    <div className="vspace-4">
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="durationMin">Duration (min) *</Label>
           <Input
             id="durationMin"
@@ -25,7 +25,7 @@ export function StrengthForm() {
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="vspace-2">
         <div className="flex items-center justify-between">
           <Label>Exercises *</Label>
           <Button
@@ -43,7 +43,7 @@ export function StrengthForm() {
           <p className="text-xs text-destructive">{errors.exercises.message}</p>
         )}
 
-        <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+        <div className="vspace-2 max-h-52 overflow-y-auto pr-1">
           {fields.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
               Add at least one exercise
@@ -94,7 +94,7 @@ export function StrengthForm() {
         </div>
       </div>
 
-      <div className="space-y-1">
+      <div className="vspace-1">
         <Label htmlFor="notes">Notes</Label>
         <Textarea id="notes" rows={3} placeholder="How was the session?" {...register('notes')} />
       </div>

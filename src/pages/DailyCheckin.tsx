@@ -20,7 +20,7 @@ function ScorePicker({
   required?: boolean
 }) {
   return (
-    <div className="space-y-2">
+    <div className="vspace-2">
       <p className="text-sm font-medium">
         {label}
         {required && <span className="text-destructive ml-1">*</span>}
@@ -112,9 +112,9 @@ function CheckinSection({
 
       {/* Expandable body */}
       {expanded && (
-        <div className="px-5 pb-5 border-t border-border/60 pt-4 space-y-4">
+        <div className="px-5 pb-5 border-t border-border/60 pt-4 vspace-4">
           {children}
-          <div className="space-y-1.5">
+          <div className="vspace-1.5">
             <Button
               onClick={onSubmit}
               disabled={saving || !canSubmit}
@@ -226,7 +226,7 @@ export default function DailyCheckin() {
     : undefined
 
   return (
-    <div className="p-8 space-y-8 max-w-xl">
+    <div className="p-8 vspace-8 max-w-xl">
 
       {/* Header */}
       <div>
@@ -294,10 +294,10 @@ export default function DailyCheckin() {
           emojis={['', '🌫️', '😵', '🤔', '🧠', '⚡']}
           descriptions={['', 'Foggy', 'Scattered', 'Clear enough', 'Sharp', 'Laser-focused']}
         />
-        <div className="space-y-1.5">
+        <div className="vspace-1.5">
           <p className="text-sm font-medium">Today's intention</p>
           <textarea
-            className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-hidden focus:ring-2 focus:ring-ring"
             rows={2}
             placeholder="What is the one thing that will make today a win?"
             value={mIntention}
@@ -328,20 +328,20 @@ export default function DailyCheckin() {
             descriptions={['', 'Rough day', 'Meh', 'Decent', 'Good day', 'Crushed it']}
             required
           />
-          <div className="space-y-1.5">
+          <div className="vspace-1.5">
             <p className="text-sm font-medium">Biggest win today</p>
             <textarea
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-hidden focus:ring-2 focus:ring-ring"
               rows={2}
               placeholder="What went well? What are you proud of?"
               value={eWins}
               onChange={e => setEWins(e.target.value)}
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="vspace-1.5">
             <p className="text-sm font-medium">Reflection / lessons</p>
             <textarea
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-hidden focus:ring-2 focus:ring-ring"
               rows={2}
               placeholder="What would you do differently? What did you learn?"
               value={eNote}

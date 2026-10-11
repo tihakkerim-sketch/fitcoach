@@ -50,7 +50,7 @@ export function ActivityFilters({ filters, onApply }: Props) {
 
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
-      <div className="space-y-1">
+      <div className="vspace-1">
         <Label className="text-xs">Type</Label>
         <Select value={type || '_all'} onValueChange={v => setType(v === '_all' ? '' : v as ActivityType)}>
           <SelectTrigger className="h-8 w-36 text-sm">
@@ -66,7 +66,7 @@ export function ActivityFilters({ filters, onApply }: Props) {
         </Select>
       </div>
 
-      <div className="space-y-1">
+      <div className="vspace-1">
         <Label className="text-xs">From</Label>
         <Input
           type="date"
@@ -76,7 +76,7 @@ export function ActivityFilters({ filters, onApply }: Props) {
         />
       </div>
 
-      <div className="space-y-1">
+      <div className="vspace-1">
         <Label className="text-xs">To</Label>
         <Input
           type="date"
@@ -86,7 +86,7 @@ export function ActivityFilters({ filters, onApply }: Props) {
         />
       </div>
 
-      <div className="space-y-1">
+      <div className="vspace-1">
         <Label className="text-xs">Source</Label>
         <Select value={source || '_any'} onValueChange={v => setSource(v === '_any' ? '' : v as 'manual' | 'garmin_import')}>
           <SelectTrigger className="h-8 w-36 text-sm">

@@ -88,9 +88,9 @@ export function SessionActionModal({ session, onClose, onSaved }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="vspace-4">
           {/* Session details */}
-          <div className="rounded-md bg-muted/50 p-3 space-y-1 text-sm">
+          <div className="rounded-md bg-muted/50 p-3 vspace-1 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Status:</span>
               <Badge variant={statusColor[session.status] as any}>{session.status}</Badge>
@@ -116,7 +116,7 @@ export function SessionActionModal({ session, onClose, onSaved }: Props) {
           </div>
 
           {/* Link to activity */}
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label>Link to logged activity</Label>
             <Select value={linkedId} onValueChange={setLinkedId}>
               <SelectTrigger>

@@ -79,7 +79,7 @@ export function GarminDropZone({ onParsed }: Props) {
           <FileCheck className="h-8 w-8 text-primary" />
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium text-primary">{fileName}</p>
-            <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-primary/10 text-primary">
+            <span className="rounded-[0.25rem] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-primary/10 text-primary">
               {fileName.toLowerCase().endsWith('.tcx') ? 'TCX' : 'FIT'}
             </span>
           </div>

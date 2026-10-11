@@ -8,9 +8,9 @@ export function RunningForm() {
   const { register, setValue, watch, formState: { errors } } = useFormContext()
 
   return (
-    <div className="space-y-4">
+    <div className="vspace-4">
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="durationMin">Duration (min) *</Label>
           <Input
             id="durationMin"
@@ -22,7 +22,7 @@ export function RunningForm() {
           {errors.durationMin && <p className="text-xs text-destructive">{String(errors.durationMin.message)}</p>}
         </div>
 
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="distanceKm">Distance (km)</Label>
           <Input
             id="distanceKm"
@@ -37,12 +37,12 @@ export function RunningForm() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="startTime">Start Time</Label>
           <Input id="startTime" type="time" {...register('startTime')} />
         </div>
 
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="surfaceType">Surface</Label>
           <Select onValueChange={v => setValue('surfaceType', v)} value={watch('surfaceType') ?? ''}>
             <SelectTrigger id="surfaceType">
@@ -60,7 +60,7 @@ export function RunningForm() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="avgHr">Avg HR (bpm)</Label>
           <Input
             id="avgHr"
@@ -72,7 +72,7 @@ export function RunningForm() {
           {errors.avgHr && <p className="text-xs text-destructive">{String(errors.avgHr.message)}</p>}
         </div>
 
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="maxHr">Max HR (bpm)</Label>
           <Input
             id="maxHr"
@@ -85,7 +85,7 @@ export function RunningForm() {
         </div>
       </div>
 
-      <div className="space-y-1">
+      <div className="vspace-1">
         <Label htmlFor="perceivedEffort">Perceived Effort (1–10)</Label>
         <Input
           id="perceivedEffort"
@@ -96,7 +96,7 @@ export function RunningForm() {
         />
       </div>
 
-      <div className="space-y-1">
+      <div className="vspace-1">
         <Label htmlFor="notes">Notes</Label>
         <Textarea id="notes" rows={3} placeholder="How did it feel?" {...register('notes')} />
       </div>

@@ -10,7 +10,7 @@ const path = require('path')
 const Jimp = require('jimp')
 const pngToIco = require('png-to-ico')
 
-const SOURCE = path.join(__dirname, '..', 'Icon for fitcoach.jpg')
+const SOURCE = path.join(__dirname, '..', 'build', 'icon-source.jpg')
 const OUT_DIR = path.join(__dirname, '..', 'build')
 const OUT_ICO = path.join(OUT_DIR, 'icon.ico')
 

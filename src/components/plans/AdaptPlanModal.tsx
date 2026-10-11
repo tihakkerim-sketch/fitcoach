@@ -80,7 +80,7 @@ export function AdaptPlanModal({ open, onClose, onSaved, planId, planName }: Pro
           <DialogTitle>Adapt Plan — {planName}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+        <div className="flex-1 overflow-y-auto vspace-4 pr-1">
 
           {/* ── Step: paste ── */}
           {step === 'paste' && (
@@ -88,7 +88,7 @@ export function AdaptPlanModal({ open, onClose, onSaved, planId, planName }: Pro
               {/* How it works callout */}
               <div className="flex items-start gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/8 p-4">
                 <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                <div className="text-sm space-y-1">
+                <div className="text-sm vspace-1">
                   <p className="font-semibold text-emerald-700 dark:text-emerald-400">Your progress is safe</p>
                   <p className="text-muted-foreground text-xs">
                     Completed and skipped sessions are preserved and automatically
@@ -98,7 +98,7 @@ export function AdaptPlanModal({ open, onClose, onSaved, planId, planName }: Pro
                 </div>
               </div>
 
-              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+              <div className="rounded-lg border bg-muted/30 p-4 vspace-2">
                 <p className="text-sm font-medium">Step 1 — Get Claude to adapt your plan</p>
                 <p className="text-xs text-muted-foreground">
                   Copy the prompt, share your weekly stats with{' '}
@@ -113,10 +113,10 @@ export function AdaptPlanModal({ open, onClose, onSaved, planId, planName }: Pro
                 </Button>
               </div>
 
-              <div className="space-y-2">
+              <div className="vspace-2">
                 <p className="text-sm font-medium">Step 2 — Paste Claude's updated JSON</p>
                 <textarea
-                  className="w-full h-48 rounded-md border bg-background px-3 py-2 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full h-48 rounded-md border bg-background px-3 py-2 text-sm font-mono resize-none focus:outline-hidden focus:ring-2 focus:ring-ring"
                   placeholder={'{\n  "name": "Updated Plan",\n  "phases": [...]\n}'}
                   value={json}
                   onChange={e => { setJson(e.target.value); setParseError(null) }}
@@ -155,10 +155,10 @@ export function AdaptPlanModal({ open, onClose, onSaved, planId, planName }: Pro
 
           {/* ── Step: done ── */}
           {step === 'done' && result && (
-            <div className="py-4 space-y-4 text-center">
+            <div className="py-4 vspace-4 text-center">
               <div className="text-4xl">✅</div>
               <p className="font-semibold text-lg">Plan updated!</p>
-              <div className="rounded-lg border bg-muted/30 p-4 text-sm space-y-1 text-left">
+              <div className="rounded-lg border bg-muted/30 p-4 text-sm vspace-1 text-left">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Completed / skipped sessions found</span>
                   <span className="font-semibold">{result.preserved}</span>

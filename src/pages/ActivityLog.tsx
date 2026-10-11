@@ -79,7 +79,7 @@ export default function ActivityLog() {
           </div>
         ) : (
           <ScrollArea className="h-full">
-            <div className="space-y-2 pr-2">
+            <div className="vspace-2 pr-2">
               {activities.map(a => (
                 <ActivityCard key={a.id} activity={a} onDeleted={refresh} />
               ))}

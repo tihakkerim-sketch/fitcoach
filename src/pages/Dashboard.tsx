@@ -170,7 +170,7 @@ function TodayCard({ session, onDone }: { session: SessionRow; onDone: () => voi
           <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center shrink-0', colors.iconBg)}>
             <Icon className={cn('h-5 w-5', colors.iconText)} />
           </div>
-          <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex-1 min-w-0 vspace-1.5">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 Today · {DOW_LABEL[session.dayOfWeek]}
@@ -208,10 +208,10 @@ function TodayCard({ session, onDone }: { session: SessionRow; onDone: () => voi
           </p>
         )}
         {showNote && (
-          <div className="mt-4 space-y-3 pt-4 border-t border-border/60">
+          <div className="mt-4 vspace-3 pt-4 border-t border-border/60">
             <p className="text-xs font-medium text-muted-foreground">Add a note (optional)</p>
             <textarea
-              className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full rounded-lg border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-hidden focus:ring-2 focus:ring-ring"
               rows={2}
               placeholder="How did it feel? Any PRs?"
               value={note}
@@ -312,7 +312,7 @@ function CheckinBanner({ checkin, onNavigate }: { checkin: DailyCheckin | null; 
     return (
       <button
         onClick={onNavigate}
-        className="group flex items-center gap-3 rounded-xl border border-green-500/20 bg-green-500/5 p-3.5 w-full text-left hover:shadow-sm transition-all"
+        className="group flex items-center gap-3 rounded-xl border border-green-500/20 bg-green-500/5 p-3.5 w-full text-left hover:shadow-xs transition-all"
       >
         <Check className="h-4 w-4 text-green-500 shrink-0" />
         <div className="flex-1 min-w-0">
@@ -329,7 +329,7 @@ function CheckinBanner({ checkin, onNavigate }: { checkin: DailyCheckin | null; 
     return (
       <button
         onClick={onNavigate}
-        className="group flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 w-full text-left hover:shadow-sm transition-all"
+        className="group flex items-center gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3.5 w-full text-left hover:shadow-xs transition-all"
       >
         <div className="flex flex-col items-center gap-0.5 shrink-0 w-8">
           <Check className="h-3.5 w-3.5 text-green-500" />
@@ -350,7 +350,7 @@ function CheckinBanner({ checkin, onNavigate }: { checkin: DailyCheckin | null; 
   return (
     <button
       onClick={onNavigate}
-      className="group flex items-center gap-3 rounded-xl border border-dashed border-border bg-card p-3.5 w-full text-left hover:border-primary/40 hover:shadow-sm transition-all"
+      className="group flex items-center gap-3 rounded-xl border border-dashed border-border bg-card p-3.5 w-full text-left hover:border-primary/40 hover:shadow-xs transition-all"
     >
       <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
         {hour < 17
@@ -374,7 +374,7 @@ function GoalBar({ label, current, goal, unit }: {
   const done  = current >= goal
   const color = done ? 'hsl(var(--chart-2))' : pct >= 60 ? 'hsl(var(--chart-1))' : 'hsl(var(--muted-foreground))'
   return (
-    <div className="space-y-1.5">
+    <div className="vspace-1.5">
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium">{label}</span>
         <span className="tabular-nums text-muted-foreground">
@@ -398,7 +398,7 @@ function ReadinessAlert({ score, onNavigate }: { score: number; onNavigate: () =
     <button
       onClick={onNavigate}
       className={cn(
-        'w-full rounded-xl border p-3.5 flex items-start gap-3 text-left transition-all hover:shadow-sm',
+        'w-full rounded-xl border p-3.5 flex items-start gap-3 text-left transition-all hover:shadow-xs',
         isRed
           ? 'border-red-500/30 bg-red-500/5 hover:border-red-500/50'
           : 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/50',
@@ -489,7 +489,7 @@ export default function Dashboard() {
   const weekBucket = stats?.weekly[stats.weekly.length - 1]
 
   return (
-    <div className="p-8 space-y-8 max-w-5xl">
+    <div className="p-8 vspace-8 max-w-5xl">
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div>
@@ -534,7 +534,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-6 items-start">
 
         {/* ── Left: Today's training ──────────────────────────────────── */}
-        <div className="space-y-3">
+        <div className="vspace-3">
           <ColHeader label="Today's training" />
 
           {/* Readiness alert — shown only on training days when score is low */}
@@ -555,7 +555,7 @@ export default function Dashboard() {
 
           {/* Upcoming sessions */}
           {activePlan && upcomingSessions.length > 0 && (
-            <div className="space-y-2">
+            <div className="vspace-2">
               <p className="text-xs font-medium text-muted-foreground">
                 {todaySession ? 'Coming up this week' : 'Next up'}
               </p>
@@ -565,7 +565,7 @@ export default function Dashboard() {
         </div>
 
         {/* ── Right: Performance OS ────────────────────────────────────── */}
-        <div className="space-y-3">
+        <div className="vspace-3">
           <ColHeader label="Performance OS" />
 
           {/* Check-in banner */}
@@ -599,7 +599,7 @@ export default function Dashboard() {
               </button>
             }
           />
-          <div className="rounded-xl border bg-card p-5 space-y-5">
+          <div className="rounded-xl border bg-card p-5 vspace-5">
             {profile.weeklyGoalKm && (
               <GoalBar
                 label="Running distance"
@@ -622,7 +622,7 @@ export default function Dashboard() {
 
       {/* ── Training stats ────────────────────────────────────────────── */}
       {hasData ? (
-        <div className="space-y-8">
+        <div className="vspace-8">
           <div>
             <SectionHeader label="All-time training" />
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -656,7 +656,7 @@ export default function Dashboard() {
           )}
         </div>
       ) : (
-        <div className="rounded-2xl border bg-card p-12 text-center space-y-5">
+        <div className="rounded-2xl border bg-card p-12 text-center vspace-5">
           <div className="w-14 h-14 rounded-2xl gradient-brand flex items-center justify-center mx-auto shadow-lg shadow-blue-500/20">
             <Activity className="h-7 w-7 text-white" />
           </div>

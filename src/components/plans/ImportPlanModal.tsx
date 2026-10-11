@@ -73,10 +73,10 @@ export function ImportPlanModal({ open, onClose, onSaved }: Props) {
           <DialogTitle>Import Plan from Claude</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+        <div className="flex-1 overflow-y-auto vspace-4 pr-1">
           {step === 'paste' && (
             <>
-              <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+              <div className="rounded-lg border bg-muted/30 p-4 vspace-2">
                 <p className="text-sm font-medium">Step 1 — Ask Claude to generate your plan</p>
                 <p className="text-xs text-muted-foreground">
                   Copy the prompt below, paste it into{' '}
@@ -91,10 +91,10 @@ export function ImportPlanModal({ open, onClose, onSaved }: Props) {
                 </Button>
               </div>
 
-              <div className="space-y-2">
+              <div className="vspace-2">
                 <p className="text-sm font-medium">Step 2 — Paste Claude's JSON response</p>
                 <textarea
-                  className="w-full h-48 rounded-md border bg-background px-3 py-2 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full h-48 rounded-md border bg-background px-3 py-2 text-sm font-mono resize-none focus:outline-hidden focus:ring-2 focus:ring-ring"
                   placeholder={'{\n  "name": "My Plan",\n  "phases": [...]\n}'}
                   value={json}
                   onChange={e => { setJson(e.target.value); setParseError(null) }}

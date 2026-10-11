@@ -93,13 +93,13 @@ export default function Export() {
       </div>
 
       {/* Controls */}
-      <div className="rounded-lg border bg-card p-4 space-y-4">
+      <div className="rounded-lg border bg-card p-4 vspace-4">
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="date-from">From</Label>
             <Input id="date-from" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
           </div>
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="date-to">To</Label>
             <Input id="date-to" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} max={format(new Date(), 'yyyy-MM-dd')} />
           </div>

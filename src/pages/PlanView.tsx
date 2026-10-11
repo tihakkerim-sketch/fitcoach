@@ -34,7 +34,7 @@ export default function PlanView() {
   }
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-6 vspace-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Training Plans</h1>
@@ -83,7 +83,7 @@ export default function PlanView() {
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="vspace-3">
         {plans.map(plan => (
           <PlanCard
             key={plan.id}

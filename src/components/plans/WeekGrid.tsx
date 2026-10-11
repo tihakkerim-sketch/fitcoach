@@ -57,7 +57,7 @@ export function WeekGrid({ phases, onSessionUpdated }: Props) {
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="vspace-6">
         {phases.map(phase => (
           <div key={phase.id}>
             {/* Phase header */}
@@ -68,7 +68,7 @@ export function WeekGrid({ phases, onSessionUpdated }: Props) {
             </div>
 
             {/* Week rows */}
-            <div className="space-y-2">
+            <div className="vspace-2">
               {/* Day header */}
               <div className="grid grid-cols-[56px_repeat(7,1fr)] gap-1.5">
                 <div />
@@ -91,7 +91,7 @@ export function WeekGrid({ phases, onSessionUpdated }: Props) {
                       W{week.weekNumber}
                     </div>
                     {[1, 2, 3, 4, 5, 6, 7].map(day => (
-                      <div key={day} className="min-h-[52px] space-y-1">
+                      <div key={day} className="min-h-[52px] vspace-1">
                         {(byDay[day] ?? []).map(s => (
                           <SessionCell key={s.id} session={s} onClick={setActiveSession} />
                         ))}

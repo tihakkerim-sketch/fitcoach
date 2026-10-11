@@ -113,9 +113,9 @@ export function LogActivityModal({ open, onClose, onSaved, prefill }: Props) {
 
         <FormProvider {...methods}>
           <form onSubmit={methods.handleSubmit(onSubmit)} noValidate>
-            <div className="space-y-4">
+            <div className="vspace-4">
               {/* Date field — shared across all tabs */}
-              <div className="space-y-1">
+              <div className="vspace-1">
                 <Label htmlFor="date">Date *</Label>
                 <Input
                   id="date"

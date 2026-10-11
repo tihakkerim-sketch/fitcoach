@@ -1,13 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
+import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath } from 'node:url'
+
+const src = fileURLToPath(new URL('./src', import.meta.url))
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@shared': path.resolve(__dirname, './src/types'),
+      '@': src,
+      '@shared': `${src}/types`,
     },
   },
   base: './',

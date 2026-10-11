@@ -4,7 +4,7 @@ export function PlanPreview({ plan }: { plan: ClaudePlan }) {
   const { totalWeeks, totalSessions } = planStats(plan)
 
   return (
-    <div className="rounded-lg border bg-muted/30 p-4 space-y-3 text-sm">
+    <div className="rounded-lg border bg-muted/30 p-4 vspace-3 text-sm">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-semibold text-base">{plan.name}</p>
@@ -17,9 +17,9 @@ export function PlanPreview({ plan }: { plan: ClaudePlan }) {
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="vspace-2">
         {plan.phases.map((phase, i) => (
-          <div key={i} className="border rounded p-3 space-y-1.5 bg-background">
+          <div key={i} className="border rounded-[0.25rem] p-3 vspace-1.5 bg-background">
             <div className="flex items-center justify-between">
               <span className="font-medium">{phase.name}</span>
               <span className="text-xs text-muted-foreground">{phase.weeks} week{phase.weeks !== 1 ? 's' : ''}</span>
@@ -28,7 +28,7 @@ export function PlanPreview({ plan }: { plan: ClaudePlan }) {
               {phase.sessions.map((s, si) => (
                 <span
                   key={si}
-                  className="inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs bg-muted"
+                  className="inline-flex items-center gap-1 rounded-[0.25rem] border px-2 py-0.5 text-xs bg-muted"
                 >
                   <span className="font-medium">{s.day}</span>
                   <span className="text-muted-foreground">·</span>

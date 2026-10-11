@@ -50,7 +50,7 @@ function PhaseBuilder({ index, onRemove, onDuplicate }: { index: number; onRemov
     append({ dayOfWeek: 1, type: 'running', targetDurationMin: '', targetHrZone: '', intensityLabel: '' })
 
   return (
-    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+    <div className="rounded-lg border bg-muted/30 p-4 vspace-3">
       <div className="flex items-center gap-2">
         <Button type="button" variant="ghost" size="sm" className="px-1" onClick={() => setCollapsed(c => !c)}>
           {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
@@ -65,19 +65,19 @@ function PhaseBuilder({ index, onRemove, onDuplicate }: { index: number; onRemov
       </div>
 
       {!collapsed && (
-        <div className="space-y-3">
+        <div className="vspace-3">
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
+            <div className="vspace-1">
               <Label className="text-xs">Phase name</Label>
               <Input placeholder="e.g. Base Building" {...register(`phases.${index}.name`)} />
             </div>
-            <div className="space-y-1">
+            <div className="vspace-1">
               <Label className="text-xs">Duration (weeks)</Label>
               <Input type="number" min={1} max={52} placeholder="4" {...register(`phases.${index}.durationWeeks`)} />
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="vspace-2">
             <div className="flex items-center justify-between">
               <Label className="text-xs">Weekly session template</Label>
               <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={addSession}>
@@ -243,25 +243,25 @@ export function CreatePlanModal({ open, onClose, onSaved }: Props) {
 
         <FormProvider {...methods}>
           <form onSubmit={methods.handleSubmit(onSubmit)} noValidate>
-            <div className="space-y-5">
+            <div className="vspace-5">
               {/* Plan info */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-1">
+                <div className="col-span-2 vspace-1">
                   <Label htmlFor="plan-name">Plan name *</Label>
                   <Input id="plan-name" placeholder="e.g. Half Marathon 12-Week" {...methods.register('name')} />
                 </div>
-                <div className="space-y-1">
+                <div className="vspace-1">
                   <Label htmlFor="goal-event">Goal event</Label>
                   <Input id="goal-event" placeholder="e.g. City Half Marathon" {...methods.register('goalEvent')} />
                 </div>
-                <div className="space-y-1">
+                <div className="vspace-1">
                   <Label htmlFor="goal-date">Goal date</Label>
                   <Input id="goal-date" type="date" {...methods.register('goalDate')} />
                 </div>
               </div>
 
               {/* Phases */}
-              <div className="space-y-2">
+              <div className="vspace-2">
                 <div className="flex items-center justify-between">
                   <Label>Phases</Label>
                   <Button
@@ -277,7 +277,7 @@ export function CreatePlanModal({ open, onClose, onSaved }: Props) {
                   Columns: Day · Type · Duration (min) · HR Zone · Intensity label
                 </p>
 
-                <div className="space-y-3">
+                <div className="vspace-3">
                   {phaseFields.map((field, i) => (
                     <PhaseBuilder
                       key={field.id}

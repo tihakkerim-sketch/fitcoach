@@ -1,82 +1,56 @@
 # FitCoach
 
-A local-first desktop training coach for amateur endurance athletes. Your data lives on your machine. Coaching adapts through a structured conversation with an LLM of your choice.
+Lokale Desktop-App (Windows, Electron) für Lauftraining. Deine Daten bleiben auf deinem Rechner:
+kein Konto, keine Cloud, kein Abo.
 
-> Built by an amateur runner training for a marathon, for amateur runners training for marathons.
+## Funktionen
 
-## What FitCoach does
+- **Aktivitäten:** manuell eintragen (Laufen, Rad, Kraft, Schlaf) oder Garmin-Dateien importieren.
+- **Trainingspläne:** Pläne mit Phasen, Wochen und Einheiten inkl. Ziel-Zone und Dauer.
+- **Recovery:** HRV, Body Battery, Schlaf-Score, Ruhepuls und ein täglicher Check-in; daraus wird ein Readiness-Wert berechnet.
+- **Fortschritt:** Statistiken und Diagramme zu Umfang, Herzfrequenz und Zonen.
+- **Coach-Export:** erzeugt eine Markdown-Zusammenfassung, die du in einen KI-Chat einfügst. Die Antwort kann als Plan-JSON zurück in die App importiert werden; abgeschlossene Einheiten bleiben erhalten.
+- **Backup:** JSON-Export/-Import in den Einstellungen und automatische tägliche Sicherung der Datenbank.
 
-- **Tracks your training** — manual log or Garmin `.fit` import. Running, cycling, strength, sleep.
-- **Plans your phases** — multi-phase periodized plans with weekly grids and per-session targets.
-- **Logs your recovery** — Body Battery, Sleep Score, HRV, resting HR. Computes a readiness score automatically.
-- **Coaches through Claude (or any LLM)** — exports a Markdown summary of your training, recovery, habits, and check-ins. You paste it to an LLM, get an updated plan back as JSON, and the app applies the changes while preserving the history of every completed session.
-- **Habits, daily check-ins, daily challenges** — the operating-system layer around the training itself.
+## Entwicklung
 
-## Why local-first
-
-- Your training data, recovery data, and journal entries never leave your machine.
-- No accounts. No cloud. No subscription.
-- The app is the database file on your disk. Back it up like any other file.
-
-## Tech stack
-
-- **Shell** — Electron 31
-- **Frontend** — React 18 + TypeScript (strict) + Vite
-- **UI** — Tailwind CSS + shadcn/ui + Lucide icons
-- **Database** — SQLite via [sql.js](https://github.com/sql-js/sql.js) (WASM) with [Drizzle ORM](https://orm.drizzle.team)
-- **Charts** — Recharts
-- **Validation** — Zod
-- **Garmin parsing** — fit-file-parser + fast-xml-parser
-
-## Status
-
-Active development. Pre-1.0. Currently being used by the author for a sub-4:15 marathon attempt.
-
-A first public release is planned for **September 2026**.
-
-## Getting started (development)
-
-Requirements: Node.js 20+ on Windows, macOS, or Linux.
+Voraussetzung: Node.js 24 (passend zu Electron 44).
 
 ```sh
-git clone https://github.com/YOUR_USERNAME/fitcoach.git
+git clone https://github.com/tihakkerim-sketch/fitcoach.git
 cd fitcoach
 npm install
-npm run dev
+npm run dev        # startet Vite (Port 5173) und Electron
 ```
 
-This starts Vite on `localhost:5173` and launches Electron pointing at it.
-
-To build a distributable:
+Weitere Befehle:
 
 ```sh
-npm run build
+npm test                               # Unit-Tests (vitest)
+npx tsc --noEmit -p tsconfig.json      # Typecheck Renderer
+npx tsc --noEmit -p tsconfig.electron.json   # Typecheck Hauptprozess/DB
+npm run build                          # Build
+npm run dist                           # Windows-Installer nach release/
 ```
 
-## Project layout
+Hinweise für Entwickler (Gotchas, Migrationen, IPC): [`CLAUDE.md`](CLAUDE.md). Aufbau der App: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-```
-electron/      Electron main process + IPC handlers (one file per domain)
-db/            Drizzle schema and migrations
-src/           React renderer — pages, components, hooks
-src/types/     IPC channel constants and TypeScript types
-```
+## Wo liegen die Daten?
 
-## Roadmap
+| Was | Ort |
+|---|---|
+| Datenbank | `%APPDATA%\FitCoach\fitcoach.db` |
+| Automatische Sicherungen | `%APPDATA%\FitCoach\backups\` |
 
-- [x] Activity logging, Garmin import, training plans, recovery logs, habits, check-ins, challenges
-- [x] Plan-adapt loop with completion-history preservation
-- [x] Auto-calculated readiness score with proportional weight redistribution
-- [ ] Race-time predictor (regression on Z2 pace/HR pairs)
-- [ ] Confidence intervals on predictions
-- [ ] Skip-this-week simulator
-- [ ] Signed Windows installer (1.0)
-- [ ] Auto-update via GitHub Releases (1.0)
+In `backups\` liegen eine Sicherung pro Tag (`fitcoach-JJJJ-MM-TT.db`, die letzten 14) und
+Sicherungen vor Datenbank-Updates (`vor-migration-*.db`). Zum Wiederherstellen die App
+schließen und die gewünschte `.db`-Datei als `fitcoach.db` zurückkopieren.
 
-## Contributing
+## Technik
 
-This is currently a single-author project, but issues and PRs are welcome. If you're building anything in the local-first AI-augmented coaching space, please open an issue — I'd like to hear about it.
+Electron 44, React 18 + TypeScript + Vite, Tailwind + shadcn/ui, SQLite (`node:sqlite`) mit Drizzle ORM,
+Zod, Recharts.
 
-## License
+## Lizenz
 
-MIT — see [LICENSE](LICENSE).
+MIT – siehe [LICENSE](LICENSE).

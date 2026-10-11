@@ -70,11 +70,11 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-6 max-w-2xl space-y-8">
+    <div className="p-6 max-w-2xl vspace-8">
       <h1 className="text-2xl font-bold">Settings</h1>
 
       {/* Appearance */}
-      <section className="space-y-3">
+      <section className="vspace-3">
         <h2 className="font-semibold">Appearance</h2>
         <Separator />
         <div className="flex items-center gap-3">
@@ -104,7 +104,7 @@ export default function Settings() {
       </section>
 
       {/* Startup */}
-      <section className="space-y-3">
+      <section className="vspace-3">
         <h2 className="font-semibold">Startup</h2>
         <Separator />
         <div className="flex items-center justify-between gap-4">
@@ -129,7 +129,7 @@ export default function Settings() {
             }`}
           >
             <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-background shadow transition-transform ${
+              className={`inline-block h-5 w-5 transform rounded-full bg-background shadow-sm transition-transform ${
                 autostart ? 'translate-x-5' : 'translate-x-0.5'
               }`}
             />
@@ -138,41 +138,41 @@ export default function Settings() {
       </section>
 
       {/* Profile */}
-      <section className="space-y-3">
+      <section className="vspace-3">
         <h2 className="font-semibold">Athlete Profile</h2>
         <Separator />
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="name">Name</Label>
             <Input id="name" value={profile.name ?? ''} onChange={e => set('name', e.target.value)} placeholder="Your name" />
           </div>
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="age">Age</Label>
             <Input id="age" type="number" min={10} max={100} value={profile.age ?? ''} onChange={e => set('age', e.target.value ? Number(e.target.value) : undefined)} />
           </div>
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="max-hr">Max HR (bpm)</Label>
             <Input id="max-hr" type="number" min={100} max={250} value={profile.maxHr ?? ''} onChange={e => set('maxHr', e.target.value ? Number(e.target.value) : undefined)} />
           </div>
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="resting-hr">Resting HR (bpm)</Label>
             <Input id="resting-hr" type="number" min={30} max={120} value={profile.restingHr ?? ''} onChange={e => set('restingHr', e.target.value ? Number(e.target.value) : undefined)} />
           </div>
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="goal-event">Goal event</Label>
             <Input id="goal-event" value={profile.goalEvent ?? ''} onChange={e => set('goalEvent', e.target.value)} placeholder="e.g. City Marathon" />
           </div>
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="goal-time">Target finish time</Label>
             <Input id="goal-time" value={profile.goalFinishTime ?? ''} onChange={e => set('goalFinishTime', e.target.value)} placeholder="e.g. 1:45:00" />
           </div>
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="training-days">Training days per week</Label>
             <Input id="training-days" type="number" min={1} max={7} value={profile.trainingDaysPerWeek ?? ''} onChange={e => set('trainingDaysPerWeek', e.target.value ? Number(e.target.value) : undefined)} />
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="vspace-2">
           <Label>Fixed rest days</Label>
           <div className="flex gap-2 flex-wrap">
             {DAYS.map((d, i) => (
@@ -192,7 +192,7 @@ export default function Settings() {
           </div>
         </div>
 
-        <div className="space-y-1">
+        <div className="vspace-1">
           <Label htmlFor="injury-notes">Injury / health notes</Label>
           <Textarea
             id="injury-notes"
@@ -205,14 +205,14 @@ export default function Settings() {
       </section>
 
       {/* Weekly Goals */}
-      <section className="space-y-3">
+      <section className="vspace-3">
         <h2 className="font-semibold">Weekly Goals</h2>
         <Separator />
         <p className="text-xs text-muted-foreground">
           Set weekly targets to track progress on your Dashboard. Leave blank to hide the goal widget.
         </p>
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="goal-km">Running distance (km)</Label>
             <Input
               id="goal-km"
@@ -225,7 +225,7 @@ export default function Settings() {
               onChange={e => set('weeklyGoalKm', e.target.value ? Number(e.target.value) : undefined)}
             />
           </div>
-          <div className="space-y-1">
+          <div className="vspace-1">
             <Label htmlFor="goal-sessions">Training sessions</Label>
             <Input
               id="goal-sessions"

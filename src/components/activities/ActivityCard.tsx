@@ -110,7 +110,7 @@ export function ActivityCard({ activity, onDeleted }: Props) {
   }
 
   return (
-    <div className={cn('rounded-xl border bg-card transition-all', pendingDelete ? 'opacity-50 scale-[0.99]' : 'hover:shadow-sm')}>
+    <div className={cn('rounded-xl border bg-card transition-all', pendingDelete ? 'opacity-50 scale-[0.99]' : 'hover:shadow-xs')}>
 
       {/* ── Header row ─────────────────────────────────────────────── */}
       <div className="flex items-center gap-4 p-4">
@@ -183,7 +183,7 @@ export function ActivityCard({ activity, onDeleted }: Props) {
 
       {/* ── Expanded detail ─────────────────────────────────────────── */}
       {expanded && (
-        <div className="border-t px-4 pb-4 pt-3 space-y-3">
+        <div className="border-t px-4 pb-4 pt-3 vspace-3">
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
             {activity.maxHr && (
               <div>
