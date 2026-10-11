@@ -5,19 +5,34 @@ import { getDb } from '../../db/index'
 import {
   activities,
   trainingPlans,
-  planPhases,
-  planWeeks,
-  planSessions,
   userProfile,
   hrZones,
 } from '../../db/schema'
-import { eq, and, gte, lte } from 'drizzle-orm'
+import { eq, and, gte, lte, desc } from 'drizzle-orm'
 import * as fs from 'fs'
 import { parseISO, getDay, format } from 'date-fns'
+import type { SessionRow } from '../../src/types/ipc'
+import { currentWeekIndex, formatPace, isMissed, planEndDate, planState, todayLocal } from '../../src/shared/planCalendar'
+import { getPlanDetail } from '../lib/planRead'
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-// dayOfWeek in DB: 1=Mon … 7=Sun
-const DB_DAY_NAMES: Record<number, string> = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' }
+// dayOfWeek in DB: 1=Mo … 7=So
+const GERMAN_DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+const TYPE_DE: Record<string, string> = { running: 'Lauf', cycling: 'Rad', strength: 'Kraft', rest: 'Ruhetag', custom: 'Sonstiges' }
+
+/** Soll einer Einheit kompakt: "8 km · 6:00–6:20/km · Z2" */
+function targetText(s: SessionRow): string {
+  const parts: string[] = []
+  if (s.targetDistanceKm) parts.push(`${s.targetDistanceKm} km`)
+  if (s.targetDurationMin) parts.push(`${s.targetDurationMin} min`)
+  if (s.targetPaceFastSec) {
+    const slow = s.targetPaceSlowSec ?? s.targetPaceFastSec
+    parts.push(slow === s.targetPaceFastSec ? `${formatPace(slow)}/km` : `${formatPace(s.targetPaceFastSec)}–${formatPace(slow)}/km`)
+  }
+  if (s.targetHrZone) parts.push(`Z${s.targetHrZone}`)
+  if (s.steps && s.steps.length > 0) parts.push('Intervalle')
+  return parts.length ? parts.join(' · ') : '—'
+}
 
 function fmt(min: number): string {
   const h = Math.floor(min / 60)
@@ -78,55 +93,43 @@ function buildMarkdown(dateFrom: string, dateTo: string): string {
   push('---', '')
 
   // ── Active plan ────────────────────────────────────────────────────────────
-  const activePlan = db.select().from(trainingPlans).where(eq(trainingPlans.isActive, 1)).get()
-  if (activePlan) {
-    push(
-      `## Active Training Plan: ${activePlan.name}`,
-      '',
-    )
-    if (activePlan.goalEvent) push(`**Goal event:** ${activePlan.goalEvent}`)
-    if (activePlan.goalDate)  push(`**Goal date:** ${activePlan.goalDate}`)
+  const activePlan = db.select({ id: trainingPlans.id }).from(trainingPlans)
+    .where(eq(trainingPlans.isActive, 1)).orderBy(desc(trainingPlans.id)).get()
+  const detail = activePlan ? getPlanDetail(db, activePlan.id) : null
+  if (detail) {
+    const today = todayLocal()
+    const state = planState(detail.startDate, detail.weekCount, today)
+    const end = planEndDate(detail.startDate, detail.weekCount)
+    push(`## Aktiver Trainingsplan: ${detail.name}`, '')
+    if (detail.goalEvent) push(`**Ziel:** ${detail.goalEvent}`)
+    if (detail.goalDate)  push(`**Zieldatum:** ${detail.goalDate}`)
+    push(`**Zeitraum:** ${detail.startDate} → ${end}`)
+    if (state === 'running') push(`**Stand:** Woche ${currentWeekIndex(detail.startDate, today) + 1} von ${detail.weekCount}`)
+    else if (state === 'before') push(`**Stand:** startet am ${detail.startDate}`)
+    else push(`**Stand:** beendet am ${end}`)
     push('')
 
-    // Find sessions that fall in or overlap the export window
-    const phases = db.select().from(planPhases).where(eq(planPhases.planId, activePlan.id)).all()
-    const allPlannedSessions: Array<{
-      day: string; type: string; duration?: number | null; zone?: number | null; intensity?: string | null; status: string
-    }> = []
-
-    for (const phase of phases) {
-      const weeks = db.select().from(planWeeks).where(eq(planWeeks.phaseId, phase.id)).all()
-      for (const week of weeks) {
-        const sessions = db.select().from(planSessions).where(eq(planSessions.weekId, week.id)).all()
-        for (const s of sessions) {
-          allPlannedSessions.push({
-            day: DB_DAY_NAMES[s.dayOfWeek] ?? String(s.dayOfWeek),
-            type: s.type,
-            duration: s.targetDurationMin,
-            zone: s.targetHrZone,
-            intensity: s.intensityLabel,
-            status: s.status,
-          })
-        }
-      }
-    }
-
-    // Show all plan sessions (most users won't have hundreds)
-    const weekSessions = allPlannedSessions.filter(s => s.status !== 'skipped')
-    if (weekSessions.length > 0) {
-      push('### All Planned Sessions', '')
-      push('| Day | Type | Duration | Zone | Intensity | Status |')
-      push('|-----|------|----------|------|-----------|--------|')
-      for (const s of allPlannedSessions) {
-        const dur = s.duration ? `${s.duration} min` : '—'
-        const zone = s.zone ? `Z${s.zone}` : '—'
-        const intensity = s.intensity ?? '—'
-        push(`| ${s.day} | ${s.type} | ${dur} | ${zone} | ${intensity} | ${s.status} |`)
+    // Einheiten im Export-Zeitraum
+    const inRange = detail.weeks.flatMap(w => w.sessions).filter(s => s.date >= dateFrom && s.date <= dateTo)
+    if (inRange.length > 0) {
+      push('### Geplante Einheiten im Zeitraum', '')
+      push('| Datum | Tag | Einheit | Soll | Status | Ist |', '|-------|-----|---------|------|--------|-----|')
+      for (const s of inRange) {
+        const status = s.status === 'completed' ? 'erledigt'
+          : s.status === 'skipped' ? 'übersprungen'
+          : isMissed(s, s.date, today) ? 'verpasst' : 'geplant'
+        const ist = s.activity
+          ? [s.activity.distanceKm ? `${Number(s.activity.distanceKm).toFixed(1)} km` : null,
+             s.activity.durationMin ? fmt(Math.round(s.activity.durationMin)) : null].filter(Boolean).join(', ') || '—'
+          : '—'
+        push(`| ${s.date} | ${GERMAN_DAYS[s.dayOfWeek - 1]} | ${s.title ?? TYPE_DE[s.type] ?? s.type} | ${targetText(s)} | ${status} | ${ist} |`)
       }
       push('')
+    } else {
+      push('_Keine geplanten Einheiten in diesem Zeitraum._', '')
     }
   } else {
-    push('## Training Plan', '', '_No active training plan._', '')
+    push('## Trainingsplan', '', '_Kein aktiver Trainingsplan._', '')
   }
 
   push('---', '')
