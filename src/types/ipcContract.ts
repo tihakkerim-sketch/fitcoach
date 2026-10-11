@@ -11,9 +11,10 @@
  */
 import { z } from 'zod'
 import { IPC } from './ipc'
+import { isMonday } from '../shared/planCalendar'
 import type {
   IpcChannel,
-  ActivityRow, PlanRow, PlanDetail, AdaptPlanResult, UserProfile, HrZone,
+  ActivityRow, PlanRow, PlanDetail, PlanTodayResult, SessionRow, AdaptPlanResult, UserProfile, HrZone,
   StatsResult, DailyCheckin, RecoveryLog,
 } from './ipc'
 
@@ -116,38 +117,108 @@ export const sessionStatusSchema = z.enum(['planned', 'completed', 'skipped'])
 export type SessionType = z.infer<typeof sessionTypeSchema>
 export type SessionStatus = z.infer<typeof sessionStatusSchema>
 
-const planSessionSchema = z.object({
+const paceSec = z.number().int().min(120).max(1200) // Sekunden pro km (2:00–20:00)
+
+/** Ein Intervall-Schritt (Aufwärmen, Belastung, Trabpause, Auslaufen). */
+export const planStepSchema = z.object({
+  kind: z.enum(['warmup', 'work', 'recovery', 'cooldown']),
+  distanceM: z.number().min(1).max(100000).nullish(),
+  durationSec: z.number().int().min(1).max(86400).nullish(),
+  paceFastSec: paceSec.nullish(),
+  paceSlowSec: paceSec.nullish(),
+  hrZone: z.number().int().min(1).max(5).nullish(),
+  note: shortText.nullish(),
+})
+export type PlanStep = z.infer<typeof planStepSchema>
+
+/** Schritt oder Wiederholung von Schritten (eine Verschachtelungsebene). */
+export const planBlockSchema = z.union([
+  planStepSchema,
+  z.object({
+    repeat: z.number().int().min(2).max(50),
+    steps: z.array(planStepSchema).min(1).max(10),
+  }),
+])
+export type PlanBlock = z.infer<typeof planBlockSchema>
+
+export const planStepsSchema = z.array(planBlockSchema).max(30)
+
+/** Startdatum eines Plans: gültiges Datum und immer ein Montag. */
+const mondayDate = dateString.refine(isMonday, 'Startdatum muss ein Montag sein')
+
+const sessionBaseSchema = z.object({
   dayOfWeek: z.number().int().min(1).max(7), // 1 = Mo … 7 = So
   type: sessionTypeSchema,
+  title: z.string().max(100).nullish(),
+  targetDistanceKm: z.number().min(0).max(500).nullish(),
   targetDurationMin: z.number().min(0).max(1440).nullish(),
+  targetPaceFastSec: paceSec.nullish(),
+  targetPaceSlowSec: paceSec.nullish(),
   targetHrZone: z.number().int().min(1).max(5).nullish(),
-  intensityLabel: z.string().max(100).nullish(),
+  steps: planStepsSchema.nullish(),
   coachingNote: longText.nullish(),
 })
 
-const planWeekSchema = z.object({
-  weekNumber: z.number().int().min(1).max(520),
-  notes: longText.nullish(),
-  sessions: z.array(planSessionSchema).max(21),
-})
+const paceOrderOk = (s: { targetPaceFastSec?: number | null; targetPaceSlowSec?: number | null }) =>
+  s.targetPaceFastSec == null || s.targetPaceSlowSec == null || s.targetPaceFastSec <= s.targetPaceSlowSec
+const PACE_ORDER_MESSAGE = 'Pace: schneller Wert muss kleiner sein'
 
-const planPhaseSchema = z.object({
-  name: shortText.min(1),
-  orderIndex: z.number().int().min(0).max(100),
-  durationWeeks: z.number().int().min(1).max(520),
-  weeks: z.array(planWeekSchema).max(520),
+export const sessionFieldsSchema = sessionBaseSchema.refine(paceOrderOk, PACE_ORDER_MESSAGE)
+
+export const planWeekInputSchema = z.object({
+  phase: shortText.nullish(),
+  notes: longText.nullish(),
+  sessions: z.array(sessionFieldsSchema).max(21),
 })
 
 export const createPlanSchema = z.object({
   name: shortText.min(1),
   goalEvent: shortText.nullish(),
   goalDate: dateString.nullish(),
-  phases: z.array(planPhaseSchema).min(1).max(100),
+  startDate: mondayDate,
+  weeks: z.array(planWeekInputSchema).min(1).max(52),
 })
 export type CreatePlanPayload = z.infer<typeof createPlanSchema>
 
+export const createEmptyPlanSchema = z.object({
+  name: shortText.min(1),
+  goalEvent: shortText.nullish(),
+  goalDate: dateString.nullish(),
+  startDate: mondayDate,
+  weekCount: z.number().int().min(1).max(52),
+})
+export type CreateEmptyPlanPayload = z.infer<typeof createEmptyPlanSchema>
+
+export const updatePlanSchema = z.object({
+  planId: id,
+  name: shortText.min(1).optional(),
+  goalEvent: shortText.nullish(),
+  goalDate: dateString.nullish(),
+  startDate: mondayDate.optional(),
+  weekCount: z.number().int().min(1).max(52).optional(),
+})
+export type UpdatePlanPayload = z.infer<typeof updatePlanSchema>
+
 export const adaptPlanSchema = createPlanSchema.extend({ planId: id })
 export type AdaptPlanPayload = z.infer<typeof adaptPlanSchema>
+
+export const updateWeekSchema = z.object({
+  weekId: id,
+  phase: shortText.nullish(),
+  notes: longText.nullish(),
+})
+export type UpdateWeekPayload = z.infer<typeof updateWeekSchema>
+
+export const createSessionSchema = sessionBaseSchema
+  .extend({ planId: id, weekIndex: z.number().int().min(0).max(51) })
+  .refine(paceOrderOk, PACE_ORDER_MESSAGE)
+export type CreateSessionPayload = z.infer<typeof createSessionSchema>
+
+export const updateSessionSchema = sessionBaseSchema
+  .partial()
+  .extend({ sessionId: id, weekIndex: z.number().int().min(0).max(51).optional() })
+  .refine(paceOrderOk, PACE_ORDER_MESSAGE)
+export type UpdateSessionPayload = z.infer<typeof updateSessionSchema>
 
 export const updateSessionStatusSchema = z.object({
   sessionId: id,
@@ -248,10 +319,17 @@ export const ipcInputs = {
   [IPC.GARMIN_PARSE]: garminParseSchema,
 
   [IPC.PLANS_CREATE]: createPlanSchema,
+  [IPC.PLANS_CREATE_EMPTY]: createEmptyPlanSchema,
+  [IPC.PLANS_UPDATE]: updatePlanSchema,
   [IPC.PLANS_LIST]: z.undefined(),
   [IPC.PLANS_GET]: id,
+  [IPC.PLANS_TODAY]: z.undefined(),
   [IPC.PLANS_DELETE]: id,
   [IPC.PLANS_ACTIVATE]: id,
+  [IPC.PLAN_WEEK_UPDATE]: updateWeekSchema,
+  [IPC.SESSIONS_CREATE]: createSessionSchema,
+  [IPC.SESSIONS_UPDATE]: updateSessionSchema,
+  [IPC.SESSIONS_DELETE]: id,
   [IPC.SESSIONS_UPDATE_STATUS]: updateSessionStatusSchema,
   [IPC.SESSIONS_LINK_ACTIVITY]: linkSessionActivitySchema,
   [IPC.PLANS_ADAPT]: adaptPlanSchema,
@@ -291,10 +369,17 @@ export interface IpcResults {
   [IPC.GARMIN_PARSE]: Partial<CreateActivityPayload>
 
   [IPC.PLANS_CREATE]: PlanRow
+  [IPC.PLANS_CREATE_EMPTY]: PlanRow
+  [IPC.PLANS_UPDATE]: PlanRow
   [IPC.PLANS_LIST]: PlanRow[]
   [IPC.PLANS_GET]: PlanDetail | null
+  [IPC.PLANS_TODAY]: PlanTodayResult
   [IPC.PLANS_DELETE]: void
   [IPC.PLANS_ACTIVATE]: void
+  [IPC.PLAN_WEEK_UPDATE]: void
+  [IPC.SESSIONS_CREATE]: SessionRow
+  [IPC.SESSIONS_UPDATE]: SessionRow
+  [IPC.SESSIONS_DELETE]: void
   [IPC.SESSIONS_UPDATE_STATUS]: void
   [IPC.SESSIONS_LINK_ACTIVITY]: void
   [IPC.PLANS_ADAPT]: AdaptPlanResult

@@ -41,30 +41,70 @@ describe('IPC contract', () => {
     const plan = {
       name: 'Marathon',
       goalDate: '2027-04-18',
-      phases: [{
-        name: 'Base', orderIndex: 0, durationWeeks: 1,
-        weeks: [{ weekNumber: 1, sessions: [{ dayOfWeek: 2, type: 'running', targetDurationMin: 45, targetHrZone: 2 }] }],
+      startDate: '2026-10-12', // Montag
+      weeks: [{
+        phase: 'Grundlage',
+        sessions: [{ dayOfWeek: 2, type: 'running', title: 'Locker', targetDistanceKm: 8, targetPaceFastSec: 360, targetPaceSlowSec: 380, targetHrZone: 2 }],
       }],
     }
     it('accepts a valid plan (null optionals from imports too)', () => {
       expect(ok(IPC.PLANS_CREATE, plan)).toBe(true)
       const withNull = structuredClone(plan)
-      ;(withNull.phases[0].weeks[0].sessions[0] as Record<string, unknown>).intensityLabel = null
+      ;(withNull.weeks[0].sessions[0] as Record<string, unknown>).steps = null
       expect(ok(IPC.PLANS_CREATE, withNull)).toBe(true)
     })
-    it('rejects weekday 0 or 8, HR zone 6, empty phases', () => {
+    it('requires a Monday as start date', () => {
+      expect(ok(IPC.PLANS_CREATE, { ...plan, startDate: '2026-10-13' })).toBe(false)
+      expect(ok(IPC.PLANS_CREATE, { ...plan, startDate: '2026-10-12' })).toBe(true)
+    })
+    it('rejects weekday 0 or 8, HR zone 6, empty weeks', () => {
       for (const dayOfWeek of [0, 8]) {
-        const p = structuredClone(plan); p.phases[0].weeks[0].sessions[0].dayOfWeek = dayOfWeek
+        const p = structuredClone(plan); p.weeks[0].sessions[0].dayOfWeek = dayOfWeek
         expect(ok(IPC.PLANS_CREATE, p)).toBe(false)
       }
-      const z = structuredClone(plan); z.phases[0].weeks[0].sessions[0].targetHrZone = 6
+      const z = structuredClone(plan); z.weeks[0].sessions[0].targetHrZone = 6
       expect(ok(IPC.PLANS_CREATE, z)).toBe(false)
-      expect(ok(IPC.PLANS_CREATE, { ...plan, phases: [] })).toBe(false)
+      expect(ok(IPC.PLANS_CREATE, { ...plan, weeks: [] })).toBe(false)
+    })
+    it('rejects a pace range where fast is slower than slow', () => {
+      const p = structuredClone(plan)
+      p.weeks[0].sessions[0].targetPaceFastSec = 350
+      p.weeks[0].sessions[0].targetPaceSlowSec = 330
+      expect(ok(IPC.PLANS_CREATE, p)).toBe(false)
+    })
+    it('validates interval steps', () => {
+      const withSteps = (steps: unknown) => {
+        const p = structuredClone(plan) as Record<string, any>
+        p.weeks[0].sessions[0].steps = steps
+        return p
+      }
+      expect(ok(IPC.PLANS_CREATE, withSteps([{ repeat: 6, steps: [{ kind: 'work', distanceM: 800 }] }]))).toBe(true)
+      expect(ok(IPC.PLANS_CREATE, withSteps([{ repeat: 1, steps: [{ kind: 'work', distanceM: 800 }] }]))).toBe(false)
+      expect(ok(IPC.PLANS_CREATE, withSteps([{ kind: 'sprint' }]))).toBe(false)
     })
     it('adapt needs a positive integer planId', () => {
       expect(ok(IPC.PLANS_ADAPT, { ...plan, planId: 3 })).toBe(true)
       expect(ok(IPC.PLANS_ADAPT, { ...plan, planId: 0 })).toBe(false)
       expect(ok(IPC.PLANS_ADAPT, plan)).toBe(false)
+    })
+  })
+
+  describe('plans:createEmpty / plans:update / sessions', () => {
+    it('createEmpty needs Monday and 1–52 weeks', () => {
+      const base = { name: 'X', startDate: '2026-10-12', weekCount: 4 }
+      expect(ok(IPC.PLANS_CREATE_EMPTY, base)).toBe(true)
+      expect(ok(IPC.PLANS_CREATE_EMPTY, { ...base, weekCount: 0 })).toBe(false)
+      expect(ok(IPC.PLANS_CREATE_EMPTY, { ...base, weekCount: 53 })).toBe(false)
+      expect(ok(IPC.PLANS_CREATE_EMPTY, { ...base, startDate: '2026-10-14' })).toBe(false)
+    })
+    it('update accepts partial fields, but a Monday only', () => {
+      expect(ok(IPC.PLANS_UPDATE, { planId: 1, weekCount: 8 })).toBe(true)
+      expect(ok(IPC.PLANS_UPDATE, { planId: 1, startDate: '2026-10-13' })).toBe(false)
+    })
+    it('sessions:update is partial; sessions:create needs plan and week', () => {
+      expect(ok(IPC.SESSIONS_UPDATE, { sessionId: 1, title: 'Neu' })).toBe(true)
+      expect(ok(IPC.SESSIONS_CREATE, { planId: 1, weekIndex: 0, dayOfWeek: 1, type: 'rest' })).toBe(true)
+      expect(ok(IPC.SESSIONS_CREATE, { planId: 1, dayOfWeek: 1, type: 'rest' })).toBe(false)
     })
   })
 

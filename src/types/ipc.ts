@@ -1,18 +1,20 @@
 import type {
   CreateActivityPayload, ListActivitiesPayload, CreatePlanPayload, AdaptPlanPayload,
+  CreateEmptyPlanPayload, UpdatePlanPayload, UpdateWeekPayload, CreateSessionPayload, UpdateSessionPayload,
   UpdateSessionStatusPayload, LinkSessionActivityPayload, SummaryPayload,
   UpsertCheckinPayload, UpsertRecoveryLogPayload,
   ActivityType, ActivitySource, HrZoneDistribution, StrengthExercise,
-  SessionType, SessionStatus, RecoverySource,
+  SessionType, SessionStatus, RecoverySource, PlanStep, PlanBlock,
 } from './ipcContract'
 
 // Payload types are derived from the Zod schemas in ipcContract.ts (single source of truth)
 export type {
   CreateActivityPayload, ListActivitiesPayload, CreatePlanPayload, AdaptPlanPayload,
+  CreateEmptyPlanPayload, UpdatePlanPayload, UpdateWeekPayload, CreateSessionPayload, UpdateSessionPayload,
   UpdateSessionStatusPayload, LinkSessionActivityPayload, SummaryPayload,
   UpsertCheckinPayload, UpsertRecoveryLogPayload,
   ActivityType, ActivitySource, HrZoneDistribution, StrengthExercise,
-  SessionType, SessionStatus, RecoverySource,
+  SessionType, SessionStatus, RecoverySource, PlanStep, PlanBlock,
 }
 
 // All IPC channel names — no magic strings anywhere else
@@ -28,10 +30,17 @@ export const IPC = {
 
   // Plans
   PLANS_CREATE: 'plans:create',
+  PLANS_CREATE_EMPTY: 'plans:createEmpty',
+  PLANS_UPDATE: 'plans:update',
   PLANS_LIST: 'plans:list',
   PLANS_GET: 'plans:get',
+  PLANS_TODAY: 'plans:today',
   PLANS_DELETE: 'plans:delete',
   PLANS_ACTIVATE: 'plans:activate',
+  PLAN_WEEK_UPDATE: 'planWeeks:update',
+  SESSIONS_CREATE: 'sessions:create',
+  SESSIONS_UPDATE: 'sessions:update',
+  SESSIONS_DELETE: 'sessions:delete',
   SESSIONS_UPDATE_STATUS: 'sessions:updateStatus',
   SESSIONS_LINK_ACTIVITY: 'sessions:linkActivity',
   PLANS_ADAPT: 'plans:adapt',
@@ -84,49 +93,75 @@ export interface ActivityRow extends CreateActivityPayload {
 
 // ── Plan types ────────────────────────────────────────────────────────────────
 
+export type MatchSource = 'auto' | 'manual'
+
+export interface LinkedActivitySummary {
+  id: number
+  date: string
+  type: string
+  distanceKm: number | null
+  durationMin: number | null
+  avgHr: number | null
+}
+
 export interface PlanRow {
   id: number
   name: string
-  goalEvent?: string
-  goalDate?: string
+  goalEvent: string | null
+  goalDate: string | null
+  startDate: string // YYYY-MM-DD, immer ein Montag
   isActive: number
   createdAt: number
+  weekCount: number
 }
 
 export interface SessionRow {
   id: number
   weekId: number
+  weekIndex: number
   dayOfWeek: number
+  date: string // berechnet: startDate + weekIndex·7 + (dayOfWeek − 1)
   type: SessionType
-  targetDurationMin?: number
-  targetHrZone?: number
-  intensityLabel?: string
-  coachingNote?: string
+  title: string | null
+  targetDistanceKm: number | null
+  targetDurationMin: number | null
+  targetPaceFastSec: number | null
+  targetPaceSlowSec: number | null
+  targetHrZone: number | null
+  steps: PlanBlock[] | null
+  coachingNote: string | null
   status: SessionStatus
-  linkedActivityId?: number
-  completedAt?: number
-  completionNote?: string
+  linkedActivityId: number | null
+  matchSource: MatchSource | null
+  completedAt: number | null
+  completionNote: string | null
+  activity: LinkedActivitySummary | null
 }
 
 export interface WeekDetail {
   id: number
-  phaseId: number
-  weekNumber: number
-  notes?: string
+  planId: number
+  weekIndex: number
+  phase: string | null
+  notes: string | null
+  from: string
+  to: string
   sessions: SessionRow[]
 }
 
-export interface PhaseDetail {
-  id: number
-  planId: number
-  name: string
-  orderIndex: number
-  durationWeeks: number
+export interface PlanDetail extends PlanRow {
   weeks: WeekDetail[]
 }
 
-export interface PlanDetail extends PlanRow {
-  phases: PhaseDetail[]
+export type PlanState = 'none' | 'before' | 'running' | 'finished'
+
+export interface PlanTodayResult {
+  plan: PlanRow | null
+  state: PlanState
+  today: string
+  weekIndex: number | null
+  todaySessions: SessionRow[]
+  weekSessions: SessionRow[]
 }
 
 export interface AdaptPlanResult {
