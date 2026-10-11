@@ -262,7 +262,7 @@ export interface WeeklyBucket {
   otherMin: number
   totalSessions: number           // all non-sleep activity count
   avgPaceSecPerKm: number | null  // null when no running that week
-  trainingLoad: number            // Σ durationMin × zone multiplier
+  trainingLoad: number            // Σ TRIMP
 }
 
 export interface ZoneBucket {

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ElementType } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import {
-  Activity, LayoutDashboard, CalendarDays, FileDown,
+  Activity, LayoutDashboard, CalendarDays, Brain,
   TrendingUp, Settings, Moon, Sun, Monitor, BatteryCharging,
 } from 'lucide-react'
 import { LogActivityModal } from '@/components/activities/LogActivityModal'
@@ -39,7 +39,7 @@ const navGroups: NavGroup[] = [
   {
     heading: 'App',
     items: [
-      { to: '/export',   label: 'Export',   Icon: FileDown, color: 'blue'  },
+      { to: '/coach',    label: 'Coach',    Icon: Brain,    color: 'blue'  },
       { to: '/settings', label: 'Settings', Icon: Settings, color: 'slate' },
     ],
   },

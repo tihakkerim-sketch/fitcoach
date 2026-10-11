@@ -7,7 +7,7 @@ import Dashboard from '@/pages/Dashboard'
 import ActivityLog from '@/pages/ActivityLog'
 import PlanView from '@/pages/PlanView'
 import PlanDetail from '@/pages/PlanDetail'
-import Export from '@/pages/Export'
+import Coach from '@/pages/Coach'
 import Progress from '@/pages/Progress'
 import Settings from '@/pages/Settings'
 import DailyCheckin from '@/pages/DailyCheckin'
@@ -24,7 +24,8 @@ export default function App() {
               <Route path="activities" element={<ActivityLog />} />
               <Route path="plan" element={<PlanView />} />
               <Route path="plan/:id" element={<PlanDetail />} />
-              <Route path="export" element={<Export />} />
+              <Route path="coach" element={<Coach />} />
+              <Route path="export" element={<Coach />} />
               <Route path="progress" element={<Progress />} />
               <Route path="settings" element={<Settings />} />
               <Route path="checkin" element={<DailyCheckin />} />

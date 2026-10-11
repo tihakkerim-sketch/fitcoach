@@ -12,6 +12,7 @@ import { RecoveryWidget } from '@/components/recovery/RecoveryWidget'
 import { TodayPlanCard } from '@/components/dashboard/TodayPlanCard'
 import { PlanWeekStrip } from '@/components/dashboard/PlanWeekStrip'
 import { SessionDialog } from '@/components/plans/SessionDialog'
+import { CoachCard } from '@/components/dashboard/CoachCard'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type {
@@ -298,6 +299,8 @@ export default function Dashboard() {
               onNavigate={() => navigate('/recovery')}
             />
           )}
+
+          <CoachCard />
 
           {planToday && (
             <TodayPlanCard data={planToday} onOpenSession={x => setOpenSessionId(x.id)} />

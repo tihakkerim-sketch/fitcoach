@@ -5,34 +5,25 @@ import type {
 } from '../../src/types/ipc'
 import { handle } from './handle'
 import { getDb } from '../../db/index'
-import { activities, hrZones } from '../../db/schema'
+import { activities } from '../../db/schema'
+import { activityTrimp, effectiveZones, zoneOf } from '../../src/shared/coach'
+import { loadHrBasics, loadSavedZones, toCoachActivity } from '../lib/coachData'
 import { gte } from 'drizzle-orm'
 import {
   format, subDays, startOfWeek, getISOWeek, getYear,
   parseISO, differenceInCalendarDays,
 } from 'date-fns'
 
-// ── Zone multiplier for training load ─────────────────────────────────────────
-// Z1=1.0  Z2=1.5  Z3=2.5  Z4=3.5  Z5=5.0  unknown=1.0
-const ZONE_MULT = [1.0, 1.5, 2.5, 3.5, 5.0]
-
-function zoneMultiplier(
-  avgHr: number | null,
-  zones: Array<{ zoneNumber: number; minHr: number; maxHr: number }>,
-): number {
-  if (!avgHr || zones.length === 0) return 1.0
-  const z = zones.find(z => avgHr >= z.minHr && avgHr <= z.maxHr)
-  return z ? (ZONE_MULT[z.zoneNumber - 1] ?? 1.0) : 1.0
-}
-
 export function registerStatsHandlers() {
   handle(IPC.STATS_GET, (): StatsResult => {
     const db = getDb()
 
+    const today = format(new Date(), 'yyyy-MM-dd')
     const twelveWeeksAgo = format(subDays(new Date(), 84), 'yyyy-MM-dd')
     const recentRows = db.select().from(activities).where(gte(activities.date, twelveWeeksAgo)).all()
     const allRows    = db.select().from(activities).all()
-    const zones      = db.select().from(hrZones).all()
+    const hrBasics   = loadHrBasics(db, today)
+    const { zones }  = effectiveZones(loadSavedZones(db), hrBasics)
 
     // ── All-time totals ───────────────────────────────────────────────────
     const sleepRows    = allRows.filter(a => a.type === 'sleep')
@@ -66,7 +57,6 @@ export function registerStatsHandlers() {
     let currentStreak = 0
     let longestStreak = 0
     let tempStreak    = 1
-    const today     = format(new Date(), 'yyyy-MM-dd')
     const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd')
 
     if (activeDates.length > 0 && (activeDates[0] === today || activeDates[0] === yesterday)) {
@@ -121,9 +111,7 @@ export function registerStatsHandlers() {
       // Total sessions + training load — all types except sleep
       if (a.type !== 'sleep') {
         bucket.totalSessions++
-        if (a.durationMin) {
-          bucket.trainingLoad += a.durationMin * zoneMultiplier(a.avgHr, zones)
-        }
+        bucket.trainingLoad += activityTrimp(toCoachActivity(a), hrBasics)
       }
     }
 
@@ -140,8 +128,8 @@ export function registerStatsHandlers() {
     const zoneMinutes: Record<string, number> = {}
     for (const a of recentRows) {
       if (!a.avgHr || !a.durationMin) continue
-      const z   = zones.find(z => a.avgHr! >= z.minHr && a.avgHr! <= z.maxHr)
-      const key = z ? `Z${z.zoneNumber}` : 'No HR'
+      const zn  = zoneOf(a.avgHr, zones)
+      const key = zn ? `Z${zn}` : 'No HR'
       zoneMinutes[key] = (zoneMinutes[key] ?? 0) + a.durationMin
     }
     const zoneBuckets: ZoneBucket[] = zones.length > 0

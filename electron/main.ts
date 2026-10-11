@@ -8,6 +8,7 @@ import { registerGarminHandlers } from './ipc/garmin'
 import { registerIntervalsHandlers } from './ipc/intervals'
 import { registerDataHandlers } from './ipc/data'
 import { registerSummaryHandlers } from './ipc/summary'
+import { registerCoachHandlers } from './ipc/coach'
 import { registerStatsHandlers } from './ipc/stats'
 import { registerCheckinHandlers } from './ipc/checkin'
 import { registerRecoveryHandlers } from './ipc/recovery'
@@ -131,6 +132,7 @@ function startApp() {
     registerIntervalsHandlers()
     registerDataHandlers()
     registerSummaryHandlers()
+    registerCoachHandlers()
     registerStatsHandlers()
     registerCheckinHandlers()
     registerRecoveryHandlers()

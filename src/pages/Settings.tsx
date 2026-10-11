@@ -10,6 +10,7 @@ import { IPC } from '@/types/ipc'
 import type { UserProfile } from '@/types/ipc'
 import { useTheme } from '@/contexts/ThemeContext'
 import { IntervalsSettings } from '@/components/settings/IntervalsSettings'
+import { HrZonesSettings } from '@/components/settings/HrZonesSettings'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -207,6 +208,8 @@ export default function Settings() {
           />
         </div>
       </section>
+
+      <HrZonesSettings />
 
       {/* Weekly Goals */}
       <section className="vspace-3">
