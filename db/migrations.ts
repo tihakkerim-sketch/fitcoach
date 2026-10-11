@@ -469,10 +469,43 @@ function v3PlanV2({ db }: MigrationCtx): void {
   `)
 }
 
+// ── v4: Garmin-Details (Höhe, Splits, Verläufe, externe ID), App-Einstellungen, Schlafdauer ──
+function v4GarminDetails({ db }: MigrationCtx): void {
+  db.exec(`
+    ALTER TABLE activities ADD COLUMN elevation_gain_m real;
+    ALTER TABLE activities ADD COLUMN elevation_loss_m real;
+    ALTER TABLE activities ADD COLUMN moving_time_min real;
+    ALTER TABLE activities ADD COLUMN external_id text;
+    CREATE UNIQUE INDEX activities_external_id_uix ON activities(external_id) WHERE external_id IS NOT NULL;
+    CREATE TABLE activity_splits (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      activity_id integer NOT NULL REFERENCES activities(id) ON DELETE cascade,
+      split_index integer NOT NULL,
+      distance_km real NOT NULL,
+      duration_sec real NOT NULL,
+      pace_sec_per_km real,
+      avg_hr integer,
+      elevation_gain_m real,
+      elevation_loss_m real,
+      UNIQUE(activity_id, split_index)
+    );
+    CREATE TABLE activity_streams (
+      activity_id integer PRIMARY KEY NOT NULL REFERENCES activities(id) ON DELETE cascade,
+      data text NOT NULL
+    );
+    CREATE TABLE app_settings (
+      key text PRIMARY KEY NOT NULL,
+      value text NOT NULL
+    );
+    ALTER TABLE recovery_logs ADD COLUMN sleep_hours real;
+  `)
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: 'baseline', up: v1Baseline },
   { version: 2, name: 'phase-1-cleanup', up: v2Cleanup },
   { version: 3, name: 'plan-v2', up: v3PlanV2 },
+  { version: 4, name: 'garmin-details', up: v4GarminDetails },
 ]
 
 // ── Runner ───────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
-  activities, userProfile, hrZones, trainingPlans, planWeeks, planSessions,
+  activities, activitySplits, activityStreams, appSettings, userProfile, hrZones, trainingPlans, planWeeks, planSessions,
   dailyCheckins, recoveryLogs,
 } from '../../db/schema'
 import { importBackup, type Db } from './importBackup'
@@ -104,6 +104,8 @@ describe('importBackup', () => {
     d.insert(userProfile).values({ id: 1, name: 'Full', theme: 'light' } as never).run()
     d.insert(hrZones).values({ zoneNumber: 1, minHr: 100, maxHr: 120, label: 'Easy' }).run()
     d.insert(activities).values(activity(7, '2026-07-07') as never).run()
+    d.insert(activitySplits).values({ activityId: 7, splitIndex: 1, distanceKm: 1, durationSec: 300, paceSecPerKm: 300, avgHr: 150 }).run()
+    d.insert(activityStreams).values({ activityId: 7, data: '{"t":[0]}' }).run()
     d.insert(trainingPlans).values({ id: 3, name: 'Plan', startDate: '2026-07-06', isActive: 1, createdAt: 5 }).run()
     d.insert(planWeeks).values({ id: 5, planId: 3, weekIndex: 0, phase: 'Base' }).run()
     d.insert(planSessions).values({
@@ -119,6 +121,8 @@ describe('importBackup', () => {
       userProfile: d.select().from(userProfile).all(),
       hrZones: d.select().from(hrZones).all(),
       activities: d.select().from(activities).all(),
+      activitySplits: d.select().from(activitySplits).all(),
+      activityStreams: d.select().from(activityStreams).all(),
       trainingPlans: d.select().from(trainingPlans).all(),
       planWeeks: d.select().from(planWeeks).all(),
       planSessions: d.select().from(planSessions).all(),
@@ -173,11 +177,11 @@ describe('importBackup', () => {
     expect(db.select().from(planSessions).all()).toHaveLength(0)
   })
 
-  it('v5-Rundlauf behält Startdatum und Zeilenzahlen', async () => {
+  it('v6-Rundlauf behält Startdatum und Zeilenzahlen', async () => {
     const src = await makeDb()
     seedEverything(src)
     const file = JSON.parse(JSON.stringify(exportBackup(src))) as Record<string, unknown>
-    expect(file.version).toBe(5)
+    expect(file.version).toBe(6)
     expect(file.planPhases).toBeUndefined()
     const result = importBackup(db, file)
     expect(result.success).toBe(true)
@@ -186,7 +190,7 @@ describe('importBackup', () => {
     expect(db.select().from(planSessions).all()).toHaveLength(1)
   })
 
-  it('v5 ohne planWeeks-Feld wird abgelehnt, Daten bleiben', async () => {
+  it('v6 ohne planWeeks-Feld wird abgelehnt, Daten bleiben', async () => {
     const file = await v4File()
     delete file.planWeeks
     const before = dump(db)
@@ -195,25 +199,61 @@ describe('importBackup', () => {
     expect(dump(db)).toEqual(before)
   })
 
-  it('unbekannte Version 6 wird abgelehnt', async () => {
+  it('unbekannte Version 7 wird abgelehnt', async () => {
     const file = await v4File()
-    file.version = 6
+    file.version = 7
     const before = dump(db)
     expect(importBackup(db, file).success).toBe(false)
     expect(dump(db)).toEqual(before)
   })
 
-  it('exports version 5 containing every table', async () => {
+  it('exports version 6 containing every table', async () => {
     const src = await makeDb()
     seedEverything(src)
     const exported = exportBackup(src)
-    expect(exported.version).toBe(5)
-    expect(BACKUP_VERSION).toBe(5)
+    expect(exported.version).toBe(6)
+    expect(BACKUP_VERSION).toBe(6)
     for (const [key, rows] of Object.entries(dump(src))) {
       expect(rows.length, 'seed ' + key).toBeGreaterThan(0)
       expect(Array.isArray(exported[key]), key).toBe(true)
       expect((exported[key] as unknown[]).length, key).toBe(rows.length)
     }
+  })
+
+  it('v6 file without activitySplits is rejected, data unchanged', async () => {
+    const file = await v4File()
+    delete file.activitySplits
+    const before = dump(db)
+    expect(importBackup(db, file).success).toBe(false)
+    expect(dump(db)).toEqual(before)
+  })
+
+  it('v5 file (no splits/streams keys) is still importable and clears old splits', async () => {
+    const file = await v4File()
+    file.version = 5
+    delete file.activitySplits
+    delete file.activityStreams
+    // Ziel hat Splits zu Aktivität 1, die nach dem Import nicht mehr existiert
+    db.insert(activitySplits).values({ activityId: 1, splitIndex: 1, distanceKm: 1, durationSec: 300 }).run()
+    db.insert(activityStreams).values({ activityId: 1, data: '{}' }).run()
+    const result = importBackup(db, file)
+    expect(result.success).toBe(true)
+    expect(db.select().from(activitySplits).all()).toHaveLength(0)
+    expect(db.select().from(activityStreams).all()).toHaveLength(0)
+    expect(db.select().from(activities).all()).toHaveLength(1)
+  })
+
+  it('app_settings is never exported and never touched by an import', async () => {
+    const src = await makeDb()
+    seedEverything(src)
+    src.insert(appSettings).values({ key: 'intervals.apiKey', value: 'SECRET' }).run()
+    const exported = exportBackup(src)
+    expect(JSON.stringify(exported)).not.toContain('SECRET')
+    expect(Object.keys(exported)).not.toContain('appSettings')
+
+    db.insert(appSettings).values({ key: 'intervals.apiKey', value: 'LOCAL' }).run()
+    expect(importBackup(db, JSON.parse(JSON.stringify(exported))).success).toBe(true)
+    expect(db.select().from(appSettings).all()).toEqual([{ key: 'intervals.apiKey', value: 'LOCAL' }])
   })
 
   it('v4 round-trip restores every table', async () => {

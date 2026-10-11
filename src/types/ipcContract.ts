@@ -15,7 +15,7 @@ import { isMonday } from '../shared/planCalendar'
 import type {
   IpcChannel,
   ActivityRow, PlanRow, PlanDetail, PlanTodayResult, SessionRow, AdaptPlanResult, UserProfile, HrZone,
-  StatsResult, DailyCheckin, RecoveryLog,
+  StatsResult, DailyCheckin, RecoveryLog, ActivitySplit, ActivityStreams, ImportFileResult,
 } from './ipc'
 
 // ── Building blocks ───────────────────────────────────────────────────────────
@@ -38,7 +38,7 @@ export const MAX_EXPORT_CONTENT_CHARS = 5_000_000
 // ── Activities ────────────────────────────────────────────────────────────────
 
 export const activityTypeSchema = z.enum(['running', 'cycling', 'sleep', 'strength', 'custom'])
-export const activitySourceSchema = z.enum(['manual', 'garmin_import'])
+export const activitySourceSchema = z.enum(['manual', 'garmin_import', 'intervals_icu'])
 
 export type ActivityType = z.infer<typeof activityTypeSchema>
 export type ActivitySource = z.infer<typeof activitySourceSchema>
@@ -82,6 +82,10 @@ export const createActivitySchema = z.object({
   exercises: z.array(strengthExerciseSchema).max(200).optional(),
   typeLabel: z.string().max(100).optional(),
   rawGarminData: z.record(z.string(), z.unknown()).optional(),
+  elevationGainM: z.number().min(0).max(100000).optional(),
+  elevationLossM: z.number().min(0).max(100000).optional(),
+  movingTimeMin: duration.optional(),
+  externalId: z.string().min(1).max(100).optional(),
 })
 export type CreateActivityPayload = z.infer<typeof createActivitySchema>
 
@@ -99,15 +103,22 @@ export type ListActivitiesPayload = z.infer<typeof listActivitiesSchema>
 
 // ── Garmin ────────────────────────────────────────────────────────────────────
 
-export const garminParseSchema = z.object({
-  fileName: z.string().min(1).max(255),
-  /** Raw file bytes (structured clone transfers Uint8Array directly) */
-  data: z.instanceof(Uint8Array).refine(
-    b => b.byteLength <= MAX_GARMIN_FILE_BYTES,
-    'Datei ist zu groß (max. 50 MB)',
-  ),
+const garminFileName = z.string().min(1).max(260).refine(
+  n => /\.(fit|tcx)$/i.test(n),
+  'Nur .fit- und .tcx-Dateien werden unterstützt',
+)
+
+export const garminImportFilesSchema = z.object({
+  files: z.array(z.object({
+    fileName: garminFileName,
+    /** Raw file bytes (structured clone transfers Uint8Array directly) */
+    data: z.instanceof(Uint8Array).refine(
+      b => b.byteLength <= MAX_GARMIN_FILE_BYTES,
+      'Datei ist zu groß (max. 50 MB)',
+    ),
+  })).min(1).max(50),
 })
-export type GarminParsePayload = z.infer<typeof garminParseSchema>
+export type GarminImportFilesPayload = z.infer<typeof garminImportFilesSchema>
 
 // ── Plans ─────────────────────────────────────────────────────────────────────
 
@@ -289,7 +300,7 @@ export type UpsertCheckinPayload = z.infer<typeof upsertCheckinSchema>
 
 // ── Recovery ──────────────────────────────────────────────────────────────────
 
-export const recoverySourceSchema = z.enum(['manual', 'garmin_import'])
+export const recoverySourceSchema = z.enum(['manual', 'garmin_import', 'intervals_icu'])
 
 export type RecoverySource = z.infer<typeof recoverySourceSchema>
 
@@ -300,6 +311,7 @@ export const upsertRecoveryLogSchema = z.object({
   bodyBattery: z.number().min(0).max(100).optional(),
   sleepScore: z.number().min(0).max(100).optional(),
   restingHr: z.number().min(20).max(250).optional(),
+  sleepHours: z.number().min(0).max(24).optional(),
   note: z.string().max(1000).optional(),
   source: recoverySourceSchema.optional(),
 })
@@ -315,8 +327,9 @@ export const ipcInputs = {
   [IPC.ACTIVITIES_LIST]: listActivitiesSchema,
   [IPC.ACTIVITIES_GET]: id,
   [IPC.ACTIVITIES_DELETE]: id,
+  [IPC.ACTIVITIES_DETAILS]: id,
 
-  [IPC.GARMIN_PARSE]: garminParseSchema,
+  [IPC.GARMIN_IMPORT_FILES]: garminImportFilesSchema,
 
   [IPC.PLANS_CREATE]: createPlanSchema,
   [IPC.PLANS_CREATE_EMPTY]: createEmptyPlanSchema,
@@ -365,8 +378,9 @@ export interface IpcResults {
   [IPC.ACTIVITIES_LIST]: { activities: ActivityRow[]; total: number }
   [IPC.ACTIVITIES_GET]: ActivityRow | null
   [IPC.ACTIVITIES_DELETE]: void
+  [IPC.ACTIVITIES_DETAILS]: { splits: ActivitySplit[]; streams: ActivityStreams | null }
 
-  [IPC.GARMIN_PARSE]: Partial<CreateActivityPayload>
+  [IPC.GARMIN_IMPORT_FILES]: ImportFileResult[]
 
   [IPC.PLANS_CREATE]: PlanRow
   [IPC.PLANS_CREATE_EMPTY]: PlanRow

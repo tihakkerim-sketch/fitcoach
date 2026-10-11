@@ -8,7 +8,7 @@
  * everything back automatically.
  *
  * Versions: v1/v2 replace only the original tables (newer tables are left
- * untouched); v3–v5 replace all current tables. v1–v4 contain the old phase-based
+ * untouched); v3–v6 replace all current tables (activitySplits/-Streams exist since v6; older files simply have none). v1–v4 contain the old phase-based
  * plans; those are converted to the plan-v2 model (`convertLegacyPlans`) before validation. Keys of tables that no longer
  * exist (habits, nutrition, body, challenges in v3 files) are ignored.
  */
@@ -73,7 +73,7 @@ export function importBackup(db: Db, backup: Record<string, unknown>): ImportRes
   let data = backup
   // ── Version gate ──────────────────────────────────────────────────────────
   const version = data.version as number
-  if (version !== 1 && version !== 2 && version !== 3 && version !== 4 && version !== 5) {
+  if (version !== 1 && version !== 2 && version !== 3 && version !== 4 && version !== 5 && version !== 6) {
     return { success: false, error: 'Unrecognised backup format or version — import cancelled, your data is unchanged' }
   }
 
@@ -92,10 +92,10 @@ export function importBackup(db: Db, backup: Record<string, unknown>): ImportRes
   // Every present table key must be an array of objects. A v3/v4 file must contain
   // every table (a missing one would silently wipe that table). A malformed file
   // is rejected before a single row is deleted.
-  for (const { key } of tables) {
+  for (const { key, since } of tables) {
     const value = data[key]
     if (value === undefined) {
-      if (full) {
+      if (full && version >= (since ?? 0)) {
         return { success: false, error: `Backup field "${key}" is missing — import cancelled, your data is unchanged` }
       }
       continue

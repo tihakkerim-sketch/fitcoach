@@ -7,7 +7,6 @@ import { ActivityFilters as ActivityFilterBar } from '@/components/activities/Ac
 import { GarminDropZone } from '@/components/activities/GarminDropZone'
 import { LogActivityModal } from '@/components/activities/LogActivityModal'
 import { useActivities } from '@/hooks/useActivities'
-import type { CreateActivityPayload } from '@/types/ipc'
 
 export default function ActivityLog() {
   const {
@@ -27,16 +26,8 @@ export default function ActivityLog() {
   } = useActivities()
 
   const [modalOpen, setModalOpen] = useState(false)
-  const [garminPrefill, setGarminPrefill] = useState<Partial<CreateActivityPayload> | undefined>()
-
-  const handleGarminParsed = (data: Partial<CreateActivityPayload>) => {
-    setGarminPrefill(data)
-    setModalOpen(true)
-  }
-
   const handleModalClose = () => {
     setModalOpen(false)
-    setGarminPrefill(undefined)
   }
 
   return (
@@ -48,14 +39,14 @@ export default function ActivityLog() {
             {total} {total === 1 ? 'activity' : 'activities'} recorded
           </p>
         </div>
-        <Button onClick={() => { setGarminPrefill(undefined); setModalOpen(true) }}>
+        <Button onClick={() => setModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Log Activity
         </Button>
       </div>
 
       {/* Garmin drop zone */}
-      <GarminDropZone onParsed={handleGarminParsed} />
+      <GarminDropZone onImported={refresh} />
 
       {/* Filters */}
       <ActivityFilterBar filters={filters} onApply={applyFilters} />
@@ -73,7 +64,7 @@ export default function ActivityLog() {
         ) : activities.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 gap-2 text-muted-foreground">
             <p>No activities found.</p>
-            <Button variant="outline" size="sm" onClick={() => { setGarminPrefill(undefined); setModalOpen(true) }}>
+            <Button variant="outline" size="sm" onClick={() => setModalOpen(true)}>
               Log your first activity
             </Button>
           </div>
@@ -109,7 +100,6 @@ export default function ActivityLog() {
         open={modalOpen}
         onClose={handleModalClose}
         onSaved={refresh}
-        prefill={garminPrefill}
       />
     </div>
   )

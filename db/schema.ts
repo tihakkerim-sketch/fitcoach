@@ -1,4 +1,4 @@
-import { sqliteTable, integer, text, real } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, integer, text, real, unique } from 'drizzle-orm/sqlite-core'
 
 // ── Activities ────────────────────────────────────────────────────────────────
 export const activities = sqliteTable('activities', {
@@ -6,7 +6,7 @@ export const activities = sqliteTable('activities', {
   type: text('type').notNull(), // running | cycling | sleep | strength | custom
   date: text('date').notNull(), // YYYY-MM-DD
   createdAt: integer('created_at').notNull(),
-  source: text('source').notNull(), // manual | garmin_import
+  source: text('source').notNull(), // manual | garmin_import | intervals_icu
   garminFileName: text('garmin_file_name'),
 
   // Shared
@@ -37,7 +37,40 @@ export const activities = sqliteTable('activities', {
   typeLabel: text('type_label'),
 
   // Garmin raw
-  rawGarminData: text('raw_garmin_data'), // JSON
+  rawGarminData: text('raw_garmin_data'), // JSON (kompakt, ohne Samples)
+
+  // Phase 3
+  elevationGainM: real('elevation_gain_m'),
+  elevationLossM: real('elevation_loss_m'),
+  movingTimeMin: real('moving_time_min'),
+  externalId: text('external_id'), // z. B. icu:i12345; UNIQUE-Index (partiell) per Migration v4
+})
+
+export const activitySplits = sqliteTable('activity_splits', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  activityId: integer('activity_id')
+    .notNull()
+    .references(() => activities.id, { onDelete: 'cascade' }),
+  splitIndex: integer('split_index').notNull(), // 1-basiert
+  distanceKm: real('distance_km').notNull(),
+  durationSec: real('duration_sec').notNull(),
+  paceSecPerKm: real('pace_sec_per_km'),
+  avgHr: integer('avg_hr'),
+  elevationGainM: real('elevation_gain_m'),
+  elevationLossM: real('elevation_loss_m'),
+}, t => [unique().on(t.activityId, t.splitIndex)])
+
+export const activityStreams = sqliteTable('activity_streams', {
+  activityId: integer('activity_id')
+    .primaryKey()
+    .references(() => activities.id, { onDelete: 'cascade' }),
+  data: text('data').notNull(), // JSON ActivityStreams
+})
+
+// Geheimnisse (z. B. verschlüsselter API-Schlüssel) – wird NIE exportiert
+export const appSettings = sqliteTable('app_settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
 })
 
 // ── Training Plans ────────────────────────────────────────────────────────────
@@ -133,8 +166,9 @@ export const recoveryLogs = sqliteTable('recovery_logs', {
   sleepScore:     integer('sleep_score'),             // 0–100
   readinessScore: integer('readiness_score'),         // 0–100
   restingHr:      integer('resting_hr'),              // bpm
+  sleepHours:     real('sleep_hours'),                // h
   note:           text('note'),
-  source:         text('source').notNull().default('manual'),  // manual | garmin_import
+  source:         text('source').notNull().default('manual'),  // manual | garmin_import | intervals_icu
   createdAt:      integer('created_at').notNull(),
   updatedAt:      integer('updated_at').notNull(),
 })

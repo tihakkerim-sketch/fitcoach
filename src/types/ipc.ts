@@ -24,9 +24,10 @@ export const IPC = {
   ACTIVITIES_LIST: 'activities:list',
   ACTIVITIES_GET: 'activities:get',
   ACTIVITIES_DELETE: 'activities:delete',
+  ACTIVITIES_DETAILS: 'activities:details',
 
   // Garmin
-  GARMIN_PARSE: 'garmin:parse',
+  GARMIN_IMPORT_FILES: 'garmin:importFiles',
 
   // Plans
   PLANS_CREATE: 'plans:create',
@@ -89,6 +90,32 @@ export type IpcResponse<T> =
 export interface ActivityRow extends CreateActivityPayload {
   id: number
   createdAt: number
+}
+
+export interface ActivitySplit {
+  splitIndex: number // 1-basiert
+  distanceKm: number
+  durationSec: number
+  paceSecPerKm?: number
+  avgHr?: number
+  elevationGainM?: number
+  elevationLossM?: number
+}
+
+/** Verkleinerte Verläufe (max. 500 Punkte), alle Arrays gleich lang. */
+export interface ActivityStreams {
+  t: number[]                // Sekunden ab Start
+  distKm: (number | null)[]
+  hr: (number | null)[]
+  paceSec: (number | null)[] // s/km
+  altM: (number | null)[]
+}
+
+export interface ImportFileResult {
+  fileName: string
+  status: 'created' | 'duplicate' | 'error'
+  activityId?: number
+  message?: string
 }
 
 // ── Plan types ────────────────────────────────────────────────────────────────
@@ -271,6 +298,7 @@ export interface RecoveryLog {
   sleepScore?: number       // 0–100
   readinessScore?: number   // 0–100
   restingHr?: number        // bpm
+  sleepHours?: number       // h
   note?: string
   source: RecoverySource
   createdAt: number

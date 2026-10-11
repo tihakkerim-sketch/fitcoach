@@ -108,16 +108,36 @@ describe('IPC contract', () => {
     })
   })
 
-  describe('garmin:parse', () => {
-    it('accepts a Uint8Array within the size limit', () => {
-      expect(ok(IPC.GARMIN_PARSE, { fileName: 'run.fit', data: new Uint8Array(1024) })).toBe(true)
+  describe('garmin:importFiles', () => {
+    const file = (fileName: string, size = 1024) => ({ fileName, data: new Uint8Array(size) })
+    it('accepts .fit/.tcx files in any case', () => {
+      expect(ok(IPC.GARMIN_IMPORT_FILES, { files: [file('run.fit'), file('RUN.TCX')] })).toBe(true)
     })
-    it('rejects plain arrays and missing file names', () => {
-      expect(ok(IPC.GARMIN_PARSE, { fileName: 'run.fit', data: [1, 2, 3] })).toBe(false)
-      expect(ok(IPC.GARMIN_PARSE, { fileName: '', data: new Uint8Array(1) })).toBe(false)
+    it('rejects other extensions, plain arrays, empty names and empty or oversized lists', () => {
+      expect(ok(IPC.GARMIN_IMPORT_FILES, { files: [file('run.gpx')] })).toBe(false)
+      expect(ok(IPC.GARMIN_IMPORT_FILES, { files: [{ fileName: 'run.fit', data: [1, 2, 3] }] })).toBe(false)
+      expect(ok(IPC.GARMIN_IMPORT_FILES, { files: [file('')] })).toBe(false)
+      expect(ok(IPC.GARMIN_IMPORT_FILES, { files: [] })).toBe(false)
+      expect(ok(IPC.GARMIN_IMPORT_FILES, { files: Array.from({ length: 51 }, () => file('a.fit', 1)) })).toBe(false)
+      expect(ok(IPC.GARMIN_IMPORT_FILES, { files: Array.from({ length: 50 }, () => file('a.fit', 1)) })).toBe(true)
     })
-    it('rejects files above 50 MB', () => {
-      expect(ok(IPC.GARMIN_PARSE, { fileName: 'big.fit', data: new Uint8Array(MAX_GARMIN_FILE_BYTES + 1) })).toBe(false)
+    it('rejects names above 260 chars and files above 50 MB', () => {
+      expect(ok(IPC.GARMIN_IMPORT_FILES, { files: [file('a'.repeat(257) + '.fit')] })).toBe(false)
+      expect(ok(IPC.GARMIN_IMPORT_FILES, { files: [file('big.fit', MAX_GARMIN_FILE_BYTES + 1)] })).toBe(false)
+    })
+  })
+
+  describe('activities:details / new fields', () => {
+    it('details needs an id', () => {
+      expect(ok(IPC.ACTIVITIES_DETAILS, 3)).toBe(true)
+      expect(ok(IPC.ACTIVITIES_DETAILS, 0)).toBe(false)
+    })
+    it('activities accept intervals_icu source and new fields', () => {
+      expect(ok(IPC.ACTIVITIES_CREATE, { type: 'running', date: '2026-10-10', source: 'intervals_icu', elevationGainM: 120, elevationLossM: 118, movingTimeMin: 44.5, externalId: 'icu:i1' })).toBe(true)
+    })
+    it('recovery accepts sleepHours 0–24 only', () => {
+      expect(ok(IPC.RECOVERY_LOG_UPSERT, { date: '2026-10-10', sleepHours: 7.5, source: 'intervals_icu' })).toBe(true)
+      expect(ok(IPC.RECOVERY_LOG_UPSERT, { date: '2026-10-10', sleepHours: 25 })).toBe(false)
     })
   })
 

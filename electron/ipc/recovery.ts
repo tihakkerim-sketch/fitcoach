@@ -15,6 +15,7 @@ function rowToLog(r: typeof recoveryLogs.$inferSelect): RecoveryLog {
     sleepScore:     r.sleepScore     ?? undefined,
     readinessScore: r.readinessScore ?? undefined,
     restingHr:      r.restingHr      ?? undefined,
+    sleepHours:     r.sleepHours     ?? undefined,
     note:           r.note           ?? undefined,
     source:         (r.source as RecoveryLog['source']) ?? 'manual',
     createdAt:      r.createdAt,
@@ -48,6 +49,7 @@ export function registerRecoveryHandlers() {
       sleepScore:     payload.sleepScore   ?? null,
       readinessScore: readinessScore       ?? null,
       restingHr:      payload.restingHr    ?? null,
+      sleepHours:     payload.sleepHours   ?? null,
       note:           payload.note         ?? null,
       source:         payload.source       ?? 'manual',
     }

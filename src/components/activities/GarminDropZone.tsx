@@ -1,66 +1,71 @@
 import { useState, useCallback, useRef } from 'react'
-import { Upload, FileCheck } from 'lucide-react'
+import { Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
-import type { CreateActivityPayload } from '@/types/ipc'
+import type { ImportFileResult } from '@/types/ipc'
 import { cn } from '@/lib/utils'
 
 interface Props {
-  onParsed: (data: Partial<CreateActivityPayload>) => void
+  /** Wird nach jedem Import mit der Ergebnisliste aufgerufen (z. B. zum Neuladen der Liste). */
+  onImported: (results: ImportFileResult[]) => void
 }
 
-export function GarminDropZone({ onParsed }: Props) {
+const isGarminFile = (f: File) => /\.(fit|tcx)$/i.test(f.name)
+
+export function GarminDropZone({ onImported }: Props) {
   const [dragging, setDragging] = useState(false)
-  const [parsing, setParsing] = useState(false)
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [fileName, setFileName] = useState<string | null>(null)
+  const [results, setResults] = useState<ImportFileResult[] | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const parseFile = useCallback(async (file: File) => {
-    const ext = file.name.toLowerCase().split('.').pop()
-    if (ext !== 'fit' && ext !== 'tcx') {
-      setError('Only .fit and .tcx files are supported')
+  const importFiles = useCallback(async (list: File[]) => {
+    const files = list.filter(isGarminFile)
+    if (files.length === 0) {
+      setError('Es werden nur .fit- und .tcx-Dateien unterstützt.')
       return
     }
-    setParsing(true)
+    setBusy(true)
     setError(null)
+    setResults(null)
     try {
-      const buffer = await file.arrayBuffer()
-      const uint8 = new Uint8Array(buffer)
-      const result = await invoke(IPC.GARMIN_PARSE, {
-        fileName: file.name,
-        data: uint8,
-      })
-      setFileName(file.name)
-      onParsed({ ...result, source: 'garmin_import', garminFileName: file.name })
+      const payload = await Promise.all(files.map(async f => ({
+        fileName: f.name,
+        data: new Uint8Array(await f.arrayBuffer()),
+      })))
+      const res = await invoke(IPC.GARMIN_IMPORT_FILES, { files: payload })
+      setResults(res)
+      onImported(res)
     } catch (e) {
-      setError(e instanceof Error ? e.message : `Failed to parse .${ext} file`)
+      setError(e instanceof Error ? e.message : 'Import fehlgeschlagen.')
     } finally {
-      setParsing(false)
+      setBusy(false)
     }
-  }, [onParsed])
+  }, [onImported])
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file) parseFile(file)
-  }, [parseFile])
+    void importFiles(Array.from(e.dataTransfer.files))
+  }, [importFiles])
 
   const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) parseFile(file)
-    // Reset input so the same file can be re-selected
-    e.target.value = ''
-  }, [parseFile])
+    const files = Array.from(e.target.files ?? [])
+    if (files.length > 0) void importFiles(files)
+    e.target.value = '' // dieselbe Datei erneut wählbar
+  }, [importFiles])
+
+  const created = results?.filter(r => r.status === 'created').length ?? 0
+  const duplicates = results?.filter(r => r.status === 'duplicate').length ?? 0
+  const failed = results?.filter(r => r.status === 'error') ?? []
 
   return (
     <div
       className={cn(
         'relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 transition-colors',
         dragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-muted-foreground/50',
-        parsing && 'pointer-events-none opacity-60'
+        busy && 'pointer-events-none opacity-60'
       )}
       onDragOver={e => { e.preventDefault(); setDragging(true) }}
       onDragLeave={() => setDragging(false)}
@@ -70,53 +75,30 @@ export function GarminDropZone({ onParsed }: Props) {
         ref={fileInputRef}
         type="file"
         accept=".fit,.tcx"
+        multiple
         className="hidden"
         onChange={onFileChange}
       />
-
-      {fileName ? (
-        <>
-          <FileCheck className="h-8 w-8 text-primary" />
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium text-primary">{fileName}</p>
-            <span className="rounded-[0.25rem] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-primary/10 text-primary">
-              {fileName.toLowerCase().endsWith('.tcx') ? 'TCX' : 'FIT'}
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground">Form pre-filled from Garmin data</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => { setFileName(null); fileInputRef.current?.click() }}
-          >
-            Change file
-          </Button>
-        </>
-      ) : (
-        <>
-          <Upload className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            {parsing
-              ? `Parsing file…`
-              : 'Drag & drop a .fit or .tcx file, or'}
-          </p>
-          {!parsing && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Browse file
-            </Button>
-          )}
-          {!parsing && (
-            <p className="text-[11px] text-muted-foreground/60">Supports Garmin .fit and .tcx formats</p>
-          )}
-        </>
+      <Upload className="h-8 w-8 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">
+        {busy ? 'Dateien werden importiert …' : 'Garmin-Dateien (.fit / .tcx) hierher ziehen oder'}
+      </p>
+      {!busy && (
+        <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+          Dateien auswählen
+        </Button>
       )}
 
+      {results && (
+        <div className="text-xs text-muted-foreground text-center">
+          <p className="font-medium text-foreground">
+            {created} neu · {duplicates} doppelt · {failed.length} Fehler
+          </p>
+          {failed.map(f => (
+            <p key={f.fileName} className="text-destructive">{f.fileName}: {f.message}</p>
+          ))}
+        </div>
+      )}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )

@@ -256,7 +256,7 @@ describe('migrations', () => {
       db.exec('PRAGMA foreign_keys = ON')
       runMigrations(db, backupDir, { now })
 
-      expect(userVersion(db)).toBe(3)
+      expect(userVersion(db)).toBe(LATEST)
       expect(db.prepare('SELECT start_date AS s, is_active AS a, name FROM training_plans').all())
         .toEqual([{ s: '2026-05-18', a: 0, name: 'Marathon Base to Finish' }])
       expect((db.prepare('SELECT week_index AS i, phase FROM plan_weeks ORDER BY week_index').all()))
@@ -326,6 +326,39 @@ describe('migrations', () => {
     it('refuses a database from a newer app version', () => {
       db.exec(`PRAGMA user_version = ${LATEST + 5}`)
       expect(() => runMigrations(db, backupDir, { now })).toThrow(/Version/)
+    })
+  })
+
+  describe('v4 garmin-details', () => {
+    it('keeps existing activities/recovery, adds columns and tables', () => {
+      runMigrations(db, backupDir, { now, migrations: MIGRATIONS.filter(m => m.version <= 3) })
+      db.exec(`INSERT INTO activities (id, type, date, created_at, source, distance_km) VALUES (1, 'running', '2026-09-01', 1, 'manual', 10);
+        INSERT INTO recovery_logs (id, date, hrv_rmssd, created_at, updated_at) VALUES (1, '2026-09-01', 55.5, 1, 1);`)
+      const res = runMigrations(db, backupDir, { now })
+      expect(res).toMatchObject({ from: 3, to: 4 })
+      expect(columnNames(db, 'activities')).toEqual(expect.arrayContaining(['elevation_gain_m', 'elevation_loss_m', 'moving_time_min', 'external_id']))
+      expect(columnNames(db, 'recovery_logs')).toContain('sleep_hours')
+      expect(tableNames(db)).toEqual(expect.arrayContaining(['activity_splits', 'activity_streams', 'app_settings']))
+      expect(db.prepare('SELECT distance_km AS d, external_id AS e FROM activities').get()).toEqual({ d: 10, e: null })
+      expect((db.prepare('SELECT hrv_rmssd AS h, sleep_hours AS s FROM recovery_logs').get() as { h: number; s: number | null })).toEqual({ h: 55.5, s: null })
+    })
+
+    it('external_id is unique when set; NULLs may repeat', () => {
+      runMigrations(db, backupDir, { now })
+      const ins = db.prepare("INSERT INTO activities (type, date, created_at, source, external_id) VALUES ('running', '2026-09-01', 1, 'manual', ?)")
+      ins.run(null); ins.run(null); ins.run('icu:1')
+      expect(() => ins.run('icu:1')).toThrow(/UNIQUE/i)
+    })
+
+    it('deleting an activity cascades to splits and streams; split_index is unique per activity', () => {
+      runMigrations(db, backupDir, { now })
+      db.exec(`INSERT INTO activities (id, type, date, created_at, source) VALUES (1, 'running', '2026-09-01', 1, 'manual');
+        INSERT INTO activity_splits (activity_id, split_index, distance_km, duration_sec) VALUES (1, 1, 1, 300), (1, 2, 1, 310);
+        INSERT INTO activity_streams (activity_id, data) VALUES (1, '{}');`)
+      expect(() => db.exec('INSERT INTO activity_splits (activity_id, split_index, distance_km, duration_sec) VALUES (1, 1, 1, 1)')).toThrow(/UNIQUE/i)
+      db.exec('DELETE FROM activities WHERE id = 1')
+      expect(count(db, 'activity_splits')).toBe(0)
+      expect(count(db, 'activity_streams')).toBe(0)
     })
   })
 
