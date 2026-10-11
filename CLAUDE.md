@@ -30,6 +30,8 @@ Aktueller Umbau: siehe `docs/AUDIT-2026-10.md` (Phasenplan + Entscheidungen in A
 - `main.js` liegt unter `dist-electron/electron/main.js`.
 - Mehrschrittige Schreibvorgänge immer in einer Transaktion: `runInTransaction` aus `electron/lib/transaction.ts` (synchron, `BEGIN IMMEDIATE`).
 - App ohne echte Daten testen: Vite starten, dann `npx electron . --user-data-dir=<tempordner>` (Kopie von `fitcoach.db` hineinlegen). Port 5173 muss frei sein (`--strictPort`).
-- Backup-Format v4 = alle Tabellen (`electron/lib/backupFormat.ts`); neue Tabellen dort eintragen. v1–v3 bleiben importierbar.
+- Backup-Format v5 = alle Tabellen (`electron/lib/backupFormat.ts`); neue Tabellen dort eintragen. v1–v4 bleiben importierbar (alte Plan-Phasen → `electron/lib/legacyPlan.ts`).
+- **Plan-Datum wird berechnet** (`startDate` Montag + weekIndex + Wochentag) in `src/shared/planCalendar.ts` – gemeinsam für Main und Renderer (`src/shared` ist in `tsconfig.electron.json` eingebunden; dort kein `@/`-Alias benutzen). Nie ein Datum in `plan_sessions` speichern.
+- Neue Aktivität → `matchActivity` (Auto-Zuordnung), Löschen → vorher `releaseActivity` (`electron/lib/matchSessions.ts`).
 - Entfernt (Phase 1): Habits, Ernährung, Körper, Challenges. Alte Daten liegen in `backups/vor-v2-alle-tabellen-*.json`.
 - Rauchtest ohne echte Daten: Playwright `_electron.launch({ args: ['.', '--user-data-dir=<temp>'] })` (gepackt: `executablePath: release/win-unpacked/FitCoach.exe`). Port 5173 vorher frei machen, sonst läuft alter Code.

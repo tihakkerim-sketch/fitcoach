@@ -1,6 +1,6 @@
 # FitCoach – Architektur
 
-Kurzüberblick über den echten Stand (nach Phase 1). Befehle, Gotchas und Konventionen
+Kurzüberblick über den echten Stand (nach Phase 2). Befehle, Gotchas und Konventionen
 stehen in [`CLAUDE.md`](CLAUDE.md) und werden hier nicht wiederholt. Hintergrund und
 Phasenplan: [`docs/AUDIT-2026-10.md`](docs/AUDIT-2026-10.md).
 
@@ -80,16 +80,17 @@ Renderer: invoke() wirft bei success:false einen Error mit der Meldung
   `checkin`, `stats`, `garmin`, `summary` (Coach-Export), `data` (Backup/Import), `settings`.
 - `runHandler.ts` und `electron/lib/*` importieren nichts aus `electron` und sind testbar.
 
-## 4. Backup-Format (JSON, v4)
+## 4. Backup-Format (JSON, v5)
 
-`electron/lib/backupFormat.ts`, `BACKUP_VERSION = 4`.
+`electron/lib/backupFormat.ts`, `BACKUP_VERSION = 5`.
 
 - Enthält **alle** Tabellen: `userProfile`, `hrZones`, `activities`, `trainingPlans`,
-  `planPhases`, `planWeeks`, `planSessions`, `dailyCheckins`, `recoveryLogs`.
+  `planWeeks`, `planSessions`, `dailyCheckins`, `recoveryLogs`.
 - Die Reihenfolge in `BACKUP_TABLES` ist die Einfüge-Reihenfolge (Eltern vor Kindern);
   Löschen läuft umgekehrt. **Neue Tabelle → dort eintragen**, sonst fehlt sie im Backup.
-- Import (`electron/lib/importBackup.ts`) liest v1–v4. Schlüssel der entfernten Module in
-  v3-Dateien werden ignoriert.
+- Import (`electron/lib/importBackup.ts`) liest v1–v5. Schlüssel der entfernten Module in
+  v3-Dateien werden ignoriert. Plan-Daten aus v1–v4 (mit `planPhases`) werden per
+  `electron/lib/legacyPlan.ts` ins neue Modell umgewandelt (wie Migration v3).
 - Das JSON-Backup (Export/Import in den Einstellungen) ist getrennt von den
   `.db`-Sicherungen im Ordner `backups/`.
 
@@ -102,8 +103,8 @@ in einen KI-Chat ein. Es gibt keine KI-Anbindung in der App. Der Text ist aktuel
 1. Kopf: Zeitraum, Erstellungsdatum
 2. **Athletenprofil:** Name, Alter, Max-HF, Ruhe-HF, Zielwettkampf, Zielzeit, Trainingstage/Woche, Verletzungs-/Gesundheitsnotizen
 3. **HF-Zonen** (Zone, Bezeichnung, Bereich)
-4. **Aktiver Trainingsplan:** Name, Ziel, Zieldatum und **alle** geplanten Einheiten des Plans
-   (Wochentag, Typ, Dauer, Zone, Intensität, Status) – nicht nur die im Zeitraum
+4. **Aktiver Trainingsplan:** Name, Ziel, Zeitraum, „Woche X von N" und eine Tabelle der
+   Einheiten **im Zeitraum** (Datum, Soll, Status inkl. „verpasst", Ist der verknüpften Aktivität)
 5. **Aktivitäten im Zeitraum:** Dauer, Startzeit, Distanz, Ø-/Max-HF (mit Zone), Kadenz,
    gefühlte Anstrengung, Untergrund, Schlaf (Zeiten, Qualität), Kraftübungen, Notizen
 6. **Wochenstatistik:** Anzahl je Typ, Laufzeit/-distanz, Ø-Lauf-HF, Radzeit/-distanz, Schlafqualität
@@ -113,8 +114,25 @@ in einen KI-Chat ein. Es gibt keine KI-Anbindung in der App. Der Text ist aktuel
 tägliche Check-ins, Readiness, Trainingsbelastung und Trends. Ein besserer Export mit
 Änderungs-Vorschau ist geplant (Audit Abschnitt 3.3 und 8).
 
-Der Rückweg (Plan als JSON zurück in die App) läuft über `src/lib/planImport.ts` und
-`electron/lib/adaptPlan.ts`; abgeschlossene Einheiten bleiben dabei erhalten.
+Der Rückweg (Plan als JSON v2 zurück in die App) läuft über `src/lib/planImport.ts`
+(Prompts `CLAUDE_IMPORT_PROMPT`, `buildAdaptPrompt`) und `adaptPlan` in
+`electron/lib/planWrite.ts`; erledigte/übersprungene Einheiten bleiben erhalten, wenn
+(Woche, Tag, Typ) im neuen Plan existiert.
+
+## 5a. Trainingsplan (seit Phase 2)
+
+- Tabellen: `training_plans` (+ `start_date`, immer Montag) → `plan_weeks` (`week_index`
+  0-basiert, `phase`, `notes`) → `plan_sessions` (Ziele: Distanz, Dauer, Pace von–bis in
+  Sek./km, HF-Zone, `steps` = Intervall-JSON; `match_source` auto/manual).
+- **Datum einer Einheit wird berechnet**, nicht gespeichert:
+  `startDate + weekIndex·7 + (dayOfWeek − 1)` (`src/shared/planCalendar.ts`, von Main und
+  Renderer genutzt). „Verpasst" = geplant + Datum vorbei (kein Ruhetag), wird nur angezeigt.
+- Nur ein aktiver Plan (anlegen/aktivieren setzt die anderen auf Archiv).
+- Automatische Zuordnung (`electron/lib/matchSessions.ts`): neue Aktivität → Einheit des
+  aktiven Plans am selben Tag mit gleichem Typ (Lauf/Rad/Kraft) wird erledigt + verknüpft.
+  Löschen der Aktivität setzt `auto` zurück; `rematchPlan` nach Start-/Plan-Änderungen.
+- Lesen/Schreiben: `electron/lib/planRead.ts`, `planWrite.ts`; Handler `electron/ipc/plans.ts`.
+- Soll/Ist-Abweichung: `src/shared/deviation.ts`.
 
 ## 6. Datums-Regeln
 
@@ -133,7 +151,7 @@ electron/
   main.ts          Fenster, CSP, Single-Instance, DB-Start/-Ende
   preload.ts       Brücke zum Renderer
   ipc/             ein Handler-Modul pro Bereich + handle.ts / runHandler.ts
-  lib/             reine Logik (testbar): Backup, Import, Garmin-Parser, Plan-Anpassung, Transaktionen, testDb
+  lib/             reine Logik (testbar): Backup, Import, Garmin-Parser, Plan lesen/schreiben/zuordnen, Transaktionen, testDb
 db/
   index.ts         initDb / closeDb / getDb
   migrations.ts    Migrationssystem (+ migrations.test.ts)
@@ -156,5 +174,5 @@ Build-Ausgabe: Renderer `dist/`, Hauptprozess `dist-electron/` (Einstieg
 
 Vitest (≥ 3). Tests laufen gegen eine In-Memory-DB mit den echten Migrationen
 (`electron/lib/testDb.ts`). Abgedeckt u. a.: Migrationen, Backup-Rotation, Import,
-Transaktionen, Garmin-Parser, Plan-Anpassung, IPC-Vertrag und `runHandler`.
+Transaktionen, Garmin-Parser, Plan-Kalender, Plan lesen/schreiben, Zuordnung, Plan-Import, IPC-Vertrag und `runHandler`.
 CI: `.github/workflows/ci.yml` (Node 24).

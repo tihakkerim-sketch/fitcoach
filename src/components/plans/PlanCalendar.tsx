@@ -25,7 +25,7 @@ function weekKm(week: WeekDetail) {
     .filter(s => s.type === 'running')
     .reduce((sum, s) => sum + (s.targetDistanceKm ?? 0), 0)
   const actual = week.sessions
-    .filter(s => s.status === 'completed' && s.activity)
+    .filter(s => s.status === 'completed' && s.activity?.type === 'running')
     .reduce((sum, s) => sum + (s.activity?.distanceKm ?? 0), 0)
   return { planned, actual }
 }
