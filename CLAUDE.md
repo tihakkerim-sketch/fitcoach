@@ -37,3 +37,6 @@ Aktueller Umbau: siehe `docs/AUDIT-2026-10.md` (Phasenplan + Entscheidungen in A
 - Rauchtest ohne echte Daten: Playwright `_electron.launch({ args: ['.', '--user-data-dir=<temp>'] })` (gepackt: `executablePath: release/win-unpacked/FitCoach.exe`). Port 5173 vorher frei machen, sonst läuft alter Code.
 - Zod 4: `.extend()`/`.partial()` nicht auf Objekten mit `.refine()` – Refine zuletzt anhängen.
 - Unverpackte App lädt immer `http://localhost:5173` → für Rauchtests Vite starten; Testdaten per `window.fitcoach.invoke(...)` aus Playwright anlegen.
+- **Garmin-Import** (Phase 3): Datei → `parseGarminFile` → `saveImported` (`electron/lib/importActivity.ts`: Dedupe + Splits + Streams + `matchActivity` in einer Transaktion). Duplikat-Regeln in `dedupe.ts`; Treffer mit `externalId` trägt die ID nach.
+- **intervals.icu**: Client/Sync in `electron/lib/intervals{Client,Sync}.ts` (fetch injizierbar, Tests ohne Netz). Schlüssel nur per `safeStorage` verschlüsselt in `app_settings` (nie Klartext, nie im Backup, nie an Renderer). `start_date_local` ist Ortszeit ohne Zone → String schneiden, nicht `new Date()`.
+- Renderer-Neuladen nach Import/Sync: `emitDataChanged()` / `onDataChanged()` aus `src/lib/dataEvents.ts`.

@@ -7,10 +7,14 @@ Reihenfolge laut `docs/AUDIT-2026-10.md` Abschnitt 7.
 - [x] Phase 2 – Trainingsplan neu (Startdatum, Kalender, Woche-für-Woche, Auto-Zuordnung) – 11.10.2026
 - [ ] Plan: Vorlagen / Woche kopieren / automatische Progression im Editor (bewusst nicht in Phase 2)
 - [ ] Plan: Zuordnung ±1 Tag (Einheit am Folgetag gelaufen) – derzeit nur gleicher Tag
-- [ ] Phase 3 – Garmin (intervals.icu-Sync, Mehrfach-Import, Duplikate, Splits)
+- [x] Phase 3 – Garmin (intervals.icu-Sync, Mehrfach-Import, Duplikate, Splits/Höhe/Verläufe) – 11.10.2026
+- [ ] intervals.icu-Sync mit echtem Konto testen (sperrt intervals.icu Garmin-Daten über die API, bleibt nur Datei-Import)
+- [ ] Lauf-Kadenz aus TCX/FIT ist halbe Schrittfrequenz (z. B. 67 statt 134 spm) – verdoppeln für Läufe
+- [ ] Alte Läufe ohne Splits: Details nachberechnen durch erneuten Datei-Import (Duplikat ergänzt dann Details)
+- [ ] Ordner-Überwachung für Garmin-Dateien
 - [ ] Phase 4 – Coach (Zonen auto, CTL/ATL/TSB, Steigerungswarnung, Prognose, Export + Änderungs-Vorschau; Export enthält Recovery/Check-ins noch NICHT)
 - [ ] Phase 5 – UX & Deutsch (Onboarding, Bearbeiten/Undo, Tageswechsel 04:00, Schuh-km, Check-in → kurze Angabe im Recovery, Nav „Performance OS“ umbenennen)
 - [ ] Phase 6 – Release (E2E, Windows-CI, Auto-Update, Signatur)
-- [ ] Mit echter .fit-Datei prüfen, dass Datum lokal stimmt; dann `fit-file-parser` 1 → 6 updaten (Phase 3)
+- [ ] Mit echter .fit-Datei prüfen: Datum lokal + Höhen-Einheit (km→m in `fitDataToParsed`); dann `fit-file-parser` 1 → 6 updaten
 - [ ] npm audit: 12 moderate übrig (jimp → file-type im Icon-Skript; sprintf-js über electron-builder) – nur Build-Werkzeuge
 - [ ] Wiederherstellen-Knopf für Auto-Sicherungen in den Einstellungen
