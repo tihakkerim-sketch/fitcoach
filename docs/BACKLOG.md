@@ -12,7 +12,10 @@ Reihenfolge laut `docs/AUDIT-2026-10.md` Abschnitt 7.
 - [ ] Lauf-Kadenz aus TCX/FIT ist halbe Schrittfrequenz (z. B. 67 statt 134 spm) – verdoppeln für Läufe
 - [ ] Alte Läufe ohne Splits: Details nachberechnen durch erneuten Datei-Import (Duplikat ergänzt dann Details)
 - [ ] Ordner-Überwachung für Garmin-Dateien
-- [ ] Phase 4 – Coach (Zonen auto, CTL/ATL/TSB, Steigerungswarnung, Prognose, Export + Änderungs-Vorschau; Export enthält Recovery/Check-ins noch NICHT)
+- [x] Phase 4 – Coach (Zonen auto, CTL/ATL/TSB, Steigerungswarnung, Prognose, Coach-Bericht + Änderungs-Vorschau) – 11.10.2026
+- [ ] Coach mit echten Daten durchspielen (aktiven Plan, Bericht → Claude → Antwort einfügen)
+- [ ] Readiness-Score (Recovery-Seite) relativ zum eigenen HRV-Schnitt statt fester 20–80 ms
+- [ ] JS-Bündel > 500 kB: Seiten per lazy() laden
 - [ ] Phase 5 – UX & Deutsch (Onboarding, Bearbeiten/Undo, Tageswechsel 04:00, Schuh-km, Check-in → kurze Angabe im Recovery, Nav „Performance OS“ umbenennen)
 - [ ] Phase 6 – Release (E2E, Windows-CI, Auto-Update, Signatur)
 - [ ] Mit echter .fit-Datei prüfen: Datum lokal + Höhen-Einheit (km→m in `fitDataToParsed`); dann `fit-file-parser` 1 → 6 updaten

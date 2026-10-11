@@ -1,33 +1,32 @@
 # Übergabe – FitCoach – 2026-10-11
 
 ## Ziel der letzten Session
-Phase 3 „Garmin“ aus `docs/AUDIT-2026-10.md` (Spec `docs/superpowers/specs/2026-10-11-garmin-sync-design.md`).
+Phase 4 „Coach“ aus `docs/AUDIT-2026-10.md` (Spec `docs/superpowers/specs/2026-10-11-coach-design.md`).
 
 ## Stand
-- Branch `phase-3-garmin` (auf `phase-2-trainingsplan` → `phase-1-fundament` → `phase-0-datensicherheit`). **Nichts gemergt/gepusht.**
-- Migration v4: Höhe/Bewegungszeit/`external_id` an Aktivitäten, Tabellen `activity_splits`, `activity_streams`, `app_settings`, `recovery_logs.sleep_hours`. Backup v6 (Settings nie im Backup).
-- Mehrfach-Import .fit/.tcx direkt speichern + Ergebnisliste; Duplikat-Erkennung (ID oder Tag+Zeit±2 Min+Distanz±3 %).
-- Lauf-Details: Splits pro km, Höhenmeter, Diagramme Puls/Pace/Höhe (beim Aufklappen der Aktivität).
-- intervals.icu-Sync: Läufe (Original-Datei → gleiche Pipeline, sonst Summen) + Recovery (füllt nur leere Felder). Beim App-Start + Knopf. Schlüssel verschlüsselt via `safeStorage`.
-- UI: Sync-Leiste auf „Aktivitäten“, Abschnitt in Einstellungen, Schlafdauer im Recovery.
-- Geprüft: 240 Tests, beide Typechecks, Build grün. Rauchtest (Playwright, **Kopie** der echten DB v0→v4): beide echten TCX importiert (2 neu), zweiter Import „2 doppelt“, Splits + 3 Diagramme sichtbar, keine Konsolenfehler. Echte DB unberührt (Stand 04.10.).
+- Committet auf Branch `phase-3-garmin` (Kette phase-0 → 1 → 2 → 3, kein eigener Phase-4-Branch). **Nichts gemergt/gepusht.**
+- Puls-Zonen: automatisch nach Karvonen aus Max-/Ruhepuls (Profil, sonst Recovery-Median bzw. höchster gemessener Puls); eigene Zonen in Einstellungen → „Puls-Zonen“.
+- Belastung = TRIMP pro Aktivität; Fitness/Ermüdung/Form (CTL 42 T, ATL 7 T, TSB); Progress-Seite nutzt jetzt auch TRIMP.
+- Steigerungswarnungen: Wochen-km, längster Lauf, Plan nächste 7 Tage (je > 10 % Hinweis, > 30 % Warnung), ATL/CTL > 1,5.
+- Prognose (Riegel) aus Läufen ≥ 5 km der letzten 12 Wochen vs. Zielzeit aus Profil.
+- Neue Seite „Coach“ (ersetzt „Export“): Status + 90-Tage-Verlauf, Warnungen, Prognose, Recovery-Trend, Coach-Bericht (Deutsch, mit `#ID` der kommenden Einheiten + Antwort-Format), „Antwort von Claude einfügen“ → Vorschau mit Häkchen → Übernehmen (eine Transaktion, nur geplante Einheiten ab heute).
+- Dashboard: Form-Karte mit erster Warnung.
+- Geprüft: 309 Tests, beide Typechecks, Build grün. Rauchtest (Playwright) mit Kopie der echten DB + Testdaten im Temp-Ordner: Status, Warnungen, Prognose, Bericht, Änderung übernommen, Zonen-Einstellungen, keine Konsolenfehler. Echte DB unberührt.
 
 ## Offen / angefangen
-- Sync **nicht** mit echtem intervals.icu-Konto getestet (Adel hat noch keins) – nur mit Fake-Antworten.
-- Risiko: intervals.icu kündigt an, Garmin-Daten über die API evtl. zu sperren → dann zählt der Sync „nicht verfügbar“, Datei-Import bleibt.
-- FIT-Höhe: fit-file-parser liefert bei `lengthUnit:'km'` Höhe in km (laut Quellcode) → ×1000. Ohne echte .fit ungeprüft.
-- Lauf-Kadenz aus TCX ist halbe Schrittfrequenz (Backlog).
-- Adel: App starten (echte DB migriert v0→v4, Sicherung automatisch), intervals.icu verbinden, dann Branches mergen + pushen.
+- Echte Daten: letzter Lauf 19.06. → Coach zeigt aktuell kaum etwas (Form ≈ 0, keine Prognose). Kein aktiver Plan in der echten DB.
+- Rest der App noch teils Englisch (Settings-Labels, Dashboard) → Phase 5.
+- JS-Bündel > 500 kB (nur Warnung).
 
 ## Nächste sinnvolle Schritte
-1. **Phase 4 Coach-Export (empfohlen)**: jetzt mit Splits/Recovery/Schlaf als Datenbasis (CTL/ATL/TSB, Steigerungswarnung).
-2. intervals.icu mit echtem Konto prüfen (erster Sync, Recovery-Werte).
-3. Phase 5 UX/Deutsch (Rest der App noch englisch).
+1. **Phase 5 UX & Deutsch (empfohlen)**: Onboarding, Bearbeiten/Undo, Deutsch überall, Tageswechsel 04:00.
+2. Adel: App starten, Plan aktivieren, Coach-Bericht an Claude, Antwort einfügen – echter Durchlauf.
+3. Branches mergen + pushen.
 
 ## Gotchas, die neu gelernt wurden
-- `start_date_local` von intervals.icu ist Ortszeit ohne Zone → String schneiden, nie `new Date()`.
-- intervals.icu: Basic-Auth `API_KEY:<schlüssel>`, Athlet `0`, eigener User-Agent (Cloudflare), Original-Datei evtl. gzip.
-- Playwright: Chevron-Buttons gibt es auch in Filter-Selects → Karten-Knopf gezielt über die Karte ansprechen; Inhalt scrollt in innerer ScrollArea.
+- Coach-Logik liegt rein in `src/shared/coach` (Main + Renderer); `COACH_CHANGES_FORMAT` dort, damit der Bericht (Main) es nutzen kann.
+- Claude-Änderungen verweisen per `sessionId` (`#123` im Bericht) – Datum allein ist nicht eindeutig (mehrere Einheiten pro Tag möglich).
+- Playwright: `fullPage`-Screenshot erfasst die innere ScrollArea nicht – Ergebnis per `invoke` prüfen.
 
 ## Wichtige Dateien
-`electron/lib/{garminParse,activityDetails,dedupe,importActivity,activityInsert,intervalsClient,intervalsSync,appSettings}.ts`, `electron/ipc/{garmin,intervals}.ts`, `db/migrations.ts` (v4), `src/hooks/useIntervalsSync.ts`, `src/lib/dataEvents.ts`, `src/components/activities/{GarminDropZone,IntervalsSyncBar,ActivityDetails}.tsx`, `src/components/settings/IntervalsSettings.tsx`
+`src/shared/coach/*`, `electron/lib/{coachData,coachExport,coachChanges}.ts`, `electron/ipc/{coach,summary,stats}.ts`, `src/lib/coachChanges.ts`, `src/pages/Coach.tsx`, `src/components/coach/*`, `src/components/settings/HrZonesSettings.tsx`, `src/components/dashboard/CoachCard.tsx`
