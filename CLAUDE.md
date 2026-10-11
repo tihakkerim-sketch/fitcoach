@@ -32,3 +32,4 @@ Aktueller Umbau: siehe `docs/AUDIT-2026-10.md` (Phasenplan + Entscheidungen in A
 - App ohne echte Daten testen: Vite starten, dann `npx electron . --user-data-dir=<tempordner>` (Kopie von `fitcoach.db` hineinlegen). Port 5173 muss frei sein (`--strictPort`).
 - Backup-Format v4 = alle Tabellen (`electron/lib/backupFormat.ts`); neue Tabellen dort eintragen. v1–v3 bleiben importierbar.
 - Entfernt (Phase 1): Habits, Ernährung, Körper, Challenges. Alte Daten liegen in `backups/vor-v2-alle-tabellen-*.json`.
+- Rauchtest ohne echte Daten: Playwright `_electron.launch({ args: ['.', '--user-data-dir=<temp>'] })` (gepackt: `executablePath: release/win-unpacked/FitCoach.exe`). Port 5173 vorher frei machen, sonst läuft alter Code.
