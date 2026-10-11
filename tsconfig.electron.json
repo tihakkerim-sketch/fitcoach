@@ -17,6 +17,6 @@
       "@shared/*": ["./src/types/*"]
     }
   },
-  "include": ["electron", "db", "src/types"],
+  "include": ["electron", "db", "src/types", "src/shared"],
   "exclude": ["**/*.test.ts", "**/*.spec.ts", "electron/lib/testDb.ts"]
 }
