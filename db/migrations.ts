@@ -16,6 +16,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import * as fs from 'fs'
 import * as path from 'path'
 import { format } from 'date-fns'
+import { convertLegacyPlans } from '../electron/lib/legacyPlan'
 
 export interface MigrationCtx {
   db: DatabaseSync
@@ -380,9 +381,98 @@ function v2Cleanup({ db, backupDir, now }: MigrationCtx): void {
   // (e) daily_checkins and recovery_logs stay untouched.
 }
 
+// ── v3: Trainingsplan v2 ─────────────────────────────────────────────────────
+
+/**
+ * Plan mit Startdatum, Wochen mit Index, Einheiten mit Distanz/Pace/Intervallen.
+ * `plan_phases` entfällt. Die alten Zeilen werden mit `convertLegacyPlans` umgewandelt
+ * (gleiche Funktion wie beim Backup-Import), in `*_new`-Tabellen geschrieben, dann
+ * werden die alten Tabellen ersetzt.
+ */
+function v3PlanV2({ db }: MigrationCtx): void {
+  const legacy = {
+    plans: all(db, 'SELECT id, name, goal_event AS goalEvent, goal_date AS goalDate, is_active AS isActive, created_at AS createdAt FROM training_plans'),
+    phases: all(db, 'SELECT id, plan_id AS planId, name, order_index AS orderIndex, duration_weeks AS durationWeeks FROM plan_phases'),
+    weeks: all(db, 'SELECT id, phase_id AS phaseId, week_number AS weekNumber, notes FROM plan_weeks'),
+    sessions: all(db,
+      'SELECT id, week_id AS weekId, day_of_week AS dayOfWeek, type, target_duration_min AS targetDurationMin, ' +
+      'target_hr_zone AS targetHrZone, intensity_label AS intensityLabel, coaching_note AS coachingNote, status, ' +
+      'linked_activity_id AS linkedActivityId, completed_at AS completedAt, completion_note AS completionNote FROM plan_sessions'),
+    activities: all(db, 'SELECT id, date FROM activities'),
+  }
+  const converted = convertLegacyPlans(legacy as unknown as Parameters<typeof convertLegacyPlans>[0])
+
+  db.exec(`
+    CREATE TABLE training_plans_new (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      name text NOT NULL,
+      goal_event text,
+      goal_date text,
+      start_date text NOT NULL,
+      is_active integer DEFAULT 1 NOT NULL,
+      created_at integer NOT NULL
+    );
+    CREATE TABLE plan_weeks_new (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      plan_id integer NOT NULL REFERENCES training_plans(id) ON DELETE cascade,
+      week_index integer NOT NULL,
+      phase text,
+      notes text,
+      UNIQUE(plan_id, week_index)
+    );
+    CREATE TABLE plan_sessions_new (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      week_id integer NOT NULL REFERENCES plan_weeks(id) ON DELETE cascade,
+      day_of_week integer NOT NULL,
+      type text NOT NULL,
+      title text,
+      target_distance_km real,
+      target_duration_min real,
+      target_pace_fast_sec integer,
+      target_pace_slow_sec integer,
+      target_hr_zone integer,
+      steps text,
+      coaching_note text,
+      status text DEFAULT 'planned' NOT NULL,
+      linked_activity_id integer REFERENCES activities(id) ON DELETE set null,
+      match_source text,
+      completed_at integer,
+      completion_note text
+    );
+  `)
+
+  const insPlan = db.prepare(
+    'INSERT INTO training_plans_new (id, name, goal_event, goal_date, start_date, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+  for (const p of converted.plans) insPlan.run(p.id, p.name, p.goalEvent, p.goalDate, p.startDate, p.isActive, p.createdAt)
+  const insWeek = db.prepare('INSERT INTO plan_weeks_new (id, plan_id, week_index, phase, notes) VALUES (?, ?, ?, ?, ?)')
+  for (const w of converted.weeks) insWeek.run(w.id, w.planId, w.weekIndex, w.phase, w.notes)
+  const insSession = db.prepare(
+    'INSERT INTO plan_sessions_new (id, week_id, day_of_week, type, title, target_distance_km, target_duration_min, ' +
+    'target_pace_fast_sec, target_pace_slow_sec, target_hr_zone, steps, coaching_note, status, linked_activity_id, ' +
+    'match_source, completed_at, completion_note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+  for (const s of converted.sessions) {
+    insSession.run(s.id, s.weekId, s.dayOfWeek, s.type, s.title, s.targetDistanceKm, s.targetDurationMin,
+      s.targetPaceFastSec, s.targetPaceSlowSec, s.targetHrZone, s.steps, s.coachingNote, s.status,
+      s.linkedActivityId, s.matchSource, s.completedAt, s.completionNote)
+  }
+
+  db.exec(`
+    DROP TABLE plan_sessions;
+    DROP TABLE plan_weeks;
+    DROP TABLE plan_phases;
+    DROP TABLE training_plans;
+    ALTER TABLE training_plans_new RENAME TO training_plans;
+    ALTER TABLE plan_weeks_new RENAME TO plan_weeks;
+    ALTER TABLE plan_sessions_new RENAME TO plan_sessions;
+    CREATE INDEX plan_sessions_week_idx ON plan_sessions(week_id);
+    CREATE INDEX plan_sessions_activity_idx ON plan_sessions(linked_activity_id);
+  `)
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: 'baseline', up: v1Baseline },
   { version: 2, name: 'phase-1-cleanup', up: v2Cleanup },
+  { version: 3, name: 'plan-v2', up: v3PlanV2 },
 ]
 
 // ── Runner ───────────────────────────────────────────────────────────────────

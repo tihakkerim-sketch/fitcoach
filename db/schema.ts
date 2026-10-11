@@ -46,26 +46,18 @@ export const trainingPlans = sqliteTable('training_plans', {
   name: text('name').notNull(),
   goalEvent: text('goal_event'),
   goalDate: text('goal_date'),
+  startDate: text('start_date').notNull(), // YYYY-MM-DD, immer ein Montag
   isActive: integer('is_active').notNull().default(1),
   createdAt: integer('created_at').notNull(),
 })
 
-export const planPhases = sqliteTable('plan_phases', {
+export const planWeeks = sqliteTable('plan_weeks', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   planId: integer('plan_id')
     .notNull()
     .references(() => trainingPlans.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  orderIndex: integer('order_index').notNull(),
-  durationWeeks: integer('duration_weeks').notNull(),
-})
-
-export const planWeeks = sqliteTable('plan_weeks', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  phaseId: integer('phase_id')
-    .notNull()
-    .references(() => planPhases.id, { onDelete: 'cascade' }),
-  weekNumber: integer('week_number').notNull(),
+  weekIndex: integer('week_index').notNull(), // 0-basiert, UNIQUE(plan_id, week_index)
+  phase: text('phase'),
   notes: text('notes'),
 })
 
@@ -74,16 +66,21 @@ export const planSessions = sqliteTable('plan_sessions', {
   weekId: integer('week_id')
     .notNull()
     .references(() => planWeeks.id, { onDelete: 'cascade' }),
-  dayOfWeek: integer('day_of_week').notNull(), // 0=Mon … 6=Sun
+  dayOfWeek: integer('day_of_week').notNull(), // 1=Mo … 7=So
   type: text('type').notNull(), // running | cycling | strength | rest | custom
-  targetDurationMin: integer('target_duration_min'),
+  title: text('title'),
+  targetDistanceKm: real('target_distance_km'),
+  targetDurationMin: real('target_duration_min'),
+  targetPaceFastSec: integer('target_pace_fast_sec'), // Sekunden pro km
+  targetPaceSlowSec: integer('target_pace_slow_sec'),
   targetHrZone: integer('target_hr_zone'),
-  intensityLabel: text('intensity_label'),
+  steps: text('steps'), // JSON (Intervall-Schritte)
   coachingNote: text('coaching_note'),
   status: text('status').notNull().default('planned'), // planned | completed | skipped
   linkedActivityId: integer('linked_activity_id').references(() => activities.id, {
     onDelete: 'set null',
   }),
+  matchSource: text('match_source'), // auto | manual | NULL
   completedAt: integer('completed_at'),
   completionNote: text('completion_note'),
 })

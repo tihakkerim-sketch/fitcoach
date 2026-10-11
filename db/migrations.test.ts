@@ -155,13 +155,12 @@ describe('migrations', () => {
       d.insert(schema.userProfile).values({ id: 1, name: 'A' }).run()
       d.insert(schema.hrZones).values({ zoneNumber: 1, minHr: 1, maxHr: 2, label: 'Z1' }).run()
       d.insert(schema.activities).values({ type: 'running', date: '2026-01-01', createdAt: 1, source: 'manual' }).run()
-      d.insert(schema.trainingPlans).values({ id: 1, name: 'P', createdAt: 1 }).run()
-      d.insert(schema.planPhases).values({ id: 1, planId: 1, name: 'B', orderIndex: 0, durationWeeks: 1 }).run()
-      d.insert(schema.planWeeks).values({ id: 1, phaseId: 1, weekNumber: 1 }).run()
+      d.insert(schema.trainingPlans).values({ id: 1, name: 'P', startDate: '2026-05-18', createdAt: 1 }).run()
+      d.insert(schema.planWeeks).values({ id: 1, planId: 1, weekIndex: 0 }).run()
       d.insert(schema.planSessions).values({ weekId: 1, dayOfWeek: 1, type: 'running' }).run()
       d.insert(schema.dailyCheckins).values({ date: '2026-01-01', createdAt: 1, updatedAt: 1 }).run()
       d.insert(schema.recoveryLogs).values({ date: '2026-01-01', hrvRmssd: 1.5, createdAt: 1, updatedAt: 1 }).run()
-      for (const t of [schema.userProfile, schema.hrZones, schema.activities, schema.trainingPlans, schema.planPhases,
+      for (const t of [schema.userProfile, schema.hrZones, schema.activities, schema.trainingPlans,
         schema.planWeeks, schema.planSessions, schema.dailyCheckins, schema.recoveryLogs]) {
         expect(d.select().from(t).all(), getTableName(t)).toHaveLength(1)
       }
@@ -189,8 +188,9 @@ describe('migrations', () => {
       expect(res.to).toBe(LATEST)
       expect(userVersion(db)).toBe(LATEST)
 
-      // orphan chains gone, valid plan data intact (session 7 kept, its dead link cleared)
-      expect(count(db, 'plan_phases')).toBe(1)
+      // orphan chains gone, valid plan data intact (session 7 kept, its dead link cleared);
+      // v3 wandelt Phasen in Wochen-Felder um (plan_phases existiert nicht mehr)
+      expect(tableNames(db)).not.toContain('plan_phases')
       expect(count(db, 'plan_weeks')).toBe(2)
       expect((db.prepare('SELECT id FROM plan_sessions ORDER BY id').all() as { id: number }[]).map(r => r.id)).toEqual([1, 2, 3, 7])
       expect((db.prepare('SELECT linked_activity_id AS l FROM plan_sessions WHERE id = 1').get() as { l: number }).l).toBe(1)
@@ -237,6 +237,39 @@ describe('migrations', () => {
       expect(json.__drizzle_migrations).toHaveLength(1)
       expect(json.user_profile[0].daily_calorie_target).toBe(2500)
       expect(json.recovery_logs[0].hrv_rmssd).toBe(55.5)
+    })
+
+    it('v3 wandelt einen Phasen-Plan um: Startdatum, Wochen-Index, Verknüpfungen, ohne Verstöße', () => {
+      db.exec('PRAGMA foreign_keys = OFF')
+      db.exec(`
+        DELETE FROM plan_sessions; DELETE FROM plan_weeks; DELETE FROM plan_phases; DELETE FROM training_plans; DELETE FROM activities;
+        INSERT INTO activities (id, type, date, created_at, source, distance_km) VALUES (1, 'running', '2026-05-19', 1, 'manual', 3.1);
+        INSERT INTO training_plans (id, name, is_active, created_at) VALUES (9, 'Marathon Base to Finish', 1, 1);
+        INSERT INTO plan_phases (id, plan_id, name, order_index, duration_weeks) VALUES (1, 9, 'Base', 0, 2), (2, 9, 'Build', 1, 1);
+        INSERT INTO plan_weeks (id, phase_id, week_number) VALUES (1, 1, 1), (2, 1, 2), (3, 2, 1);
+        INSERT INTO plan_sessions (id, week_id, day_of_week, type, intensity_label, status, linked_activity_id) VALUES
+          (1, 1, 2, 'running', 'Easy', 'completed', 1), (2, 1, 4, 'running', NULL, 'planned', NULL),
+          (3, 1, 7, 'rest', NULL, 'planned', NULL), (4, 2, 1, 'running', NULL, 'skipped', NULL),
+          (5, 2, 3, 'running', NULL, 'planned', NULL), (6, 3, 2, 'running', NULL, 'planned', NULL),
+          (7, 3, 6, 'running', NULL, 'planned', NULL);
+      `)
+      db.exec('PRAGMA foreign_keys = ON')
+      runMigrations(db, backupDir, { now })
+
+      expect(userVersion(db)).toBe(3)
+      expect(db.prepare('SELECT start_date AS s, is_active AS a, name FROM training_plans').all())
+        .toEqual([{ s: '2026-05-18', a: 0, name: 'Marathon Base to Finish' }])
+      expect((db.prepare('SELECT week_index AS i, phase FROM plan_weeks ORDER BY week_index').all()))
+        .toEqual([{ i: 0, phase: 'Base' }, { i: 1, phase: 'Base' }, { i: 2, phase: 'Build' }])
+      expect(count(db, 'plan_sessions')).toBe(7)
+      expect(db.prepare('SELECT linked_activity_id AS l, match_source AS m, title, status, steps FROM plan_sessions WHERE id = 1').get())
+        .toEqual({ l: 1, m: 'manual', title: 'Easy', status: 'completed', steps: null })
+      expect(tableNames(db)).not.toContain('plan_phases')
+      expect(tableNames(db).filter(t => t.endsWith('_new'))).toEqual([])
+      expect(db.prepare('PRAGMA foreign_key_check').all()).toHaveLength(0)
+      // Indizes
+      const idx = (db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'plan_sessions_%'").all() as { name: string }[]).map(r => r.name).sort()
+      expect(idx).toEqual(['plan_sessions_activity_idx', 'plan_sessions_week_idx'])
     })
 
     it('result passes PRAGMA foreign_key_check and foreign_keys is restored', () => {
