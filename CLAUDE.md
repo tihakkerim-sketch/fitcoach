@@ -41,4 +41,10 @@ Aktueller Umbau: siehe `docs/AUDIT-2026-10.md` (Phasenplan + Entscheidungen in A
 - **intervals.icu**: Client/Sync in `electron/lib/intervals{Client,Sync}.ts` (fetch injizierbar, Tests ohne Netz). Schlüssel nur per `safeStorage` verschlüsselt in `app_settings` (nie Klartext, nie im Backup, nie an Renderer). `start_date_local` ist Ortszeit ohne Zone → String schneiden, nicht `new Date()`.
 - Renderer-Neuladen nach Import/Sync: `emitDataChanged()` / `onDataChanged()` aus `src/lib/dataEvents.ts`.
 - **Coach** (Phase 4): reine Logik in `src/shared/coach` (Zonen Karvonen, TRIMP, CTL/ATL/TSB, Steigerung, Riegel-Prognose); DB-Anbindung `electron/lib/coachData.ts`, Bericht `coachExport.ts`, Übernehmen `coachChanges.ts`. Gespeicherte `hr_zones` haben Vorrang, sonst automatisch berechnet.
+- **Phase 5:** „Heute“ = Tageswechsel (`user_profile.day_start_hour`, Standard 4 Uhr). Main: `appToday(db)` (`electron/lib/today.ts`), Renderer: `today()` (`src/lib/today.ts`) – nie `format(new Date(), …)`/`todayLocal()` direkt.
+- Schuhe: Tabelle `shoes`, `activities.shoe_id`; neue Läufe ohne `shoeId` bekommen den Standard-Schuh in `insertActivity` (`null` = bewusst keiner). Backup v7.
+- Check-in-Seite entfernt → Befinden `recovery_logs.feeling` (1–5) über `RECOVERY_SET_FEELING`; `daily_checkins` bleibt nur als Altdaten.
+- Rückgängig nach Löschen: Main hält die letzten 10 Snapshots im Speicher (`electron/lib/activityTrash.ts`), weg nach Neustart.
+- IPC-Antworten kommen in Playwright als `{success, data}` – in Testskripten auspacken. Zahl-Inputs mit Punkt füllen.
+- Suspense für lazy Seiten nur um `<Outlet />` in `Layout.tsx` (sonst flackert die Sidebar).
 - Claude-Änderungen (`fitcoachChanges`-JSON) verweisen per `sessionId` (`#123` im Bericht); nur geplante Einheiten ab heute, alles in einer Transaktion.

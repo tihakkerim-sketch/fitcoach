@@ -1,32 +1,37 @@
-# Übergabe – FitCoach – 2026-10-11
+# Übergabe – FitCoach – 2026-10-12
 
 ## Ziel der letzten Session
-Phase 4 „Coach“ aus `docs/AUDIT-2026-10.md` (Spec `docs/superpowers/specs/2026-10-11-coach-design.md`).
+Phase 5 „UX & Deutsch“ aus `docs/AUDIT-2026-10.md` (Spec `docs/superpowers/specs/2026-10-12-ux-deutsch-design.md`).
 
 ## Stand
-- Committet auf Branch `phase-3-garmin` (Kette phase-0 → 1 → 2 → 3, kein eigener Phase-4-Branch). **Nichts gemergt/gepusht.**
-- Puls-Zonen: automatisch nach Karvonen aus Max-/Ruhepuls (Profil, sonst Recovery-Median bzw. höchster gemessener Puls); eigene Zonen in Einstellungen → „Puls-Zonen“.
-- Belastung = TRIMP pro Aktivität; Fitness/Ermüdung/Form (CTL 42 T, ATL 7 T, TSB); Progress-Seite nutzt jetzt auch TRIMP.
-- Steigerungswarnungen: Wochen-km, längster Lauf, Plan nächste 7 Tage (je > 10 % Hinweis, > 30 % Warnung), ATL/CTL > 1,5.
-- Prognose (Riegel) aus Läufen ≥ 5 km der letzten 12 Wochen vs. Zielzeit aus Profil.
-- Neue Seite „Coach“ (ersetzt „Export“): Status + 90-Tage-Verlauf, Warnungen, Prognose, Recovery-Trend, Coach-Bericht (Deutsch, mit `#ID` der kommenden Einheiten + Antwort-Format), „Antwort von Claude einfügen“ → Vorschau mit Häkchen → Übernehmen (eine Transaktion, nur geplante Einheiten ab heute).
-- Dashboard: Form-Karte mit erster Warnung.
-- Geprüft: 309 Tests, beide Typechecks, Build grün. Rauchtest (Playwright) mit Kopie der echten DB + Testdaten im Temp-Ordner: Status, Warnungen, Prognose, Bericht, Änderung übernommen, Zonen-Einstellungen, keine Konsolenfehler. Echte DB unberührt.
+- Branch `phase-5-ux` (baut auf `phase-3-garmin` auf; Kette 0 → 1 → 2 → 3/4 → 5). **Nichts gemergt/gepusht.**
+- Migration v5: Tabelle `shoes`, `activities.shoe_id`, `recovery_logs.feeling`, `user_profile.day_start_hour` (Standard 4). Befinden aus alten Check-ins übernommen (auf DB-Kopie geprüft: 34 von 43 Tagen).
+- Tageswechsel einstellbar (Einstellungen → Tageswechsel, 0–6 Uhr) – gilt für „Heute“ in Main und Renderer.
+- Aktivität bearbeiten (Stift-Symbol) + Löschen mit „Rückgängig“-Toast (8 s).
+- Laufschuhe: Einstellungen → Schuhe (km-Balken, Hinweis ab 80 %, Warnung ab 100 %); Standard-Schuh wird neuen Läufen automatisch zugeordnet; Auswahl im Lauf-Formular.
+- Check-in-Seite entfernt → „Wie fühlst du dich heute?“ (1–5) auf Heute + Erholung; Coach-Bericht zeigt Befinden.
+- Onboarding `/willkommen` (5 Schritte), nur bei leerem Profil; in Einstellungen erneut startbar.
+- Ganze UI Deutsch inkl. Datums-/Zahlenformat; Navigation: Übersicht (Heute, Erholung) · Training (Aktivitäten, Plan, Fortschritt, Coach) · App.
+- Seiten per `lazy()` → Haupt-Bündel 332 kB, keine Warnung mehr. Backup v7.
+- Geprüft: 347 Tests, beide Typechecks, Build grün. Rauchtest (Playwright, Kopie der echten DB im Temp-Ordner): Migration, alle Seiten ohne Konsolenfehler, Löschen → Rückgängig, Bearbeiten → Speichern, Schuh-km. Echte DB unberührt.
 
 ## Offen / angefangen
-- Echte Daten: letzter Lauf 19.06. → Coach zeigt aktuell kaum etwas (Form ≈ 0, keine Prognose). Kein aktiver Plan in der echten DB.
-- Rest der App noch teils Englisch (Settings-Labels, Dashboard) → Phase 5.
-- JS-Bündel > 500 kB (nur Warnung).
+- Echte Daten: letzter Lauf 19.06., kein aktiver Plan → Coach/Dashboard zeigen wenig.
+- Befinden-Verlauf nur im Diagramm-Tooltip, keine eigene Liste.
+- „Rückgängig“ nur für Aktivitäten, Speicher weg nach App-Neustart.
 
 ## Nächste sinnvolle Schritte
-1. **Phase 5 UX & Deutsch (empfohlen)**: Onboarding, Bearbeiten/Undo, Deutsch überall, Tageswechsel 04:00.
-2. Adel: App starten, Plan aktivieren, Coach-Bericht an Claude, Antwort einfügen – echter Durchlauf.
-3. Branches mergen + pushen.
+1. **Adel testet** echten Durchlauf (Plan aktivieren, Schuh anlegen, Lauf importieren, Coach-Bericht).
+2. Branches mergen + pushen (`phase-5-ux` → `main`).
+3. Phase 6 Release (E2E, Windows-CI, Auto-Update, Signatur).
 
 ## Gotchas, die neu gelernt wurden
-- Coach-Logik liegt rein in `src/shared/coach` (Main + Renderer); `COACH_CHANGES_FORMAT` dort, damit der Bericht (Main) es nutzen kann.
-- Claude-Änderungen verweisen per `sessionId` (`#123` im Bericht) – Datum allein ist nicht eindeutig (mehrere Einheiten pro Tag möglich).
-- Playwright: `fullPage`-Screenshot erfasst die innere ScrollArea nicht – Ergebnis per `invoke` prüfen.
+- IPC-Antworten in Playwright: `window.fitcoach.invoke` liefert `{success, data}` → auspacken.
+- `<input type=number>` in Playwright mit Punkt füllen (`9.5`), Anzeige danach deutsch.
+- Suspense nur um `<Outlet />` (in `Layout.tsx`), sonst flackert die Sidebar bei Seitenwechsel.
+- Beim ersten Start einer DB-Kopie läuft die Migration → Rauchtest 3–4 s warten.
 
 ## Wichtige Dateien
-`src/shared/coach/*`, `electron/lib/{coachData,coachExport,coachChanges}.ts`, `electron/ipc/{coach,summary,stats}.ts`, `src/lib/coachChanges.ts`, `src/pages/Coach.tsx`, `src/components/coach/*`, `src/components/settings/HrZonesSettings.tsx`, `src/components/dashboard/CoachCard.tsx`
+`db/migrations.ts` (v5), `electron/lib/{today,shoes,activityUpdate,activityTrash,recoveryFeeling,onboarding}.ts`, `electron/ipc/shoes.ts`,
+`src/lib/today.ts`, `src/pages/Onboarding.tsx`, `src/components/settings/ShoesSettings.tsx`, `src/components/recovery/FeelingPicker.tsx`,
+`src/components/activities/LogActivityModal.tsx` (Bearbeiten-Modus), `src/components/Layout.tsx`
