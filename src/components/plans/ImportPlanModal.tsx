@@ -8,7 +8,7 @@ import {
   parsePlanJson, toCreatePayload,
   CLAUDE_IMPORT_PROMPT, type ParsedPlan,
 } from '@/lib/planImport'
-import { todayLocal } from '@/shared/planCalendar'
+import { today } from '@/lib/today'
 import { PlanPreview } from './PlanPreview'
 import { StartDateField, effectiveStart } from './StartDateField'
 import { nextMonday } from './sessionFormat'
@@ -52,7 +52,7 @@ export function ImportPlanModal({ open, onClose, onSaved }: Props) {
     try {
       const plan = parsePlanJson(json)
       setParsed(plan)
-      setStart(plan.startDate ?? nextMonday(todayLocal()))
+      setStart(plan.startDate ?? nextMonday(today()))
       setStep('preview')
     } catch (e) {
       setParseError(e instanceof Error ? e.message : String(e))

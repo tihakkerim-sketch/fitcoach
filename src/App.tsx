@@ -1,17 +1,19 @@
-import { HashRouter, Routes, Route } from 'react-router-dom'
+import { lazy } from 'react'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { Toaster } from '@/components/ui/Toaster'
 import { Layout } from '@/components/Layout'
-import Dashboard from '@/pages/Dashboard'
-import ActivityLog from '@/pages/ActivityLog'
-import PlanView from '@/pages/PlanView'
-import PlanDetail from '@/pages/PlanDetail'
-import Coach from '@/pages/Coach'
-import Progress from '@/pages/Progress'
-import Settings from '@/pages/Settings'
-import DailyCheckin from '@/pages/DailyCheckin'
-import Recovery from '@/pages/Recovery'
+
+const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const ActivityLog = lazy(() => import('@/pages/ActivityLog'))
+const PlanView = lazy(() => import('@/pages/PlanView'))
+const PlanDetail = lazy(() => import('@/pages/PlanDetail'))
+const Coach = lazy(() => import('@/pages/Coach'))
+const Progress = lazy(() => import('@/pages/Progress'))
+const Settings = lazy(() => import('@/pages/Settings'))
+const Recovery = lazy(() => import('@/pages/Recovery'))
+const Onboarding = lazy(() => import('@/pages/Onboarding'))
 
 export default function App() {
   return (
@@ -28,7 +30,8 @@ export default function App() {
               <Route path="export" element={<Coach />} />
               <Route path="progress" element={<Progress />} />
               <Route path="settings" element={<Settings />} />
-              <Route path="checkin" element={<DailyCheckin />} />
+              <Route path="checkin" element={<Navigate to="/recovery" replace />} />
+              <Route path="willkommen" element={<Onboarding />} />
               <Route path="recovery" element={<Recovery />} />
             </Route>
           </Routes>

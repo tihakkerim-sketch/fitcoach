@@ -1,3 +1,4 @@
+import { optNum } from './numField'
 import { useFormContext } from 'react-hook-form'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -9,10 +10,10 @@ export function CustomForm() {
   return (
     <div className="vspace-4">
       <div className="vspace-1">
-        <Label htmlFor="typeLabel">Activity Label *</Label>
+        <Label htmlFor="typeLabel">Name der Aktivität *</Label>
         <Input
           id="typeLabel"
-          placeholder="e.g. Yoga, Swimming, Hiking"
+          placeholder="z. B. Yoga, Schwimmen, Wandern"
           {...register('typeLabel')}
         />
         {errors.typeLabel && <p className="text-xs text-destructive">{String(errors.typeLabel.message)}</p>}
@@ -20,50 +21,50 @@ export function CustomForm() {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="vspace-1">
-          <Label htmlFor="durationMin">Duration (min) *</Label>
+          <Label htmlFor="durationMin">Dauer (min) *</Label>
           <Input
             id="durationMin"
             type="number"
             min={1}
             max={1440}
-            {...register('durationMin', { valueAsNumber: true })}
+            {...register('durationMin', optNum)}
           />
           {errors.durationMin && <p className="text-xs text-destructive">{String(errors.durationMin.message)}</p>}
         </div>
 
         <div className="vspace-1">
-          <Label htmlFor="startTime">Start Time</Label>
+          <Label htmlFor="startTime">Startzeit</Label>
           <Input id="startTime" type="time" {...register('startTime')} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="vspace-1">
-          <Label htmlFor="avgHr">Avg HR (bpm)</Label>
+          <Label htmlFor="avgHr">Ø Puls (bpm)</Label>
           <Input
             id="avgHr"
             type="number"
             min={30}
             max={250}
-            {...register('avgHr', { valueAsNumber: true })}
+            {...register('avgHr', optNum)}
           />
         </div>
 
         <div className="vspace-1">
-          <Label htmlFor="perceivedEffort">Perceived Effort (1–10)</Label>
+          <Label htmlFor="perceivedEffort">Anstrengung (1–10)</Label>
           <Input
             id="perceivedEffort"
             type="number"
             min={1}
             max={10}
-            {...register('perceivedEffort', { valueAsNumber: true })}
+            {...register('perceivedEffort', optNum)}
           />
         </div>
       </div>
 
       <div className="vspace-1">
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea id="notes" rows={3} placeholder="What did you do?" {...register('notes')} />
+        <Label htmlFor="notes">Notizen</Label>
+        <Textarea id="notes" rows={3} placeholder="Was hast du gemacht?" {...register('notes')} />
       </div>
     </div>
   )

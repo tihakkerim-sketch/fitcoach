@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, FormProvider, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { format } from 'date-fns'
 import {
   Dialog,
   DialogContent,
@@ -20,16 +19,18 @@ import { StrengthForm } from './forms/StrengthForm'
 import { CustomForm } from './forms/CustomForm'
 import { runningSchema, cyclingSchema, sleepSchema, strengthSchema, customSchema } from '@/schemas/activity'
 import { invoke } from '@/lib/ipc'
+import { today } from '@/lib/today'
+import { emitDataChanged } from '@/lib/dataEvents'
 import { IPC } from '@/types/ipc'
-import type { ActivityType, CreateActivityPayload } from '@/types/ipc'
+import type { ActivityType, ActivityRow, CreateActivityPayload } from '@/types/ipc'
 type Tab = ActivityType
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: 'running', label: 'Running' },
-  { value: 'cycling', label: 'Cycling' },
-  { value: 'sleep', label: 'Sleep' },
-  { value: 'strength', label: 'Strength' },
-  { value: 'custom', label: 'Custom' },
+  { value: 'running', label: 'Laufen' },
+  { value: 'cycling', label: 'Radfahren' },
+  { value: 'sleep', label: 'Schlaf' },
+  { value: 'strength', label: 'Kraft' },
+  { value: 'custom', label: 'Sonstiges' },
 ]
 
 const schemaMap = {
@@ -44,23 +45,60 @@ interface Props {
   open: boolean
   onClose: () => void
   onSaved: () => void
+  /** Wenn gesetzt: Bearbeiten-Modus für diese Aktivität. */
+  activity?: ActivityRow
+}
+
+/** Felder je Typ, die beim Bearbeiten gesendet werden (leer = null). */
+const EDIT_FIELDS: Record<Tab, string[]> = {
+  running: ['durationMin', 'startTime', 'distanceKm', 'avgHr', 'maxHr', 'perceivedEffort', 'surfaceType', 'notes', 'shoeId'],
+  cycling: ['durationMin', 'startTime', 'distanceKm', 'avgHr', 'maxHr', 'avgCadence', 'perceivedEffort', 'notes'],
+  sleep: ['bedtime', 'wakeTime', 'sleepQuality', 'notes'],
+  strength: ['durationMin', 'exercises', 'notes'],
+  custom: ['typeLabel', 'durationMin', 'startTime', 'avgHr', 'perceivedEffort', 'notes'],
+}
+
+function activityToFormValues(a: ActivityRow): AnyFormData {
+  const values: AnyFormData = { date: a.date }
+  for (const key of EDIT_FIELDS[a.type]) {
+    const v = (a as unknown as Record<string, unknown>)[key]
+    if (v !== null && v !== undefined) values[key] = v
+  }
+  if (a.type === 'running' && values.shoeId === undefined) values.shoeId = null
+  if (a.type === 'strength') {
+    let ex: unknown = a.exercises
+    if (typeof ex === 'string') { try { ex = JSON.parse(ex) } catch { ex = [] } }
+    values.exercises = Array.isArray(ex) ? ex : []
+  }
+  return values
 }
 
 type AnyFormData = Record<string, unknown>
 
-export function LogActivityModal({ open, onClose, onSaved }: Props) {
-  const [activeTab, setActiveTab] = useState<Tab>('running')
+export function LogActivityModal({ open, onClose, onSaved, activity }: Props) {
+  const editing = !!activity
+  const [activeTab, setActiveTab] = useState<Tab>(activity?.type ?? 'running')
   const [saving, setSaving] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
 
   const schema = schemaMap[activeTab]
   const methods = useForm<AnyFormData>({
     resolver: zodResolver(schema) as unknown as Resolver<AnyFormData>,
-    defaultValues: {
-      date: format(new Date(), 'yyyy-MM-dd'),
-      exercises: [],
-    },
+    defaultValues: activity ? activityToFormValues(activity) : { date: today(), exercises: [] },
   })
+
+  // Beim Öffnen: Bearbeiten → vorbefüllen, Neu → leeres Formular mit heutigem Datum
+  useEffect(() => {
+    if (!open) return
+    setServerError(null)
+    if (activity) {
+      setActiveTab(activity.type)
+      methods.reset(activityToFormValues(activity))
+    } else {
+      methods.reset({ date: today(), exercises: [] })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, activity?.id])
 
   // Reset form when switching tabs so validation matches the new schema
   const handleTabChange = (tab: string) => {
@@ -73,17 +111,26 @@ export function LogActivityModal({ open, onClose, onSaved }: Props) {
     setSaving(true)
     setServerError(null)
     try {
-      const payload: CreateActivityPayload = {
-        ...(data as Partial<CreateActivityPayload>),
-        type: activeTab,
-        source: 'manual',
-      } as CreateActivityPayload
-      await invoke(IPC.ACTIVITIES_CREATE, payload)
+      if (activity) {
+        const update: Record<string, unknown> = { id: activity.id, date: data.date }
+        for (const key of EDIT_FIELDS[activity.type]) {
+          const v = data[key]
+          update[key] = v === undefined || v === '' || (typeof v === 'number' && Number.isNaN(v)) ? null : v
+        }
+        await invoke(IPC.ACTIVITIES_UPDATE, update as never)
+      } else {
+        const payload: CreateActivityPayload = {
+          ...(data as Partial<CreateActivityPayload>),
+          type: activeTab,
+          source: 'manual',
+        } as CreateActivityPayload
+        await invoke(IPC.ACTIVITIES_CREATE, payload)
+      }
+      emitDataChanged()
       onSaved()
       onClose()
-      methods.reset({ date: format(new Date(), 'yyyy-MM-dd'), exercises: [] })
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : 'Failed to save activity')
+      setServerError(e instanceof Error ? e.message : 'Speichern fehlgeschlagen.')
     } finally {
       setSaving(false)
     }
@@ -93,7 +140,7 @@ export function LogActivityModal({ open, onClose, onSaved }: Props) {
     <Dialog open={open} onOpenChange={v => { if (!v) onClose() }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Log Activity</DialogTitle>
+          <DialogTitle>{editing ? 'Aktivität bearbeiten' : 'Aktivität erfassen'}</DialogTitle>
         </DialogHeader>
 
         <FormProvider {...methods}>
@@ -101,11 +148,11 @@ export function LogActivityModal({ open, onClose, onSaved }: Props) {
             <div className="vspace-4">
               {/* Date field — shared across all tabs */}
               <div className="vspace-1">
-                <Label htmlFor="date">Date *</Label>
+                <Label htmlFor="date">Datum *</Label>
                 <Input
                   id="date"
                   type="date"
-                  max={format(new Date(), 'yyyy-MM-dd')}
+                  max={today()}
                   {...methods.register('date')}
                 />
                 {methods.formState.errors.date && (
@@ -115,10 +162,10 @@ export function LogActivityModal({ open, onClose, onSaved }: Props) {
                 )}
               </div>
 
-              <Tabs value={activeTab} onValueChange={handleTabChange}>
+              <Tabs value={activeTab} onValueChange={editing ? undefined : handleTabChange}>
                 <TabsList className="w-full">
                   {TABS.map(t => (
-                    <TabsTrigger key={t.value} value={t.value} className="flex-1">
+                    <TabsTrigger key={t.value} value={t.value} className="flex-1" disabled={editing && t.value !== activeTab}>
                       {t.label}
                     </TabsTrigger>
                   ))}
@@ -148,10 +195,10 @@ export function LogActivityModal({ open, onClose, onSaved }: Props) {
 
             <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
-                Cancel
+                Abbrechen
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving ? 'Saving…' : 'Save Activity'}
+                {saving ? 'Speichert …' : editing ? 'Änderungen speichern' : 'Speichern'}
               </Button>
             </DialogFooter>
           </form>

@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import { CoachStatusTiles } from '@/components/coach/CoachStatusTiles'
 import { LoadChart } from '@/components/coach/LoadChart'
 import { WarningsCard } from '@/components/coach/WarningsCard'
@@ -20,9 +22,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function Coach() {
+  const navigate = useNavigate()
   const { status, error, loading } = useCoachStatus()
   const r = status?.recovery
   const hasRecovery = !!r && [r.hrvToday, r.hrv30, r.rhr7, r.rhr30, r.sleep7, r.sleep30].some(v => v != null)
+
+  const noData = !!status && status.series.every(p => p.load === 0) && status.ramp.last7Km === 0 && status.ramp.avgWeekKmPrev28 === 0
 
   return (
     <div className="p-6 max-w-4xl vspace-8">
@@ -35,6 +40,17 @@ export default function Coach() {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
       {loading && !status && <p className="text-sm text-muted-foreground">Lade…</p>}
+
+      {noData && (
+        <div className="rounded-lg border bg-card p-4 vspace-2">
+          <p className="font-semibold text-sm">Noch zu wenig Daten für den Coach</p>
+          <p className="text-sm text-muted-foreground">
+            In den letzten Wochen gibt es keine Läufe. Damit der Coach rechnen kann, braucht er Läufe mit Puls
+            (Import oder intervals.icu), deinen Max- und Ruhepuls im Profil und eine Zielzeit.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => navigate('/settings')}>Zu den Einstellungen</Button>
+        </div>
+      )}
 
       {status && (
         <>

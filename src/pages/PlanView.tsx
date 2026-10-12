@@ -75,6 +75,7 @@ export default function PlanView() {
       {!loading && !error && plans.length === 0 && (
         <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
           <p>Noch kein Trainingsplan vorhanden.</p>
+          <p className="text-sm">Lass Claude einen Plan als JSON schreiben und importiere ihn, oder lege selbst einen leeren Plan an.</p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <FileJson className="h-4 w-4 mr-2" />

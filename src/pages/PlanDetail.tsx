@@ -13,7 +13,8 @@ import { usePlanDetail } from '@/hooks/usePlanDetail'
 import { useToast } from '@/contexts/ToastContext'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
-import { currentWeekIndex, planEndDate, planState, todayLocal } from '@/shared/planCalendar'
+import { currentWeekIndex, planEndDate, planState } from '@/shared/planCalendar'
+import { today as getToday } from '@/lib/today'
 
 type Dialog =
   | { kind: 'session'; sessionId: number }
@@ -30,7 +31,7 @@ export default function PlanDetail() {
   const [settings, setSettings] = useState<'start' | 'weeks' | null>(null)
   const [dialog, setDialog] = useState<Dialog>(null)
 
-  const today = todayLocal()
+  const today = getToday()
 
   const stats = useMemo(() => {
     if (!plan) return null

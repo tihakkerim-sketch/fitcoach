@@ -83,7 +83,7 @@ export function GarminDropZone({ onImported }: Props) {
       />
       <Upload className="h-8 w-8 text-muted-foreground" />
       <p className="text-sm text-muted-foreground">
-        {busy ? 'Dateien werden importiert …' : 'Garmin-Dateien (.fit / .tcx) hierher ziehen oder'}
+        {busy ? 'Dateien werden importiert …' : 'Aktivitätsdateien (.fit / .tcx, z. B. von Garmin) hierher ziehen oder'}
       </p>
       {!busy && (
         <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>

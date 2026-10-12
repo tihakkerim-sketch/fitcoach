@@ -13,12 +13,12 @@ interface Props {
 }
 
 const TYPES: { value: ActivityType | ''; label: string }[] = [
-  { value: '', label: 'All types' },
-  { value: 'running', label: 'Running' },
-  { value: 'cycling', label: 'Cycling' },
-  { value: 'sleep', label: 'Sleep' },
-  { value: 'strength', label: 'Strength' },
-  { value: 'custom', label: 'Custom' },
+  { value: '', label: 'Alle Typen' },
+  { value: 'running', label: 'Laufen' },
+  { value: 'cycling', label: 'Radfahren' },
+  { value: 'sleep', label: 'Schlaf' },
+  { value: 'strength', label: 'Kraft' },
+  { value: 'custom', label: 'Sonstiges' },
 ]
 
 export function ActivityFilters({ filters, onApply }: Props) {
@@ -51,7 +51,7 @@ export function ActivityFilters({ filters, onApply }: Props) {
   return (
     <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
       <div className="vspace-1">
-        <Label className="text-xs">Type</Label>
+        <Label className="text-xs">Typ</Label>
         <Select value={type || '_all'} onValueChange={v => setType(v === '_all' ? '' : v as ActivityType)}>
           <SelectTrigger className="h-8 w-36 text-sm">
             <SelectValue />
@@ -67,7 +67,7 @@ export function ActivityFilters({ filters, onApply }: Props) {
       </div>
 
       <div className="vspace-1">
-        <Label className="text-xs">From</Label>
+        <Label className="text-xs">Von</Label>
         <Input
           type="date"
           className="h-8 w-36 text-sm"
@@ -77,7 +77,7 @@ export function ActivityFilters({ filters, onApply }: Props) {
       </div>
 
       <div className="vspace-1">
-        <Label className="text-xs">To</Label>
+        <Label className="text-xs">Bis</Label>
         <Input
           type="date"
           className="h-8 w-36 text-sm"
@@ -87,15 +87,15 @@ export function ActivityFilters({ filters, onApply }: Props) {
       </div>
 
       <div className="vspace-1">
-        <Label className="text-xs">Source</Label>
+        <Label className="text-xs">Quelle</Label>
         <Select value={source || '_any'} onValueChange={v => setSource(v === '_any' ? '' : v as 'manual' | 'garmin_import' | 'intervals_icu')}>
           <SelectTrigger className="h-8 w-36 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_any">Any source</SelectItem>
-            <SelectItem value="manual">Manual</SelectItem>
-            <SelectItem value="garmin_import">Garmin</SelectItem>
+            <SelectItem value="_any">Alle Quellen</SelectItem>
+            <SelectItem value="manual">Manuell</SelectItem>
+            <SelectItem value="garmin_import">Datei-Import</SelectItem>
             <SelectItem value="intervals_icu">intervals.icu</SelectItem>
           </SelectContent>
         </Select>
@@ -104,12 +104,12 @@ export function ActivityFilters({ filters, onApply }: Props) {
       <div className="flex gap-2">
         <Button size="sm" className="h-8" onClick={apply}>
           <Search className="h-3.5 w-3.5 mr-1" />
-          Apply
+          Anwenden
         </Button>
         {hasFilters && (
           <Button size="sm" variant="ghost" className="h-8" onClick={reset}>
             <X className="h-3.5 w-3.5 mr-1" />
-            Clear
+            Zurücksetzen
           </Button>
         )}
       </div>

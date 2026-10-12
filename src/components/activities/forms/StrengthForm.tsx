@@ -1,3 +1,4 @@
+import { optNum } from './numField'
 import { useFormContext, useFieldArray } from 'react-hook-form'
 import { Plus, Trash2 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
@@ -13,13 +14,13 @@ export function StrengthForm() {
     <div className="vspace-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="vspace-1">
-          <Label htmlFor="durationMin">Duration (min) *</Label>
+          <Label htmlFor="durationMin">Dauer (min) *</Label>
           <Input
             id="durationMin"
             type="number"
             min={1}
             max={1440}
-            {...register('durationMin', { valueAsNumber: true })}
+            {...register('durationMin', optNum)}
           />
           {errors.durationMin && <p className="text-xs text-destructive">{String(errors.durationMin.message)}</p>}
         </div>
@@ -27,7 +28,7 @@ export function StrengthForm() {
 
       <div className="vspace-2">
         <div className="flex items-center justify-between">
-          <Label>Exercises *</Label>
+          <Label>Übungen *</Label>
           <Button
             type="button"
             variant="outline"
@@ -35,7 +36,7 @@ export function StrengthForm() {
             onClick={() => append({ name: '', sets: 3, reps: 10 })}
           >
             <Plus className="h-4 w-4 mr-1" />
-            Add Exercise
+            Übung hinzufügen
           </Button>
         </div>
 
@@ -46,14 +47,14 @@ export function StrengthForm() {
         <div className="vspace-2 max-h-52 overflow-y-auto pr-1">
           {fields.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Add at least one exercise
+              Füge mindestens eine Übung hinzu
             </p>
           )}
           {fields.map((field, index) => (
             <div key={field.id} className="grid grid-cols-[1fr_80px_80px_32px] gap-2 items-start">
               <div>
                 <Input
-                  placeholder="Exercise name"
+                  placeholder="Name der Übung"
                   {...register(`exercises.${index}.name`)}
                 />
                 {(errors.exercises as any)?.[index]?.name && (
@@ -67,8 +68,8 @@ export function StrengthForm() {
                   type="number"
                   min={1}
                   max={100}
-                  placeholder="Sets"
-                  {...register(`exercises.${index}.sets`, { valueAsNumber: true })}
+                  placeholder="Sätze"
+                  {...register(`exercises.${index}.sets`, optNum)}
                 />
               </div>
               <div>
@@ -76,8 +77,8 @@ export function StrengthForm() {
                   type="number"
                   min={1}
                   max={1000}
-                  placeholder="Reps"
-                  {...register(`exercises.${index}.reps`, { valueAsNumber: true })}
+                  placeholder="Wdh."
+                  {...register(`exercises.${index}.reps`, optNum)}
                 />
               </div>
               <Button
@@ -95,8 +96,8 @@ export function StrengthForm() {
       </div>
 
       <div className="vspace-1">
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea id="notes" rows={3} placeholder="How was the session?" {...register('notes')} />
+        <Label htmlFor="notes">Notizen</Label>
+        <Textarea id="notes" rows={3} placeholder="Wie war das Training?" {...register('notes')} />
       </div>
     </div>
   )

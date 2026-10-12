@@ -11,6 +11,7 @@ import { loadHrBasics, loadSavedZones, toCoachActivity } from '../lib/coachData'
 import { appToday } from '../lib/today'
 import { addDaysStr } from '../../src/shared/planCalendar'
 import { gte } from 'drizzle-orm'
+import { de } from 'date-fns/locale'
 import {
   format, subDays, startOfWeek, getISOWeek, getYear,
   parseISO, differenceInCalendarDays,
@@ -83,7 +84,7 @@ export function registerStatsHandlers() {
       const anchor    = subDays(todayDate, w * 7)
       const weekStart = startOfWeek(anchor, { weekStartsOn: 1 })
       const key       = `${getYear(weekStart)}-W${String(getISOWeek(weekStart)).padStart(2, '0')}`
-      const label     = format(weekStart, 'MMM d')
+      const label     = format(weekStart, 'd. MMM', { locale: de })
       weekMap.set(key, {
         week: key, label,
         runKm: 0, cycleKm: 0, runMin: 0, cycleMin: 0,
@@ -132,7 +133,7 @@ export function registerStatsHandlers() {
     for (const a of recentRows) {
       if (!a.avgHr || !a.durationMin) continue
       const zn  = zoneOf(a.avgHr, zones)
-      const key = zn ? `Z${zn}` : 'No HR'
+      const key = zn ? `Z${zn}` : 'Kein Puls'
       zoneMinutes[key] = (zoneMinutes[key] ?? 0) + a.durationMin
     }
     const zoneBuckets: ZoneBucket[] = zones.length > 0
@@ -183,7 +184,7 @@ export function registerStatsHandlers() {
       const key = `${getYear(ws)}-W${String(getISOWeek(ws)).padStart(2, '0')}`
       const existing = allWeekKm.get(key)
       if (existing) existing.km += km
-      else allWeekKm.set(key, { label: format(ws, 'MMM d, yyyy'), km })
+      else allWeekKm.set(key, { label: format(ws, 'd. MMM yyyy', { locale: de }), km })
     }
     let bestWeekKm:    number | null = null
     let bestWeekLabel: string | null = null

@@ -104,9 +104,9 @@ export function TodayPlanCard({ data, onOpenSession }: Props) {
     return (
       <InfoCard
         icon={CalendarDays}
-        title="Kein aktiver Plan"
+        title="Noch kein Trainingsplan"
         text="Lege einen Plan an oder importiere einen von Claude."
-        action="Plan anlegen"
+        action="Zum Plan"
         onAction={() => navigate('/plan')}
       />
     )

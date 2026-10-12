@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { format } from 'date-fns'
+import { de } from 'date-fns/locale'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line,
@@ -11,6 +14,7 @@ import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type { StatsResult } from '@/types/ipc'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -24,7 +28,7 @@ const CHART = {
 }
 
 const ZONE_COLORS: Record<string, string> = {
-  Z1: '#22c55e', Z2: '#3b82f6', Z3: '#f59e0b', Z4: '#f97316', Z5: '#ef4444', 'No HR': '#9ca3af',
+  Z1: '#22c55e', Z2: '#3b82f6', Z3: '#f59e0b', Z4: '#f97316', Z5: '#ef4444', 'Kein Puls': '#9ca3af',
 }
 
 const PIE_COLORS = ['#3b82f6', '#10b981', '#f97316', '#8b5cf6', '#ef4444', '#94a3b8']
@@ -46,7 +50,7 @@ const GRID_LINE = 'hsl(var(--border))'
 function fmt(min: number) {
   const h = Math.floor(min / 60)
   const m = min % 60
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
+  return h > 0 ? `${h} Std. ${m} min` : `${m} min`
 }
 
 function formatPace(secPerKm: number): string {
@@ -58,10 +62,16 @@ function formatPace(secPerKm: number): string {
 function fmtDate(dateStr: string | null): string {
   if (!dateStr) return ''
   try {
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined, {
-      month: 'short', day: 'numeric', year: 'numeric',
-    })
+    return format(new Date(dateStr + 'T12:00:00'), 'd. MMM yyyy', { locale: de })
   } catch { return dateStr }
+}
+
+const TYPE_NAMES: Record<string, string> = {
+  Running: 'Laufen', Cycling: 'Radfahren', Strength: 'Kraft', Sleep: 'Schlaf', Custom: 'Sonstiges', Other: 'Sonstiges',
+}
+
+function fmtWeekLabel(label: string | null): string | undefined {
+  return label ? `Woche ab ${label}` : undefined
 }
 
 // ── Accent system ─────────────────────────────────────────────────────────────
@@ -108,7 +118,7 @@ function PRCard({ label, value, date, icon: Icon, color }: {
           <Icon className={cn('h-4 w-4', c.iconText)} />
         </div>
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-          PR
+          Bestwert
         </span>
       </div>
       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
@@ -130,6 +140,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Progress() {
+  const navigate = useNavigate()
   const [stats, setStats] = useState<StatsResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
@@ -137,13 +148,13 @@ export default function Progress() {
   useEffect(() => {
     invoke(IPC.STATS_GET)
       .then(s  => setStats(s))
-      .catch(e => setError(e instanceof Error ? e.message : 'Failed to load stats'))
+      .catch(e => setError(e instanceof Error ? e.message : 'Statistik konnte nicht geladen werden'))
       .finally(() => setLoading(false))
   }, [])
 
   if (loading) return (
     <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-      Loading stats…
+      Statistik wird geladen …
     </div>
   )
   if (error) return (
@@ -163,8 +174,8 @@ export default function Progress() {
 
         {/* Page header */}
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Progress</h1>
-          <p className="text-muted-foreground mt-1">Your training at a glance</p>
+          <h1 className="text-3xl font-bold tracking-tight">Fortschritt</h1>
+          <p className="text-muted-foreground mt-1">Dein Training auf einen Blick</p>
         </div>
 
         {/* Empty state */}
@@ -174,24 +185,25 @@ export default function Progress() {
               <Activity className="h-6 w-6 text-blue-500" />
             </div>
             <div>
-              <p className="font-semibold">No activities yet</p>
+              <p className="font-semibold">Noch keine Aktivitäten</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Start logging workouts to see your progress here.
+                Sobald du Läufe oder andere Einheiten einträgst oder importierst, siehst du hier deinen Fortschritt.
               </p>
             </div>
+            <Button onClick={() => navigate('/activities')}>Zu den Aktivitäten</Button>
           </div>
         )}
 
         {/* ── Stat cards ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          <StatCard label="Total Activities"  value={stats.totalActivities}          icon={Activity}   color="blue"   />
-          <StatCard label="Run Distance"      value={`${stats.totalRunKm} km`}        icon={TrendingUp} color="green"  sub={stats.totalRunMin > 0 ? fmt(stats.totalRunMin) : undefined} />
-          <StatCard label="Cycle Distance"    value={`${stats.totalCycleKm} km`}      icon={Zap}        color="orange" />
-          <StatCard label="Strength Sessions" value={stats.totalStrengthSessions}     icon={Dumbbell}   color="purple" />
-          <StatCard label="Current Streak"    value={`${stats.currentStreak} days`}   icon={Flame}      color="orange" />
-          <StatCard label="Longest Streak"    value={`${stats.longestStreak} days`}   icon={Trophy}     color="amber"  />
+          <StatCard label="Aktivitäten gesamt"  value={stats.totalActivities}          icon={Activity}   color="blue"   />
+          <StatCard label="Laufstrecke"      value={`${stats.totalRunKm} km`}        icon={TrendingUp} color="green"  sub={stats.totalRunMin > 0 ? fmt(stats.totalRunMin) : undefined} />
+          <StatCard label="Radstrecke"    value={`${stats.totalCycleKm} km`}      icon={Zap}        color="orange" />
+          <StatCard label="Krafteinheiten" value={stats.totalStrengthSessions}     icon={Dumbbell}   color="purple" />
+          <StatCard label="Aktuelle Serie"    value={`${stats.currentStreak} Tage`}   icon={Flame}      color="orange" />
+          <StatCard label="Längste Serie"    value={`${stats.longestStreak} Tage`}   icon={Trophy}     color="amber"  />
           {stats.avgRunHr && (
-            <StatCard label="Avg Run HR"      value={`${stats.avgRunHr} bpm`}         icon={Heart}      color="rose"   />
+            <StatCard label="Ø Lauf-Puls"      value={`${stats.avgRunHr} bpm`}         icon={Heart}      color="rose"   />
           )}
         </div>
 
@@ -201,15 +213,15 @@ export default function Progress() {
             {hasPRs && (
               <div>
                 <SectionHeader
-                  title="Personal Records"
-                  subtitle="Your all-time bests"
+                  title="Bestwerte"
+                  subtitle="Deine persönlichen Rekorde"
                 />
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   {pr.fastestPaceSecPerKm !== null && (
                     <PRCard
                       icon={Zap}
                       color="blue"
-                      label="Fastest Pace"
+                      label="Schnellstes Tempo"
                       value={formatPace(pr.fastestPaceSecPerKm) + ' /km'}
                       date={pr.fastestPaceDate ? fmtDate(pr.fastestPaceDate) : undefined}
                     />
@@ -218,8 +230,8 @@ export default function Progress() {
                     <PRCard
                       icon={TrendingUp}
                       color="green"
-                      label="Longest Run"
-                      value={`${pr.longestRunKm.toFixed(2)} km`}
+                      label="Längster Lauf"
+                      value={`${pr.longestRunKm.toFixed(2).replace('.', ',')} km`}
                       date={pr.longestRunDate ? fmtDate(pr.longestRunDate) : undefined}
                     />
                   )}
@@ -227,9 +239,9 @@ export default function Progress() {
                     <PRCard
                       icon={Medal}
                       color="amber"
-                      label="Best Week"
-                      value={`${pr.bestWeekKm.toFixed(1)} km`}
-                      date={pr.bestWeekLabel ?? undefined}
+                      label="Beste Woche"
+                      value={`${pr.bestWeekKm.toFixed(1).replace('.', ',')} km`}
+                      date={fmtWeekLabel(pr.bestWeekLabel)}
                     />
                   )}
                 </div>
@@ -238,27 +250,27 @@ export default function Progress() {
 
             {/* ── Weekly distance ───────────────────────────────────── */}
             <div className="rounded-xl border bg-card p-6">
-              <SectionHeader title="Weekly Distance" subtitle="Running & cycling — last 12 weeks" />
+              <SectionHeader title="Wochenstrecke" subtitle="Laufen und Radfahren – letzte 12 Wochen" />
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={stats.weekly} margin={{ left: -10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_LINE} vertical={false} />
                   <XAxis dataKey="label" tick={axisStyle} axisLine={false} tickLine={false} />
                   <YAxis unit=" km"      tick={axisStyle} axisLine={false} tickLine={false} />
                   <Tooltip
-                    formatter={(v, name) => [`${Number(v).toFixed(1)} km`, String(name)]}
+                    formatter={(v, name) => [`${Number(v).toFixed(1).replace('.', ',')} km`, String(name)]}
                     contentStyle={tooltipStyle}
                     cursor={{ fill: 'hsl(var(--muted))' }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12, paddingTop: 14 }} />
-                  <Bar dataKey="runKm"   name="Running" fill={CHART.run}   radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="cycleKm" name="Cycling" fill={CHART.cycle} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="runKm"   name="Laufen" fill={CHART.run}   radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="cycleKm" name="Radfahren" fill={CHART.cycle} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
             {/* ── Weekly training time ──────────────────────────────── */}
             <div className="rounded-xl border bg-card p-6">
-              <SectionHeader title="Weekly Training Time" subtitle="Minutes per week — last 12 weeks" />
+              <SectionHeader title="Trainingszeit pro Woche" subtitle="Minuten pro Woche – letzte 12 Wochen" />
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={stats.weekly} margin={{ left: -10 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={GRID_LINE} vertical={false} />
@@ -270,8 +282,8 @@ export default function Progress() {
                     cursor={{ stroke: 'hsl(var(--border))' }}
                   />
                   <Legend wrapperStyle={{ fontSize: 12, paddingTop: 14 }} />
-                  <Line type="monotone" dataKey="runMin"   name="Running" stroke={CHART.run}   strokeWidth={2.5} dot={false} />
-                  <Line type="monotone" dataKey="otherMin" name="Other"   stroke={CHART.other} strokeWidth={2.5} dot={false} />
+                  <Line type="monotone" dataKey="runMin"   name="Laufen" stroke={CHART.run}   strokeWidth={2.5} dot={false} />
+                  <Line type="monotone" dataKey="otherMin" name="Sonstiges" stroke={CHART.other} strokeWidth={2.5} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -280,8 +292,8 @@ export default function Progress() {
             {hasLoadData && (
               <div className="rounded-xl border bg-card p-6">
                 <SectionHeader
-                  title="Training Load"
-                  subtitle="Duration × intensity score per week — higher means harder"
+                  title="Trainingsbelastung"
+                  subtitle="Dauer × Intensität pro Woche – höher heißt härter"
                 />
                 <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={stats.weekly} margin={{ left: -10 }}>
@@ -289,11 +301,11 @@ export default function Progress() {
                     <XAxis dataKey="label" tick={axisStyle} axisLine={false} tickLine={false} />
                     <YAxis              tick={axisStyle} axisLine={false} tickLine={false} />
                     <Tooltip
-                      formatter={(v) => [Number(v).toLocaleString(), 'Load']}
+                      formatter={(v) => [Number(v).toLocaleString(), 'Belastung']}
                       contentStyle={tooltipStyle}
                       cursor={{ fill: 'hsl(var(--muted))' }}
                     />
-                    <Bar dataKey="trainingLoad" name="Load" fill={CHART.load} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="trainingLoad" name="Belastung" fill={CHART.load} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -303,8 +315,8 @@ export default function Progress() {
             {hasPaceData && (
               <div className="rounded-xl border bg-card p-6">
                 <SectionHeader
-                  title="Running Pace Trend"
-                  subtitle="Average pace per week — lower line = faster"
+                  title="Lauftempo im Verlauf"
+                  subtitle="Durchschnittstempo pro Woche – tiefere Linie = schneller"
                 />
                 <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={stats.weekly} margin={{ left: 20 }}>
@@ -321,7 +333,7 @@ export default function Progress() {
                     <Tooltip
                       formatter={(v: unknown) => {
                         const n = typeof v === 'number' && v > 0 ? v : null
-                        return [n ? formatPace(n) + ' /km' : '—', 'Pace']
+                        return [n ? formatPace(n) + ' /km' : '—', 'Tempo']
                       }}
                       contentStyle={tooltipStyle}
                       cursor={{ stroke: 'hsl(var(--border))' }}
@@ -329,7 +341,7 @@ export default function Progress() {
                     <Line
                       type="monotone"
                       dataKey="avgPaceSecPerKm"
-                      name="Pace"
+                      name="Tempo"
                       stroke={CHART.run}
                       strokeWidth={2.5}
                       dot={false}
@@ -344,11 +356,11 @@ export default function Progress() {
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               {stats.byType.length > 0 && (
                 <div className="rounded-xl border bg-card p-6">
-                  <SectionHeader title="Activity Breakdown" />
+                  <SectionHeader title="Aktivitäten nach Art" />
                   <ResponsiveContainer width="100%" height={200}>
                     <PieChart>
                       <Pie
-                        data={stats.byType}
+                        data={stats.byType.map(b => ({ ...b, type: TYPE_NAMES[b.type] ?? b.type }))}
                         dataKey="count"
                         nameKey="type"
                         cx="50%" cy="50%"
@@ -369,14 +381,14 @@ export default function Progress() {
 
               {stats.zones.some(z => z.minutes > 0) && (
                 <div className="rounded-xl border bg-card p-6">
-                  <SectionHeader title="HR Zone Distribution" subtitle="Last 12 weeks" />
+                  <SectionHeader title="Zeit in Pulszonen" subtitle="Letzte 12 Wochen" />
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={stats.zones} layout="vertical" margin={{ left: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke={GRID_LINE} horizontal={false} />
                       <XAxis type="number" unit=" min" tick={axisStyle} axisLine={false} tickLine={false} />
-                      <YAxis type="category" dataKey="zone" tick={{ fontSize: 12 }} width={32} axisLine={false} tickLine={false} />
+                      <YAxis type="category" dataKey="zone" tick={{ fontSize: 12 }} width={64} axisLine={false} tickLine={false} />
                       <Tooltip
-                        formatter={(v) => [fmt(Number(v)), 'Time']}
+                        formatter={(v) => [fmt(Number(v)), 'Zeit']}
                         contentStyle={tooltipStyle}
                         cursor={{ fill: 'hsl(var(--muted))' }}
                       />
@@ -394,14 +406,14 @@ export default function Progress() {
             {/* ── Strength sessions per week ────────────────────────── */}
             {stats.weekly.some(w => w.strengthSessions > 0) && (
               <div className="rounded-xl border bg-card p-6">
-                <SectionHeader title="Strength Sessions per Week" />
+                <SectionHeader title="Krafteinheiten pro Woche" />
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={stats.weekly} margin={{ left: -10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={GRID_LINE} vertical={false} />
                     <XAxis dataKey="label" tick={axisStyle} axisLine={false} tickLine={false} />
                     <YAxis allowDecimals={false} tick={axisStyle} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'hsl(var(--muted))' }} />
-                    <Bar dataKey="strengthSessions" name="Sessions" fill={CHART.strength} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="strengthSessions" name="Einheiten" fill={CHART.strength} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

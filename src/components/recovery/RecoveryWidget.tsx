@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { onDataChanged } from '@/lib/dataEvents'
 import { useNavigate } from 'react-router-dom'
-import { format } from 'date-fns'
 import { Zap, Moon, Activity, Heart, ChevronRight } from 'lucide-react'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type { RecoveryLog } from '@/types/ipc'
 import { cn } from '@/lib/utils'
-
-function todayStr() { return format(new Date(), 'yyyy-MM-dd') }
+import { today as getToday } from '@/lib/today'
 
 function scoreColor(v: number | undefined) {
   if (v == null) return 'text-muted-foreground'
@@ -57,7 +55,7 @@ export function RecoveryWidget() {
   const [log,    setLog]    = useState<RecoveryLog | null>(null)
   const [loaded, setLoaded] = useState(false)
 
-  const today = todayStr()
+  const today = getToday()
 
   const load = useCallback(async () => {
     try {
@@ -90,9 +88,9 @@ export function RecoveryWidget() {
 
   const moodLabel =
     avgScore == null ? null :
-    avgScore >= 70   ? 'Good recovery 🟢' :
-    avgScore >= 40   ? 'Moderate recovery 🟡' :
-    'Poor recovery 🔴'
+    avgScore >= 70   ? 'Gut erholt 🟢' :
+    avgScore >= 40   ? 'Mittel erholt 🟡' :
+    'Schlecht erholt 🔴'
 
   return (
     <button
@@ -102,12 +100,12 @@ export function RecoveryWidget() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Recovery</p>
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Erholung</p>
           {moodLabel && (
             <p className="text-xs font-semibold mt-0.5">{moodLabel}</p>
           )}
           {!hasAny && (
-            <p className="text-xs text-muted-foreground mt-0.5">No data logged today — tap to add</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Heute noch nichts eingetragen – klicken zum Eintragen</p>
           )}
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0 group-hover:translate-x-0.5 transition-transform" />
@@ -124,13 +122,13 @@ export function RecoveryWidget() {
       {hasAny && (
         <div className="flex gap-2">
           {hasBodyBattery && (
-            <MetricPill icon={Zap}      label="Body Bat." value={log?.bodyBattery}    />
+            <MetricPill icon={Zap}      label="Body Battery" value={log?.bodyBattery}    />
           )}
           {hasSleepScore && (
-            <MetricPill icon={Moon}     label="Sleep"      value={log?.sleepScore}     />
+            <MetricPill icon={Moon}     label="Schlaf" value={log?.sleepScore}     />
           )}
           {hasReadiness && (
-            <MetricPill icon={Activity} label="Readiness"  value={log?.readinessScore} />
+            <MetricPill icon={Activity} label="Bereitschaft" value={log?.readinessScore} />
           )}
           {hasHrv && (
             <MetricPill icon={Heart}    label="HRV"        value={log?.hrvRmssd} unit="ms" />

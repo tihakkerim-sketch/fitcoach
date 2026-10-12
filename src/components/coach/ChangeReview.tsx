@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
-import { todayLocal } from '@/shared/planCalendar'
+import { today } from '@/lib/today'
 import { emitDataChanged } from '@/lib/dataEvents'
 import { parseCoachChanges, type ChangeItem } from '@/lib/coachChanges'
 import { cn } from '@/lib/utils'
@@ -29,7 +29,7 @@ export function ChangeReview() {
       if (!active) { setError('Es gibt keinen aktiven Trainingsplan. Aktiviere zuerst einen Plan unter „Plans“.'); return }
       const plan = await invoke(IPC.PLANS_GET, active.id)
       if (!plan) { setError('Der aktive Plan konnte nicht geladen werden.'); return }
-      const res = parseCoachChanges(text, plan, todayLocal())
+      const res = parseCoachChanges(text, plan, today())
       setPlanId(plan.id)
       setSummary(res.summary)
       setItems(res.items)

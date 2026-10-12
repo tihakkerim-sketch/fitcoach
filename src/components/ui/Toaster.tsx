@@ -31,14 +31,14 @@ export function Toaster() {
               onClick={() => { t.onUndo!(); dismiss(t.id) }}
               className="text-xs font-bold text-primary hover:text-primary/80 transition-colors shrink-0"
             >
-              {t.undoLabel ?? 'Undo'}
+              {t.undoLabel ?? 'Rückgängig'}
             </button>
           )}
 
           <button
             onClick={() => dismiss(t.id)}
             className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            aria-label="Dismiss"
+            aria-label="Schließen"
           >
             <X className="h-3.5 w-3.5" />
           </button>

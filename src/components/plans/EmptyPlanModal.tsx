@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
-import { todayLocal } from '@/shared/planCalendar'
+import { today } from '@/lib/today'
 import { StartDateField, effectiveStart } from './StartDateField'
 import { nextMonday } from './sessionFormat'
 
@@ -22,14 +22,14 @@ export function EmptyPlanModal({ open, onClose, onSaved }: Props) {
   const [name, setName] = useState('')
   const [goalEvent, setGoalEvent] = useState('')
   const [goalDate, setGoalDate] = useState('')
-  const [start, setStart] = useState(() => nextMonday(todayLocal()))
+  const [start, setStart] = useState(() => nextMonday(today()))
   const [weeks, setWeeks] = useState('12')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const reset = () => {
     setName(''); setGoalEvent(''); setGoalDate('')
-    setStart(nextMonday(todayLocal())); setWeeks('12'); setError(null)
+    setStart(nextMonday(today())); setWeeks('12'); setError(null)
   }
   const handleClose = () => { reset(); onClose() }
 

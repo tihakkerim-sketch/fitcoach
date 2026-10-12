@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { format, subDays, startOfWeek, endOfWeek } from 'date-fns'
 import { FileDown, Copy, Check, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,13 +6,12 @@ import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
-import { todayLocal } from '@/shared/planCalendar'
-
-const fmt = (d: Date) => format(d, 'yyyy-MM-dd')
+import { today as getToday } from '@/lib/today'
+import { addDaysStr, mondayOf } from '@/shared/planCalendar'
 
 export function ReportSection() {
-  const today = todayLocal()
-  const [dateFrom, setDateFrom] = useState(() => fmt(subDays(new Date(), 6)))
+  const today = getToday()
+  const [dateFrom, setDateFrom] = useState(() => addDaysStr(today, -6))
   const [dateTo, setDateTo] = useState(today)
   const [preview, setPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -50,10 +48,10 @@ export function ReportSection() {
     }
   }
 
-  const range = (from: Date, to: Date) => { setDateFrom(fmt(from)); setDateTo(fmt(to)) }
+  const range = (from: string, to: string) => { setDateFrom(from); setDateTo(to) }
   const lastFullWeek = () => {
-    const ref = subDays(new Date(), 7)
-    range(startOfWeek(ref, { weekStartsOn: 1 }), endOfWeek(ref, { weekStartsOn: 1 }))
+    const monday = mondayOf(addDaysStr(today, -7))
+    range(monday, addDaysStr(monday, 6))
   }
 
   return (
@@ -73,9 +71,9 @@ export function ReportSection() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => range(subDays(new Date(), 6), new Date())}>Letzte 7 Tage</Button>
+          <Button variant="outline" size="sm" onClick={() => range(addDaysStr(today, -6), today)}>Letzte 7 Tage</Button>
           <Button variant="outline" size="sm" onClick={lastFullWeek}>Letzte volle Woche</Button>
-          <Button variant="outline" size="sm" onClick={() => range(subDays(new Date(), 29), new Date())}>Letzte 30 Tage</Button>
+          <Button variant="outline" size="sm" onClick={() => range(addDaysStr(today, -29), today)}>Letzte 30 Tage</Button>
         </div>
         <Button onClick={generate} disabled={loading || !dateFrom || !dateTo}>
           {loading ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Erstelle…</> : 'Bericht erstellen'}

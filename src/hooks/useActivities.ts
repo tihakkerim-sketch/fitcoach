@@ -33,7 +33,7 @@ export function useActivities() {
       setActivities(result.activities)
       setTotal(result.total)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load activities')
+      setError(e instanceof Error ? e.message : 'Aktivitäten konnten nicht geladen werden.')
     } finally {
       setLoading(false)
     }

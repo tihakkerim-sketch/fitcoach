@@ -8,7 +8,8 @@ import type { AdaptPlanResult, PlanDetail } from '@/types/ipc'
 import {
   parsePlanJson, toCreatePayload, buildAdaptPrompt, type ParsedPlan,
 } from '@/lib/planImport'
-import { isMonday, todayLocal } from '@/shared/planCalendar'
+import { isMonday } from '@/shared/planCalendar'
+import { today } from '@/lib/today'
 import { PlanPreview } from './PlanPreview'
 import { fmtDate } from './sessionFormat'
 
@@ -53,7 +54,7 @@ export function AdaptPlanModal({ open, onClose, onSaved, planId, planName }: Pro
   const copyPrompt = async () => {
     if (!detail) return
     try {
-      await navigator.clipboard.writeText(buildAdaptPrompt(detail, todayLocal()))
+      await navigator.clipboard.writeText(buildAdaptPrompt(detail, today()))
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch { /* Zwischenablage nicht verfügbar */ }

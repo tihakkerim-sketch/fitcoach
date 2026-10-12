@@ -1,3 +1,4 @@
+import { optNum } from './numField'
 import { useFormContext } from 'react-hook-form'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -10,26 +11,26 @@ export function CyclingForm() {
     <div className="vspace-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="vspace-1">
-          <Label htmlFor="durationMin">Duration (min) *</Label>
+          <Label htmlFor="durationMin">Dauer (min) *</Label>
           <Input
             id="durationMin"
             type="number"
             min={1}
             max={1440}
-            {...register('durationMin', { valueAsNumber: true })}
+            {...register('durationMin', optNum)}
           />
           {errors.durationMin && <p className="text-xs text-destructive">{String(errors.durationMin.message)}</p>}
         </div>
 
         <div className="vspace-1">
-          <Label htmlFor="distanceKm">Distance (km)</Label>
+          <Label htmlFor="distanceKm">Distanz (km)</Label>
           <Input
             id="distanceKm"
             type="number"
             step="0.01"
             min={0}
             max={1000}
-            {...register('distanceKm', { setValueAs: (v: string) => v === '' || v == null ? undefined : Number(v) })}
+            {...register('distanceKm', optNum)}
           />
           {errors.distanceKm && <p className="text-xs text-destructive">{String(errors.distanceKm.message)}</p>}
         </div>
@@ -37,65 +38,65 @@ export function CyclingForm() {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="vspace-1">
-          <Label htmlFor="startTime">Start Time</Label>
+          <Label htmlFor="startTime">Startzeit</Label>
           <Input id="startTime" type="time" {...register('startTime')} />
         </div>
 
         <div className="vspace-1">
           <Label htmlFor="avgCadence">
-            Avg Cadence (rpm) <span className="text-muted-foreground font-normal">— optional</span>
+            Ø Kadenz (U/min) <span className="text-muted-foreground font-normal">– optional</span>
           </Label>
           <Input
             id="avgCadence"
             type="number"
             min={30}
             max={200}
-            placeholder="e.g. 85"
-            {...register('avgCadence', { setValueAs: v => v === '' || v == null ? undefined : Number(v) })}
+            placeholder="z. B. 85"
+            {...register('avgCadence', optNum)}
           />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="vspace-1">
-          <Label htmlFor="avgHr">Avg HR (bpm)</Label>
+          <Label htmlFor="avgHr">Ø Puls (bpm)</Label>
           <Input
             id="avgHr"
             type="number"
             min={30}
             max={250}
-            {...register('avgHr', { setValueAs: (v: string) => v === '' || v == null ? undefined : Number(v) })}
+            {...register('avgHr', optNum)}
           />
           {errors.avgHr && <p className="text-xs text-destructive">{String(errors.avgHr.message)}</p>}
         </div>
 
         <div className="vspace-1">
-          <Label htmlFor="maxHr">Max HR (bpm)</Label>
+          <Label htmlFor="maxHr">Max. Puls (bpm)</Label>
           <Input
             id="maxHr"
             type="number"
             min={30}
             max={250}
-            {...register('maxHr', { setValueAs: (v: string) => v === '' || v == null ? undefined : Number(v) })}
+            {...register('maxHr', optNum)}
           />
           {errors.maxHr && <p className="text-xs text-destructive">{String(errors.maxHr.message)}</p>}
         </div>
       </div>
 
       <div className="vspace-1">
-        <Label htmlFor="perceivedEffort">Perceived Effort (1–10)</Label>
+        <Label htmlFor="perceivedEffort">Anstrengung (1–10)</Label>
         <Input
           id="perceivedEffort"
           type="number"
           min={1}
           max={10}
-          {...register('perceivedEffort', { setValueAs: (v: string) => v === '' || v == null ? undefined : Number(v) })}
+          {...register('perceivedEffort', optNum)}
         />
       </div>
 
       <div className="vspace-1">
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea id="notes" rows={3} placeholder="How did it feel?" {...register('notes')} />
+        <Label htmlFor="notes">Notizen</Label>
+        <Textarea id="notes" rows={3} placeholder="Wie hat es sich angefühlt?" {...register('notes')} />
       </div>
     </div>
   )

@@ -1,14 +1,18 @@
-import { useEffect, useState, type ElementType } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useState, type ElementType } from 'react'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   Activity, LayoutDashboard, CalendarDays, Brain,
   TrendingUp, Settings, Moon, Sun, Monitor, BatteryCharging,
 } from 'lucide-react'
-import { LogActivityModal } from '@/components/activities/LogActivityModal'
 import { useTheme } from '@/contexts/ThemeContext'
 import { cn } from '@/lib/utils'
 import { autoSyncOnce } from '@/hooks/useIntervalsSync'
 import { emitDataChanged } from '@/lib/dataEvents'
+import { invoke } from '@/lib/ipc'
+import { IPC } from '@/types/ipc'
+
+const LogActivityModal = lazy(() =>
+  import('@/components/activities/LogActivityModal').then(m => ({ default: m.LogActivityModal })))
 
 type NavColor = 'blue' | 'green' | 'purple' | 'orange' | 'slate'
 type NavItem  = { to: string; label: string; Icon: ElementType; color: NavColor }
@@ -16,31 +20,25 @@ type NavGroup = { heading: string; items: NavItem[] }
 
 const navGroups: NavGroup[] = [
   {
-    heading: 'Overview',
+    heading: 'Übersicht',
     items: [
-      { to: '/',        label: 'Dashboard',  Icon: LayoutDashboard, color: 'blue'   },
-    ],
-  },
-  {
-    heading: 'Performance',
-    items: [
-      { to: '/checkin',   label: 'Check-in',  Icon: Sun,      color: 'orange' },
-      { to: '/recovery',  label: 'Recovery',  Icon: BatteryCharging, color: 'purple' },
+      { to: '/',         label: 'Heute',    Icon: LayoutDashboard, color: 'blue'   },
+      { to: '/recovery', label: 'Erholung', Icon: BatteryCharging, color: 'purple' },
     ],
   },
   {
     heading: 'Training',
     items: [
-      { to: '/activities', label: 'Activities', Icon: Activity,     color: 'green'  },
-      { to: '/plan',       label: 'Plans',      Icon: CalendarDays, color: 'purple' },
-      { to: '/progress',   label: 'Progress',   Icon: TrendingUp,   color: 'orange' },
+      { to: '/activities', label: 'Aktivitäten', Icon: Activity,     color: 'green'  },
+      { to: '/plan',       label: 'Plan',        Icon: CalendarDays, color: 'purple' },
+      { to: '/progress',   label: 'Fortschritt', Icon: TrendingUp,   color: 'orange' },
+      { to: '/coach',      label: 'Coach',       Icon: Brain,        color: 'blue'   },
     ],
   },
   {
     heading: 'App',
     items: [
-      { to: '/coach',    label: 'Coach',    Icon: Brain,    color: 'blue'  },
-      { to: '/settings', label: 'Settings', Icon: Settings, color: 'slate' },
+      { to: '/settings', label: 'Einstellungen', Icon: Settings, color: 'slate' },
     ],
   },
 ]
@@ -71,14 +69,22 @@ const INDICATOR_STYLES: Record<NavColor, string> = {
 
 // What the toggle button shows (describes what clicking WILL switch to)
 const TOGGLE_NEXT = {
-  light:  { Icon: Moon,    label: 'Dark mode'  },
-  dark:   { Icon: Monitor, label: 'Auto'       },
-  system: { Icon: Sun,     label: 'Light mode' },
+  light:  { Icon: Moon,    label: 'Dunkel'  },
+  dark:   { Icon: Monitor, label: 'Automatisch' },
+  system: { Icon: Sun,     label: 'Hell' },
 } as const
 
 export function Layout() {
   const { theme, toggle } = useTheme()
   const [quickLogOpen, setQuickLogOpen] = useState(false)
+  const navigate = useNavigate()
+
+  // Erststart: zur Willkommens-Seite leiten
+  useEffect(() => {
+    invoke(IPC.ONBOARDING_STATUS)
+      .then(r => { if (r.needed) navigate('/willkommen') })
+      .catch(() => {})
+  }, [navigate])
 
   // intervals.icu: einmal pro App-Start automatisch synchronisieren (Fehler zeigt die Sync-Leiste)
   useEffect(() => { void autoSyncOnce() }, [])
@@ -164,7 +170,7 @@ export function Layout() {
         {/* Shortcut hint */}
         <div className="px-4 pb-2">
           <p className="text-[10px] text-muted-foreground/50 text-center">
-            Press <kbd className="font-mono">N</kbd> to log activity
+            <kbd className="font-mono">N</kbd> = Aktivität eintragen
           </p>
         </div>
 
@@ -182,15 +188,21 @@ export function Layout() {
 
       {/* ── Main content ─────────────────────────────────────────────── */}
       <main className="flex-1 overflow-y-auto">
-        <Outlet />
+        <Suspense fallback={<p className="p-8 text-sm text-muted-foreground">Lädt …</p>}>
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* Global log modal (triggered by N shortcut) */}
-      <LogActivityModal
-        open={quickLogOpen}
-        onClose={() => setQuickLogOpen(false)}
-        onSaved={() => { setQuickLogOpen(false); emitDataChanged() }}
-      />
+      {quickLogOpen && (
+        <Suspense fallback={null}>
+          <LogActivityModal
+            open={quickLogOpen}
+            onClose={() => setQuickLogOpen(false)}
+            onSaved={() => { setQuickLogOpen(false); emitDataChanged() }}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

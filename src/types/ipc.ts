@@ -295,7 +295,7 @@ export interface WeeklyBucket {
 }
 
 export interface ZoneBucket {
-  zone: string          // 'Z1'…'Z5' | 'No HR'
+  zone: string          // 'Z1'…'Z5' | 'Kein Puls'
   minutes: number
 }
 
