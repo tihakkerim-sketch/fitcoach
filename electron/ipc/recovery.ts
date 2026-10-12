@@ -5,6 +5,7 @@ import { getDb } from '../../db/index'
 import { recoveryLogs } from '../../db/schema'
 import { eq, and, gte, lte } from 'drizzle-orm'
 import { calcReadiness } from '../../src/lib/recoveryScore'
+import { setFeeling } from '../lib/recoveryFeeling'
 
 function rowToLog(r: typeof recoveryLogs.$inferSelect): RecoveryLog {
   return {
@@ -16,6 +17,7 @@ function rowToLog(r: typeof recoveryLogs.$inferSelect): RecoveryLog {
     readinessScore: r.readinessScore ?? undefined,
     restingHr:      r.restingHr      ?? undefined,
     sleepHours:     r.sleepHours     ?? undefined,
+    feeling:        r.feeling        ?? undefined,
     note:           r.note           ?? undefined,
     source:         (r.source as RecoveryLog['source']) ?? 'manual',
     createdAt:      r.createdAt,
@@ -71,6 +73,11 @@ export function registerRecoveryHandlers() {
 
     return rowToLog(row)
   })
+
+  // ── Befinden (nur die Spalte `feeling`) ─────────────────────────────────────
+
+  handle(IPC.RECOVERY_SET_FEELING, (payload) =>
+    rowToLog(setFeeling(getDb(), payload.date, payload.feeling)))
 
   // ── Get range ───────────────────────────────────────────────────────────────
 

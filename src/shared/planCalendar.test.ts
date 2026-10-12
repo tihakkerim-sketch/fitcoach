@@ -10,6 +10,13 @@ describe('planCalendar', () => {
     expect(todayLocal(new Date(2026, 9, 12, 0, 1))).toBe('2026-10-12')
   })
 
+  it('todayLocal mit Tageswechsel-Stunde', () => {
+    expect(todayLocal(new Date(2026, 9, 12, 1, 30), 4)).toBe('2026-10-11')
+    expect(todayLocal(new Date(2026, 9, 12, 3, 59), 4)).toBe('2026-10-11')
+    expect(todayLocal(new Date(2026, 9, 12, 4, 0), 4)).toBe('2026-10-12')
+    expect(todayLocal(new Date(2026, 9, 12, 1, 30), 0)).toBe('2026-10-12')
+  })
+
   it('sessionDate', () => {
     expect(sessionDate('2026-05-18', 0, 2)).toBe('2026-05-19')
     expect(sessionDate('2026-05-18', 12, 7)).toBe('2026-08-16')

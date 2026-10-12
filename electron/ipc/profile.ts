@@ -16,6 +16,7 @@ export function registerProfileHandlers() {
       theme: (row.theme ?? 'dark') as 'light' | 'dark',
       weeklyGoalKm: row.weeklyGoalKm ?? undefined,
       weeklyGoalSessions: row.weeklyGoalSessions ?? undefined,
+      dayStartHour: row.dayStartHour,
     } as UserProfile
   })
 
@@ -38,10 +39,12 @@ export function registerProfileHandlers() {
       weeklyGoalKm: payload.weeklyGoalKm ?? null,
       weeklyGoalSessions: payload.weeklyGoalSessions ?? null,
     }
+    // Tageswechsel nur ändern, wenn mitgeschickt (sonst bleibt der alte Wert / Standard 4)
+    const dayStart = payload.dayStartHour == null ? {} : { dayStartHour: payload.dayStartHour }
     if (existing) {
-      db.update(userProfile).set(data).where(eq(userProfile.id, 1)).run()
+      db.update(userProfile).set({ ...data, ...dayStart }).where(eq(userProfile.id, 1)).run()
     } else {
-      db.insert(userProfile).values({ id: 1, ...data }).run()
+      db.insert(userProfile).values({ id: 1, ...data, ...dayStart }).run()
     }
   })
 

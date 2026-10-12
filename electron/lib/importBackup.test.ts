@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   activities, activitySplits, activityStreams, appSettings, userProfile, hrZones, trainingPlans, planWeeks, planSessions,
-  dailyCheckins, recoveryLogs,
+  dailyCheckins, recoveryLogs, shoes,
 } from '../../db/schema'
 import { importBackup, type Db } from './importBackup'
 import { exportBackup, BACKUP_VERSION } from './backupFormat'
@@ -103,7 +103,8 @@ describe('importBackup', () => {
   function seedEverything(d: Db) {
     d.insert(userProfile).values({ id: 1, name: 'Full', theme: 'light' } as never).run()
     d.insert(hrZones).values({ zoneNumber: 1, minHr: 100, maxHr: 120, label: 'Easy' }).run()
-    d.insert(activities).values(activity(7, '2026-07-07') as never).run()
+    d.insert(shoes).values({ id: 2, name: 'Pegasus', brand: 'Nike', startKm: 50, createdAt: 1 }).run()
+    d.insert(activities).values({ ...activity(7, '2026-07-07'), shoeId: 2 } as never).run()
     d.insert(activitySplits).values({ activityId: 7, splitIndex: 1, distanceKm: 1, durationSec: 300, paceSecPerKm: 300, avgHr: 150 }).run()
     d.insert(activityStreams).values({ activityId: 7, data: '{"t":[0]}' }).run()
     d.insert(trainingPlans).values({ id: 3, name: 'Plan', startDate: '2026-07-06', isActive: 1, createdAt: 5 }).run()
@@ -113,13 +114,14 @@ describe('importBackup', () => {
       targetDistanceKm: 8, steps: '[]',
     }).run()
     d.insert(dailyCheckins).values({ id: 10, date: '2026-07-07', createdAt: 1, updatedAt: 2 }).run()
-    d.insert(recoveryLogs).values({ id: 11, date: '2026-07-07', hrvRmssd: 55.5, createdAt: 1, updatedAt: 2 }).run()
+    d.insert(recoveryLogs).values({ id: 11, date: '2026-07-07', hrvRmssd: 55.5, feeling: 4, createdAt: 1, updatedAt: 2 }).run()
   }
 
   function dump(d: Db) {
     return {
       userProfile: d.select().from(userProfile).all(),
       hrZones: d.select().from(hrZones).all(),
+      shoes: d.select().from(shoes).all(),
       activities: d.select().from(activities).all(),
       activitySplits: d.select().from(activitySplits).all(),
       activityStreams: d.select().from(activityStreams).all(),
@@ -177,17 +179,45 @@ describe('importBackup', () => {
     expect(db.select().from(planSessions).all()).toHaveLength(0)
   })
 
-  it('v6-Rundlauf behält Startdatum und Zeilenzahlen', async () => {
+  it('v7-Rundlauf behält Startdatum und Zeilenzahlen', async () => {
     const src = await makeDb()
     seedEverything(src)
     const file = JSON.parse(JSON.stringify(exportBackup(src))) as Record<string, unknown>
-    expect(file.version).toBe(6)
+    expect(file.version).toBe(7)
     expect(file.planPhases).toBeUndefined()
     const result = importBackup(db, file)
     expect(result.success).toBe(true)
     expect(db.select().from(trainingPlans).all()[0].startDate).toBe('2026-07-06')
     expect(db.select().from(planWeeks).all()).toHaveLength(1)
     expect(db.select().from(planSessions).all()).toHaveLength(1)
+    // Schuh, shoeId, Befinden und Tageswechsel überleben den Rundlauf
+    expect(db.select().from(shoes).all()).toMatchObject([{ id: 2, name: 'Pegasus', brand: 'Nike', startKm: 50, maxKm: 700 }])
+    expect(db.select().from(activities).all()[0].shoeId).toBe(2)
+    expect(db.select().from(recoveryLogs).all()[0].feeling).toBe(4)
+    expect(db.select().from(userProfile).all()[0].dayStartHour).toBe(4)
+  })
+
+  it('v6-Datei ohne shoes und neue Spalten ist importierbar (Schuhe werden geleert, Standardwerte greifen)', async () => {
+    const file = await v4File()
+    file.version = 6
+    delete file.shoes
+    for (const a of file.activities as Record<string, unknown>[]) delete a.shoeId
+    for (const r of file.recoveryLogs as Record<string, unknown>[]) delete r.feeling
+    for (const u of file.userProfile as Record<string, unknown>[]) delete u.dayStartHour
+    db.insert(shoes).values({ name: 'Alt', createdAt: 1 }).run()
+    expect(importBackup(db, file).success).toBe(true)
+    expect(db.select().from(shoes).all()).toHaveLength(0)
+    expect(db.select().from(activities).all()[0].shoeId).toBeNull()
+    expect(db.select().from(recoveryLogs).all()[0].feeling).toBeNull()
+    expect(db.select().from(userProfile).all()[0].dayStartHour).toBe(4)
+  })
+
+  it('v7-Datei ohne shoes-Feld wird abgelehnt, Daten bleiben', async () => {
+    const file = await v4File()
+    delete file.shoes
+    const before = dump(db)
+    expect(importBackup(db, file).success).toBe(false)
+    expect(dump(db)).toEqual(before)
   })
 
   it('v6 ohne planWeeks-Feld wird abgelehnt, Daten bleiben', async () => {
@@ -199,20 +229,20 @@ describe('importBackup', () => {
     expect(dump(db)).toEqual(before)
   })
 
-  it('unbekannte Version 7 wird abgelehnt', async () => {
+  it('unbekannte Version 8 wird abgelehnt', async () => {
     const file = await v4File()
-    file.version = 7
+    file.version = 8
     const before = dump(db)
     expect(importBackup(db, file).success).toBe(false)
     expect(dump(db)).toEqual(before)
   })
 
-  it('exports version 6 containing every table', async () => {
+  it('exports version 7 containing every table', async () => {
     const src = await makeDb()
     seedEverything(src)
     const exported = exportBackup(src)
-    expect(exported.version).toBe(6)
-    expect(BACKUP_VERSION).toBe(6)
+    expect(exported.version).toBe(7)
+    expect(BACKUP_VERSION).toBe(7)
     for (const [key, rows] of Object.entries(dump(src))) {
       expect(rows.length, 'seed ' + key).toBeGreaterThan(0)
       expect(Array.isArray(exported[key]), key).toBe(true)
@@ -220,7 +250,7 @@ describe('importBackup', () => {
     }
   })
 
-  it('v6 file without activitySplits is rejected, data unchanged', async () => {
+  it('v7 file without activitySplits is rejected, data unchanged', async () => {
     const file = await v4File()
     delete file.activitySplits
     const before = dump(db)

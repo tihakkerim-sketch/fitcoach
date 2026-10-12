@@ -7,6 +7,12 @@ import { eq, and, gte, lte, desc, asc, sql } from 'drizzle-orm'
 import { runInTransaction } from '../lib/transaction'
 import { matchActivity, releaseActivity } from '../lib/matchSessions'
 import { insertActivity } from '../lib/activityInsert'
+import { updateActivity } from '../lib/activityUpdate'
+import { restoreActivity, snapshotActivity, type ActivitySnapshot } from '../lib/activityTrash'
+
+// Die zuletzt gelöschten Aktivitäten (nur im Speicher) für „Rückgängig"
+const MAX_TRASH = 10
+const trash = new Map<number, ActivitySnapshot>()
 
 export function registerActivityHandlers() {
   handle(IPC.ACTIVITIES_CREATE, (payload) => {
@@ -83,13 +89,33 @@ export function registerActivityHandlers() {
     return { splits, streams }
   })
 
+  handle(IPC.ACTIVITIES_UPDATE, (payload) => {
+    const db = getDb()
+    return deserializeActivity(updateActivity(db, payload))
+  })
+
   handle(IPC.ACTIVITIES_DELETE, (id) => {
     const db = getDb()
-    // Zuordnungen lösen (und freie Läufe desselben Tages nachrücken lassen), dann löschen
-    runInTransaction(db, () => {
+    // Schnappschuss, Zuordnungen lösen (und freie Läufe desselben Tages nachrücken lassen), dann löschen
+    const snap = runInTransaction(db, () => {
+      const s = snapshotActivity(db, id)
       releaseActivity(db, id)
       db.delete(activities).where(eq(activities.id, id)).run()
+      return s
     })
+    if (snap) {
+      trash.delete(id)
+      trash.set(id, snap)
+      while (trash.size > MAX_TRASH) trash.delete(trash.keys().next().value as number)
+    }
+  })
+
+  handle(IPC.ACTIVITIES_RESTORE, (id) => {
+    const snap = trash.get(id)
+    if (!snap) throw new Error('Diese Aktivität kann nicht mehr wiederhergestellt werden.')
+    const row = restoreActivity(getDb(), snap)
+    trash.delete(id)
+    return deserializeActivity(row)
   })
 }
 
@@ -123,5 +149,6 @@ function deserializeActivity(row: typeof activities.$inferSelect): ActivityRow {
     elevationLossM: row.elevationLossM ?? undefined,
     movingTimeMin: row.movingTimeMin ?? undefined,
     externalId: row.externalId ?? undefined,
+    shoeId: row.shoeId ?? undefined,
   }
 }

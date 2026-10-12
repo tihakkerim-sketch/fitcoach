@@ -3,7 +3,7 @@ import { handle } from './handle'
 import { getDb } from '../../db/index'
 import { trainingPlans } from '../../db/schema'
 import { eq } from 'drizzle-orm'
-import { todayLocal } from '../../src/shared/planCalendar'
+import { appToday } from '../lib/today'
 import { getPlanDetail, getPlanToday, listPlans } from '../lib/planRead'
 import {
   activatePlan, adaptPlan, createEmptyPlan, createPlan, createSession, deleteSession,
@@ -17,7 +17,7 @@ export function registerPlanHandlers() {
   handle(IPC.PLANS_UPDATE, (p) => updatePlan(getDb(), p))
   handle(IPC.PLANS_LIST, () => listPlans(getDb()))
   handle(IPC.PLANS_GET, (id) => getPlanDetail(getDb(), id))
-  handle(IPC.PLANS_TODAY, () => getPlanToday(getDb(), todayLocal()))
+  handle(IPC.PLANS_TODAY, () => getPlanToday(getDb(), appToday(getDb())))
   handle(IPC.PLANS_DELETE, (id) => {
     getDb().delete(trainingPlans).where(eq(trainingPlans.id, id)).run()
   })

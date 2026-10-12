@@ -16,7 +16,7 @@ import type {
   IpcChannel,
   ActivityRow, PlanRow, PlanDetail, PlanTodayResult, SessionRow, AdaptPlanResult, UserProfile, HrZone,
   StatsResult, DailyCheckin, RecoveryLog, ActivitySplit, ActivityStreams, ImportFileResult,
-  IntervalsStatus, SyncResult,
+  IntervalsStatus, SyncResult, Shoe,
 } from './ipc'
 import type { CoachStatus } from '../shared/coach/types'
 
@@ -88,8 +88,41 @@ export const createActivitySchema = z.object({
   elevationLossM: z.number().min(0).max(100000).optional(),
   movingTimeMin: duration.optional(),
   externalId: z.string().min(1).max(100).optional(),
+  /** Laufschuh; fehlt es bei einem Lauf, wird der Standard-Schuh gesetzt. `null` = bewusst kein Schuh. */
+  shoeId: id.nullable().optional(),
 })
 export type CreateActivityPayload = z.infer<typeof createActivitySchema>
+
+/**
+ * Aktivität bearbeiten: alle Felder optional; `null` leert ein Feld.
+ * (Quelle, Dateiname, externe ID und Garmin-Rohdaten sind nicht änderbar.)
+ */
+const a = createActivitySchema.shape
+export const updateActivitySchema = z.object({
+  id,
+  type: a.type.optional(),
+  date: a.date.optional(),
+  avgHr: a.avgHr.nullable().optional(),
+  maxHr: a.maxHr.nullable().optional(),
+  durationMin: a.durationMin.nullable().optional(),
+  startTime: a.startTime.nullable().optional(),
+  distanceKm: a.distanceKm.nullable().optional(),
+  hrZoneDistribution: a.hrZoneDistribution.nullable().optional(),
+  perceivedEffort: a.perceivedEffort.nullable().optional(),
+  surfaceType: a.surfaceType.nullable().optional(),
+  notes: a.notes.nullable().optional(),
+  avgCadence: a.avgCadence.nullable().optional(),
+  bedtime: a.bedtime.nullable().optional(),
+  wakeTime: a.wakeTime.nullable().optional(),
+  sleepQuality: a.sleepQuality.nullable().optional(),
+  exercises: a.exercises.nullable().optional(),
+  typeLabel: a.typeLabel.nullable().optional(),
+  elevationGainM: a.elevationGainM.nullable().optional(),
+  elevationLossM: a.elevationLossM.nullable().optional(),
+  movingTimeMin: a.movingTimeMin.nullable().optional(),
+  shoeId: a.shoeId,
+})
+export type UpdateActivityPayload = z.infer<typeof updateActivitySchema>
 
 export const listActivitiesSchema = z.object({
   type: activityTypeSchema.optional(),
@@ -301,6 +334,8 @@ export const saveProfileSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']).nullish(),
   weeklyGoalKm: z.number().min(0).max(2000).nullish(),
   weeklyGoalSessions: z.number().int().min(0).max(100).nullish(),
+  /** Tageswechsel: Stunde (0–12), ab der ein neuer App-Tag beginnt */
+  dayStartHour: z.number().int().min(0).max(12).nullish(),
 })
 export type SaveProfilePayload = z.infer<typeof saveProfileSchema>
 
@@ -348,6 +383,25 @@ export type UpsertRecoveryLogPayload = z.infer<typeof upsertRecoveryLogSchema>
 
 export const recoveryRangeSchema = z.object({ dateFrom: dateString, dateTo: dateString })
 
+export const setFeelingSchema = z.object({
+  date: dateString,
+  feeling: z.number().int().min(1).max(5).nullable(),
+})
+export type SetFeelingPayload = z.infer<typeof setFeelingSchema>
+
+// ── Laufschuhe ────────────────────────────────────────────────────────────────
+
+export const saveShoeSchema = z.object({
+  id: id.optional(),
+  name: z.string().trim().min(1, 'Bitte einen Namen eingeben').max(100),
+  brand: z.string().trim().max(100).nullish(),
+  startKm: z.number().min(0).max(5000),
+  maxKm: z.number().min(50).max(5000),
+  retired: z.boolean(),
+  isDefault: z.boolean(),
+})
+export type SaveShoePayload = z.infer<typeof saveShoeSchema>
+
 // ── Contract maps ─────────────────────────────────────────────────────────────
 
 /** Input schema per channel (`z.undefined()` = no input). */
@@ -357,6 +411,15 @@ export const ipcInputs = {
   [IPC.ACTIVITIES_GET]: id,
   [IPC.ACTIVITIES_DELETE]: id,
   [IPC.ACTIVITIES_DETAILS]: id,
+  [IPC.ACTIVITIES_UPDATE]: updateActivitySchema,
+  [IPC.ACTIVITIES_RESTORE]: id,
+
+  [IPC.SHOES_LIST]: z.undefined(),
+  [IPC.SHOES_SAVE]: saveShoeSchema,
+  [IPC.SHOES_DELETE]: id,
+
+  [IPC.ONBOARDING_STATUS]: z.undefined(),
+  [IPC.ONBOARDING_COMPLETE]: z.undefined(),
 
   [IPC.GARMIN_IMPORT_FILES]: garminImportFilesSchema,
 
@@ -407,6 +470,7 @@ export const ipcInputs = {
   [IPC.RECOVERY_LOG_UPSERT]: upsertRecoveryLogSchema,
   [IPC.RECOVERY_LOGS_GET]: recoveryRangeSchema,
   [IPC.RECOVERY_LOG_DELETE]: id,
+  [IPC.RECOVERY_SET_FEELING]: setFeelingSchema,
 } as const satisfies Record<IpcChannel, z.ZodType>
 
 /** Result type (the `data` of a successful response) per channel. */
@@ -416,6 +480,15 @@ export interface IpcResults {
   [IPC.ACTIVITIES_GET]: ActivityRow | null
   [IPC.ACTIVITIES_DELETE]: void
   [IPC.ACTIVITIES_DETAILS]: { splits: ActivitySplit[]; streams: ActivityStreams | null }
+  [IPC.ACTIVITIES_UPDATE]: ActivityRow
+  [IPC.ACTIVITIES_RESTORE]: ActivityRow
+
+  [IPC.SHOES_LIST]: Shoe[]
+  [IPC.SHOES_SAVE]: Shoe
+  [IPC.SHOES_DELETE]: void
+
+  [IPC.ONBOARDING_STATUS]: { needed: boolean }
+  [IPC.ONBOARDING_COMPLETE]: void
 
   [IPC.GARMIN_IMPORT_FILES]: ImportFileResult[]
 
@@ -465,6 +538,7 @@ export interface IpcResults {
   [IPC.RECOVERY_LOG_UPSERT]: RecoveryLog
   [IPC.RECOVERY_LOGS_GET]: RecoveryLog[]
   [IPC.RECOVERY_LOG_DELETE]: void
+  [IPC.RECOVERY_SET_FEELING]: RecoveryLog
 }
 
 /** What the renderer sends. */

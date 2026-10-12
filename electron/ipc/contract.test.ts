@@ -24,6 +24,47 @@ describe('IPC contract', () => {
     })
   })
 
+  describe('activities:update', () => {
+    it('akzeptiert Teil-Änderungen und null zum Leeren', () => {
+      expect(ok(IPC.ACTIVITIES_UPDATE, { id: 1 })).toBe(true)
+      expect(ok(IPC.ACTIVITIES_UPDATE, { id: 1, distanceKm: 5, notes: null, shoeId: null, date: '2026-10-10' })).toBe(true)
+    })
+    it('lehnt ungültige Werte und nicht änderbare Felder ab/entfernt sie', () => {
+      expect(ok(IPC.ACTIVITIES_UPDATE, { id: 0 })).toBe(false)
+      expect(ok(IPC.ACTIVITIES_UPDATE, { id: 1, date: '10.10.2026' })).toBe(false)
+      expect(ok(IPC.ACTIVITIES_UPDATE, { id: 1, avgHr: 10 })).toBe(false)
+      expect(ipcInputs[IPC.ACTIVITIES_UPDATE].parse({ id: 1, source: 'garmin_import' })).not.toHaveProperty('source')
+    })
+  })
+
+  describe('shoes:save', () => {
+    const shoe = { name: 'Pegasus', startKm: 0, maxKm: 700, retired: false, isDefault: true }
+    it('akzeptiert gültigen Schuh', () => expect(ok(IPC.SHOES_SAVE, shoe)).toBe(true))
+    it('prüft Grenzen', () => {
+      expect(ok(IPC.SHOES_SAVE, { ...shoe, name: '' })).toBe(false)
+      expect(ok(IPC.SHOES_SAVE, { ...shoe, maxKm: 10 })).toBe(false)
+      expect(ok(IPC.SHOES_SAVE, { ...shoe, startKm: -1 })).toBe(false)
+      expect(ok(IPC.SHOES_SAVE, { ...shoe, startKm: 6000 })).toBe(false)
+    })
+  })
+
+  describe('recovery:setFeeling', () => {
+    it('1–5 oder null', () => {
+      expect(ok(IPC.RECOVERY_SET_FEELING, { date: '2026-10-10', feeling: 3 })).toBe(true)
+      expect(ok(IPC.RECOVERY_SET_FEELING, { date: '2026-10-10', feeling: null })).toBe(true)
+      expect(ok(IPC.RECOVERY_SET_FEELING, { date: '2026-10-10', feeling: 6 })).toBe(false)
+      expect(ok(IPC.RECOVERY_SET_FEELING, { date: '2026-10-10', feeling: 0 })).toBe(false)
+    })
+  })
+
+  describe('profile:save dayStartHour', () => {
+    it('0–12', () => {
+      expect(ok(IPC.PROFILE_SAVE, { dayStartHour: 4 })).toBe(true)
+      expect(ok(IPC.PROFILE_SAVE, { dayStartHour: 13 })).toBe(false)
+      expect(ok(IPC.PROFILE_SAVE, { dayStartHour: -1 })).toBe(false)
+    })
+  })
+
   describe('recovery:upsert', () => {
     it('accepts valid values and optional fields', () => {
       expect(ok(IPC.RECOVERY_LOG_UPSERT, { date: '2026-10-10' })).toBe(true)

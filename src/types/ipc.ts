@@ -2,7 +2,7 @@ import type {
   CreateActivityPayload, ListActivitiesPayload, CreatePlanPayload, AdaptPlanPayload,
   CreateEmptyPlanPayload, UpdatePlanPayload, UpdateWeekPayload, CreateSessionPayload, UpdateSessionPayload,
   UpdateSessionStatusPayload, LinkSessionActivityPayload, SummaryPayload,
-  UpsertCheckinPayload, UpsertRecoveryLogPayload,
+  UpsertCheckinPayload, UpsertRecoveryLogPayload, UpdateActivityPayload, SaveShoePayload, SetFeelingPayload,
   ActivityType, ActivitySource, HrZoneDistribution, StrengthExercise,
   SessionType, SessionStatus, RecoverySource, PlanStep, PlanBlock,
 } from './ipcContract'
@@ -12,7 +12,7 @@ export type {
   CreateActivityPayload, ListActivitiesPayload, CreatePlanPayload, AdaptPlanPayload,
   CreateEmptyPlanPayload, UpdatePlanPayload, UpdateWeekPayload, CreateSessionPayload, UpdateSessionPayload,
   UpdateSessionStatusPayload, LinkSessionActivityPayload, SummaryPayload,
-  UpsertCheckinPayload, UpsertRecoveryLogPayload,
+  UpsertCheckinPayload, UpsertRecoveryLogPayload, UpdateActivityPayload, SaveShoePayload, SetFeelingPayload,
   ActivityType, ActivitySource, HrZoneDistribution, StrengthExercise,
   SessionType, SessionStatus, RecoverySource, PlanStep, PlanBlock,
 }
@@ -25,6 +25,17 @@ export const IPC = {
   ACTIVITIES_GET: 'activities:get',
   ACTIVITIES_DELETE: 'activities:delete',
   ACTIVITIES_DETAILS: 'activities:details',
+  ACTIVITIES_UPDATE: 'activities:update',
+  ACTIVITIES_RESTORE: 'activities:restore',
+
+  // Laufschuhe
+  SHOES_LIST: 'shoes:list',
+  SHOES_SAVE: 'shoes:save',
+  SHOES_DELETE: 'shoes:delete',
+
+  // Onboarding
+  ONBOARDING_STATUS: 'onboarding:status',
+  ONBOARDING_COMPLETE: 'onboarding:complete',
 
   // Garmin
   GARMIN_IMPORT_FILES: 'garmin:importFiles',
@@ -85,6 +96,7 @@ export const IPC = {
   RECOVERY_LOG_UPSERT: 'recovery:upsert',
   RECOVERY_LOGS_GET:   'recovery:logsGet',
   RECOVERY_LOG_DELETE: 'recovery:delete',
+  RECOVERY_SET_FEELING: 'recovery:setFeeling',
 
 } as const
 
@@ -99,6 +111,21 @@ export type IpcResponse<T> =
 
 export interface ActivityRow extends CreateActivityPayload {
   id: number
+  createdAt: number
+  shoeId?: number
+}
+
+/** Laufschuh mit berechneter Laufleistung (Start-km + alle Läufe mit diesem Schuh). */
+export interface Shoe {
+  id: number
+  name: string
+  brand?: string
+  startKm: number
+  maxKm: number
+  retired: boolean
+  isDefault: boolean
+  totalKm: number
+  runCount: number
   createdAt: number
 }
 
@@ -240,6 +267,8 @@ export interface UserProfile {
   theme: 'light' | 'dark' | 'system'
   weeklyGoalKm?: number
   weeklyGoalSessions?: number
+  /** Tageswechsel (0–12 Uhr), Standard 4 */
+  dayStartHour?: number
 }
 
 export interface HrZone {
@@ -328,6 +357,7 @@ export interface RecoveryLog {
   readinessScore?: number   // 0–100
   restingHr?: number        // bpm
   sleepHours?: number       // h
+  feeling?: number          // 1–5 „Wie fühlst du dich?“
   note?: string
   source: RecoverySource
   createdAt: number

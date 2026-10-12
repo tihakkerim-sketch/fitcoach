@@ -13,6 +13,7 @@ import { registerStatsHandlers } from './ipc/stats'
 import { registerCheckinHandlers } from './ipc/checkin'
 import { registerRecoveryHandlers } from './ipc/recovery'
 import { registerSettingsHandlers } from './ipc/settings'
+import { registerShoeHandlers } from './ipc/shoes'
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
@@ -137,6 +138,7 @@ function startApp() {
     registerCheckinHandlers()
     registerRecoveryHandlers()
     registerSettingsHandlers()
+    registerShoeHandlers()
 
     createWindow()
 

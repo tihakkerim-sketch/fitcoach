@@ -8,6 +8,8 @@ import { getDb } from '../../db/index'
 import { activities } from '../../db/schema'
 import { activityTrimp, effectiveZones, zoneOf } from '../../src/shared/coach'
 import { loadHrBasics, loadSavedZones, toCoachActivity } from '../lib/coachData'
+import { appToday } from '../lib/today'
+import { addDaysStr } from '../../src/shared/planCalendar'
 import { gte } from 'drizzle-orm'
 import {
   format, subDays, startOfWeek, getISOWeek, getYear,
@@ -18,8 +20,9 @@ export function registerStatsHandlers() {
   handle(IPC.STATS_GET, (): StatsResult => {
     const db = getDb()
 
-    const today = format(new Date(), 'yyyy-MM-dd')
-    const twelveWeeksAgo = format(subDays(new Date(), 84), 'yyyy-MM-dd')
+    const today = appToday(db)
+    const todayDate = parseISO(`${today}T12:00:00`)
+    const twelveWeeksAgo = addDaysStr(today, -84)
     const recentRows = db.select().from(activities).where(gte(activities.date, twelveWeeksAgo)).all()
     const allRows    = db.select().from(activities).all()
     const hrBasics   = loadHrBasics(db, today)
@@ -57,7 +60,7 @@ export function registerStatsHandlers() {
     let currentStreak = 0
     let longestStreak = 0
     let tempStreak    = 1
-    const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd')
+    const yesterday = addDaysStr(today, -1)
 
     if (activeDates.length > 0 && (activeDates[0] === today || activeDates[0] === yesterday)) {
       currentStreak = 1
@@ -77,7 +80,7 @@ export function registerStatsHandlers() {
     // ── Weekly buckets (last 12 weeks) ────────────────────────────────────
     const weekMap = new Map<string, WeeklyBucket>()
     for (let w = 11; w >= 0; w--) {
-      const anchor    = subDays(new Date(), w * 7)
+      const anchor    = subDays(todayDate, w * 7)
       const weekStart = startOfWeek(anchor, { weekStartsOn: 1 })
       const key       = `${getYear(weekStart)}-W${String(getISOWeek(weekStart)).padStart(2, '0')}`
       const label     = format(weekStart, 'MMM d')

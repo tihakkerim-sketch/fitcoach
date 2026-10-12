@@ -5,10 +5,15 @@
 import { activities } from '../../db/schema'
 import type { CreateActivityPayload } from '../../src/types/ipc'
 import type { TxDb } from './transaction'
+import { getDefaultShoeId } from './shoes'
 
 export type ActivityDbRow = typeof activities.$inferSelect
 
 export function insertActivity(db: TxDb, payload: CreateActivityPayload, createdAt: number = Date.now()): ActivityDbRow {
+  // Neue Läufe ohne Schuh-Angabe bekommen den Standard-Schuh (`null` = bewusst keiner)
+  const shoeId = payload.shoeId !== undefined
+    ? payload.shoeId
+    : payload.type === 'running' ? getDefaultShoeId(db) : null
   const [inserted] = db
     .insert(activities)
     .values({
@@ -37,6 +42,7 @@ export function insertActivity(db: TxDb, payload: CreateActivityPayload, created
       elevationLossM: payload.elevationLossM ?? null,
       movingTimeMin: payload.movingTimeMin ?? null,
       externalId: payload.externalId ?? null,
+      shoeId,
     })
     .returning()
     .all()

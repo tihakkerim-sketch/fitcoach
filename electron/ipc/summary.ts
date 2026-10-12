@@ -3,11 +3,11 @@ import * as fs from 'fs'
 import { IPC } from '../../src/types/ipc'
 import { handle } from './handle'
 import { getDb } from '../../db/index'
-import { todayLocal } from '../../src/shared/planCalendar'
+import { appToday } from '../lib/today'
 import { buildCoachReport } from '../lib/coachExport'
 
 export function registerSummaryHandlers() {
-  handle(IPC.EXPORT_GENERATE_SUMMARY, (payload) => buildCoachReport(getDb(), todayLocal(), payload))
+  handle(IPC.EXPORT_GENERATE_SUMMARY, (payload) => buildCoachReport(getDb(), appToday(getDb()), payload))
 
   handle(IPC.EXPORT_SAVE_MD, async (payload) => {
     const { filePath, canceled } = await dialog.showSaveDialog({

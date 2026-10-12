@@ -8,8 +8,12 @@ import { addDays, format, parseISO } from 'date-fns'
 const parse = (date: string): Date => parseISO(`${date}T12:00:00`)
 const fmt = (d: Date): string => format(d, 'yyyy-MM-dd')
 
-export function todayLocal(now: Date = new Date()): string {
-  return fmt(now)
+/**
+ * Heutiges lokales Datum. Mit `dayStartHour` > 0 beginnt der „App-Tag" erst zu dieser Stunde
+ * (01:30 Uhr mit 4 → noch der Vortag).
+ */
+export function todayLocal(now: Date = new Date(), dayStartHour = 0): string {
+  return fmt(new Date(now.getTime() - dayStartHour * 3_600_000))
 }
 
 export function addDaysStr(date: string, n: number): string {

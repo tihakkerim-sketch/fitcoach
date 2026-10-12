@@ -8,7 +8,7 @@
  * everything back automatically.
  *
  * Versions: v1/v2 replace only the original tables (newer tables are left
- * untouched); v3–v6 replace all current tables (activitySplits/-Streams exist since v6; older files simply have none). v1–v4 contain the old phase-based
+ * untouched); v3–v7 replace all current tables (activitySplits/-Streams exist since v6, shoes since v7; older files simply have none). v1–v4 contain the old phase-based
  * plans; those are converted to the plan-v2 model (`convertLegacyPlans`) before validation. Keys of tables that no longer
  * exist (habits, nutrition, body, challenges in v3 files) are ignored.
  */
@@ -73,7 +73,7 @@ export function importBackup(db: Db, backup: Record<string, unknown>): ImportRes
   let data = backup
   // ── Version gate ──────────────────────────────────────────────────────────
   const version = data.version as number
-  if (version !== 1 && version !== 2 && version !== 3 && version !== 4 && version !== 5 && version !== 6) {
+  if (version !== 1 && version !== 2 && version !== 3 && version !== 4 && version !== 5 && version !== 6 && version !== 7) {
     return { success: false, error: 'Unrecognised backup format or version — import cancelled, your data is unchanged' }
   }
 

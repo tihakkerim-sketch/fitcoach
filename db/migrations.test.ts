@@ -335,7 +335,7 @@ describe('migrations', () => {
       db.exec(`INSERT INTO activities (id, type, date, created_at, source, distance_km) VALUES (1, 'running', '2026-09-01', 1, 'manual', 10);
         INSERT INTO recovery_logs (id, date, hrv_rmssd, created_at, updated_at) VALUES (1, '2026-09-01', 55.5, 1, 1);`)
       const res = runMigrations(db, backupDir, { now })
-      expect(res).toMatchObject({ from: 3, to: 4 })
+      expect(res).toMatchObject({ from: 3, to: LATEST })
       expect(columnNames(db, 'activities')).toEqual(expect.arrayContaining(['elevation_gain_m', 'elevation_loss_m', 'moving_time_min', 'external_id']))
       expect(columnNames(db, 'recovery_logs')).toContain('sleep_hours')
       expect(tableNames(db)).toEqual(expect.arrayContaining(['activity_splits', 'activity_streams', 'app_settings']))
@@ -359,6 +359,46 @@ describe('migrations', () => {
       db.exec('DELETE FROM activities WHERE id = 1')
       expect(count(db, 'activity_splits')).toBe(0)
       expect(count(db, 'activity_streams')).toBe(0)
+    })
+  })
+
+  describe('v5 schuhe-befinden', () => {
+    it('legt shoes, shoe_id, feeling, day_start_hour an und lässt Daten unberührt', () => {
+      runMigrations(db, backupDir, { now, migrations: MIGRATIONS.filter(m => m.version <= 4) })
+      db.exec(`INSERT INTO activities (id, type, date, created_at, source) VALUES (1, 'running', '2026-09-01', 1, 'manual');
+        INSERT INTO user_profile (id, name) VALUES (1, 'A');`)
+      const res = runMigrations(db, backupDir, { now })
+      expect(res).toMatchObject({ from: 4, to: 5 })
+      expect(tableNames(db)).toContain('shoes')
+      expect(columnNames(db, 'activities')).toContain('shoe_id')
+      expect(columnNames(db, 'recovery_logs')).toContain('feeling')
+      expect((db.prepare('SELECT day_start_hour AS h FROM user_profile').get() as { h: number }).h).toBe(4)
+      expect((db.prepare('SELECT shoe_id AS s FROM activities').get() as { s: number | null }).s).toBeNull()
+    })
+
+    it('Schuh löschen setzt shoe_id der Aktivität auf NULL', () => {
+      runMigrations(db, backupDir, { now })
+      db.exec(`INSERT INTO shoes (id, name, created_at) VALUES (1, 'X', 1);
+        INSERT INTO activities (id, type, date, created_at, source, shoe_id) VALUES (1, 'running', '2026-09-01', 1, 'manual', 1);`)
+      db.exec('DELETE FROM shoes WHERE id = 1')
+      expect((db.prepare('SELECT shoe_id AS s FROM activities').get() as { s: number | null }).s).toBeNull()
+    })
+
+    it('übernimmt morning_energy als Befinden: ergänzt vorhandene Zeile, legt sonst neue an', () => {
+      runMigrations(db, backupDir, { now, migrations: MIGRATIONS.filter(m => m.version <= 4) })
+      db.exec(`
+        INSERT INTO recovery_logs (date, hrv_rmssd, created_at, updated_at) VALUES ('2026-09-01', 50, 1, 1), ('2026-09-02', 51, 1, 1);
+        INSERT INTO daily_checkins (date, morning_energy, created_at, updated_at) VALUES
+          ('2026-09-01', 4, 10, 11), ('2026-09-03', 2, 20, 21), ('2026-09-04', NULL, 30, 31);
+      `)
+      runMigrations(db, backupDir, { now })
+      const rows = db.prepare('SELECT date, feeling, source, hrv_rmssd AS hrv, created_at AS c, updated_at AS u FROM recovery_logs ORDER BY date').all()
+      expect(rows).toEqual([
+        { date: '2026-09-01', feeling: 4, source: 'manual', hrv: 50, c: 1, u: 1 },
+        { date: '2026-09-02', feeling: null, source: 'manual', hrv: 51, c: 1, u: 1 },
+        { date: '2026-09-03', feeling: 2, source: 'manual', hrv: null, c: 20, u: 21 },
+      ])
+      expect(count(db, 'daily_checkins')).toBe(3)
     })
   })
 

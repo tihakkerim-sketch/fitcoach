@@ -11,15 +11,17 @@
  *            beim Import per convertLegacyPlans umgewandelt.
  *   v6     : v5 + activitySplits, activityStreams (und neue Spalten an activities/recoveryLogs).
  *            `app_settings` (API-Schlüssel) wird NIE exportiert und beim Import nie angefasst.
+ *   v7     : v6 + shoes (Laufschuhe) und neue Spalten: activities.shoeId, recoveryLogs.feeling,
+ *            userProfile.dayStartHour. Ältere Dateien ohne diese Tabelle/Spalten bleiben importierbar.
  */
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { TxDb } from './transaction'
 import {
-  activities, activitySplits, activityStreams, trainingPlans, planWeeks, planSessions,
+  shoes, activities, activitySplits, activityStreams, trainingPlans, planWeeks, planSessions,
   userProfile, hrZones, dailyCheckins, recoveryLogs,
 } from '../../db/schema'
 
-export const BACKUP_VERSION = 6
+export const BACKUP_VERSION = 7
 
 export interface BackupTable {
   key: string
@@ -35,6 +37,7 @@ export interface BackupTable {
 export const BACKUP_TABLES: readonly BackupTable[] = [
   { key: 'userProfile',     table: userProfile,     legacy: true  },
   { key: 'hrZones',         table: hrZones,         legacy: true  },
+  { key: 'shoes',           table: shoes,           legacy: false, since: 7 },
   { key: 'activities',      table: activities,      legacy: true  },
   { key: 'activitySplits',  table: activitySplits,  legacy: false, since: 6 },
   { key: 'activityStreams', table: activityStreams, legacy: false, since: 6 },
@@ -45,7 +48,7 @@ export const BACKUP_TABLES: readonly BackupTable[] = [
   { key: 'recoveryLogs',    table: recoveryLogs,    legacy: false },
 ]
 
-/** Build the full v6 backup object (all tables) from the database. */
+/** Build the full v7 backup object (all tables) from the database. */
 export function exportBackup(db: TxDb): Record<string, unknown> {
   const out: Record<string, unknown> = {
     exportedAt: new Date().toISOString(),

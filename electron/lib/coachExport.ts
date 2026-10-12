@@ -195,6 +195,10 @@ export function buildCoachReport(db: TxDb, today: string, range: { dateFrom: str
     if (c.morningIntention?.trim()) checkinLines.push(`- ${short(c.date)} Vorsatz: ${oneLine(c.morningIntention)}`)
     if (c.eveningNote?.trim()) checkinLines.push(`- ${short(c.date)} Abend: ${oneLine(c.eveningNote)}`)
   }
+  const feelings = loadRecoveryLogs(db, noteFrom, today).filter(l => l.feeling !== null)
+  if (feelings.length > 0) {
+    recLines.push(`- Befinden (14 Tage, 1–5): ${feelings.map(l => `${short(l.date)} ${l.feeling}`).join(' · ')}`)
+  }
   if (recLines.length > 0 || recNotes.length > 0 || checkinLines.length > 0) {
     push('## Recovery-Trend', ...recLines)
     if (recNotes.length > 0) {

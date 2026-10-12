@@ -12,6 +12,22 @@ let db: TestDb
 beforeEach(async () => { db = await makeTestDb() })
 
 describe('buildCoachReport', () => {
+  it('Befinden der letzten 14 Tage steht im Recovery-Abschnitt', () => {
+    db.insert(recoveryLogs).values([
+      { date: '2026-10-12', feeling: 4, createdAt: 1, updatedAt: 1 },
+      { date: '2026-10-13', feeling: 3, createdAt: 1, updatedAt: 1 },
+      { date: '2026-09-01', feeling: 1, createdAt: 1, updatedAt: 1 }, // zu alt
+      { date: '2026-10-11', createdAt: 1, updatedAt: 1 },             // ohne Befinden
+    ]).run()
+    const md = buildCoachReport(db, TODAY, RANGE)
+    expect(md).toContain('- Befinden (14 Tage, 1–5): 12.10. 4 · 13.10. 3')
+    expect(md).not.toContain('01.09. 1')
+  })
+
+  it('ohne Befinden keine Zeile', () => {
+    expect(buildCoachReport(db, TODAY, RANGE)).not.toContain('Befinden')
+  })
+
   it('leere DB: alle Abschnitte ohne Absturz', () => {
     const md = buildCoachReport(db, TODAY, RANGE)
     for (const h of ['# FitCoach – Coach-Bericht', '## Profil', '## Status', '## Diese Woche', '## Letzte 4 Wochen',

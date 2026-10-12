@@ -501,11 +501,44 @@ function v4GarminDetails({ db }: MigrationCtx): void {
   `)
 }
 
+// ── v5: Laufschuhe, Befinden (aus Check-in), Tageswechsel-Stunde ──
+function v5ShoesFeeling({ db }: MigrationCtx): void {
+  db.exec(`
+    CREATE TABLE shoes (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      name text NOT NULL,
+      brand text,
+      start_km real NOT NULL DEFAULT 0,
+      max_km real NOT NULL DEFAULT 700,
+      retired integer NOT NULL DEFAULT 0,
+      is_default integer NOT NULL DEFAULT 0,
+      created_at integer NOT NULL
+    );
+    ALTER TABLE activities ADD COLUMN shoe_id integer REFERENCES shoes(id) ON DELETE SET NULL;
+    CREATE INDEX activities_shoe_idx ON activities(shoe_id);
+    ALTER TABLE recovery_logs ADD COLUMN feeling integer;
+    ALTER TABLE user_profile ADD COLUMN day_start_hour integer NOT NULL DEFAULT 4;
+  `)
+  // Befinden aus dem Morgen-Check-in übernehmen (daily_checkins bleibt unverändert)
+  db.exec(`
+    UPDATE recovery_logs
+       SET feeling = (SELECT c.morning_energy FROM daily_checkins c WHERE c.date = recovery_logs.date)
+     WHERE feeling IS NULL
+       AND EXISTS (SELECT 1 FROM daily_checkins c WHERE c.date = recovery_logs.date AND c.morning_energy IS NOT NULL);
+    INSERT INTO recovery_logs (date, feeling, source, created_at, updated_at)
+      SELECT c.date, c.morning_energy, 'manual', c.created_at, c.updated_at
+        FROM daily_checkins c
+       WHERE c.morning_energy IS NOT NULL
+         AND NOT EXISTS (SELECT 1 FROM recovery_logs r WHERE r.date = c.date);
+  `)
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: 'baseline', up: v1Baseline },
   { version: 2, name: 'phase-1-cleanup', up: v2Cleanup },
   { version: 3, name: 'plan-v2', up: v3PlanV2 },
   { version: 4, name: 'garmin-details', up: v4GarminDetails },
+  { version: 5, name: 'shoes-feeling', up: v5ShoesFeeling },
 ]
 
 // ── Runner ───────────────────────────────────────────────────────────────────

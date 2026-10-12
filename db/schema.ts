@@ -1,6 +1,17 @@
 import { sqliteTable, integer, text, real, unique } from 'drizzle-orm/sqlite-core'
 
 // ── Activities ────────────────────────────────────────────────────────────────
+export const shoes = sqliteTable('shoes', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  brand: text('brand'),
+  startKm: real('start_km').notNull().default(0),
+  maxKm: real('max_km').notNull().default(700),
+  retired: integer('retired').notNull().default(0),
+  isDefault: integer('is_default').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+})
+
 export const activities = sqliteTable('activities', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   type: text('type').notNull(), // running | cycling | sleep | strength | custom
@@ -44,6 +55,9 @@ export const activities = sqliteTable('activities', {
   elevationLossM: real('elevation_loss_m'),
   movingTimeMin: real('moving_time_min'),
   externalId: text('external_id'), // z. B. icu:i12345; UNIQUE-Index (partiell) per Migration v4
+
+  // Phase 5
+  shoeId: integer('shoe_id').references(() => shoes.id, { onDelete: 'set null' }),
 })
 
 export const activitySplits = sqliteTable('activity_splits', {
@@ -133,6 +147,7 @@ export const userProfile = sqliteTable('user_profile', {
   theme: text('theme').notNull().default('dark'),
   weeklyGoalKm: real('weekly_goal_km'),
   weeklyGoalSessions: integer('weekly_goal_sessions'),
+  dayStartHour: integer('day_start_hour').notNull().default(4), // Tageswechsel (0–12 Uhr)
 })
 
 export const hrZones = sqliteTable('hr_zones', {
@@ -167,6 +182,7 @@ export const recoveryLogs = sqliteTable('recovery_logs', {
   readinessScore: integer('readiness_score'),         // 0–100
   restingHr:      integer('resting_hr'),              // bpm
   sleepHours:     real('sleep_hours'),                // h
+  feeling:        integer('feeling'),                 // 1–5 „Wie fühlst du dich?“
   note:           text('note'),
   source:         text('source').notNull().default('manual'),  // manual | garmin_import | intervals_icu
   createdAt:      integer('created_at').notNull(),

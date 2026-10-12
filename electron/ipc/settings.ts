@@ -1,6 +1,8 @@
 import { app } from 'electron'
 import { IPC } from '../../src/types/ipc'
 import { handle } from './handle'
+import { getDb } from '../../db/index'
+import { completeOnboarding, onboardingNeeded } from '../lib/onboarding'
 
 // OS-level app settings that live outside the database.
 //
@@ -22,4 +24,7 @@ export function registerSettingsHandlers() {
     // Read the value back so the renderer reflects the OS's actual state
     return app.getLoginItemSettings().openAtLogin
   })
+
+  handle(IPC.ONBOARDING_STATUS, () => ({ needed: onboardingNeeded(getDb()) }))
+  handle(IPC.ONBOARDING_COMPLETE, () => { completeOnboarding(getDb()) })
 }
