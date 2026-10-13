@@ -1,6 +1,6 @@
 {
   "name": "fitcoach",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "FitCoach Desktop — personal fitness coach",
   "main": "dist-electron/electron/main.js",
   "build": {

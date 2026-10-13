@@ -49,7 +49,18 @@ jobs:
       - name: E2E tests
         run: npx playwright test
 
-      - name: Installer bauen und veröffentlichen
-        run: npx electron-builder --win --publish always
+      - name: Installer bauen
+        run: npx electron-builder --win --publish never
+
+      # Nicht `--publish always`: electron-builder lädt die Dateien parallel hoch
+      # und legt dabei mehrere Releases zum selben Tag an (passiert bei v1.0.0).
+      - name: Release veröffentlichen
+        shell: bash
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" --title "$v" --generate-notes \
+            "release/FitCoach-Setup-$v.exe" \
+            "release/FitCoach-Setup-$v.exe.blockmap" \
+            release/latest.yml
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
