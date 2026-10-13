@@ -17,7 +17,8 @@ Reihenfolge laut `docs/AUDIT-2026-10.md` Abschnitt 7.
 - [ ] Readiness-Score (Recovery-Seite) relativ zum eigenen HRV-Schnitt statt fester 20–80 ms
 - [x] JS-Bündel > 500 kB: Seiten per lazy() laden (12.10.2026)
 - [x] Phase 5 – UX & Deutsch (Onboarding, Bearbeiten/Undo, Tageswechsel 04:00, Schuh-km, Befinden statt Check-in, Navigation) – 12.10.2026
-- [ ] Phase 6 – Release (E2E, Windows-CI, Auto-Update, Signatur)
+- [x] Phase 6 – Release (E2E, Windows-CI, Auto-Update) – Signatur offen, siehe unten
+- [ ] Code-Signatur kostenlos über SignPath Foundation (Open-Source-Antrag) – bis dahin SmartScreen-Warnung
 - [ ] Mit echter .fit-Datei prüfen: Datum lokal + Höhen-Einheit (km→m in `fitDataToParsed`); dann `fit-file-parser` 1 → 6 updaten
 - [ ] npm audit: 12 moderate übrig (jimp → file-type im Icon-Skript; sprintf-js über electron-builder) – nur Build-Werkzeuge
 - [ ] Wiederherstellen-Knopf für Auto-Sicherungen in den Einstellungen

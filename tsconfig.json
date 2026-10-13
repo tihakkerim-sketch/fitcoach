@@ -22,5 +22,5 @@
       "@shared/*": ["./src/types/*"]
     }
   },
-  "include": ["src", "src/types"]
+  "include": ["src", "src/types", "e2e", "playwright.config.ts"]
 }

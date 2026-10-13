@@ -16,7 +16,7 @@ import type {
   IpcChannel,
   ActivityRow, PlanRow, PlanDetail, PlanTodayResult, SessionRow, AdaptPlanResult, UserProfile, HrZone,
   StatsResult, DailyCheckin, RecoveryLog, ActivitySplit, ActivityStreams, ImportFileResult,
-  IntervalsStatus, SyncResult, Shoe,
+  IntervalsStatus, SyncResult, Shoe, UpdateStatus,
 } from './ipc'
 import type { CoachStatus } from '../shared/coach/types'
 
@@ -414,6 +414,11 @@ export const ipcInputs = {
   [IPC.ACTIVITIES_UPDATE]: updateActivitySchema,
   [IPC.ACTIVITIES_RESTORE]: id,
 
+  [IPC.APP_INFO]: z.undefined(),
+  [IPC.UPDATE_STATUS]: z.undefined(),
+  [IPC.UPDATE_CHECK]: z.undefined(),
+  [IPC.UPDATE_INSTALL]: z.undefined(),
+
   [IPC.SHOES_LIST]: z.undefined(),
   [IPC.SHOES_SAVE]: saveShoeSchema,
   [IPC.SHOES_DELETE]: id,
@@ -482,6 +487,11 @@ export interface IpcResults {
   [IPC.ACTIVITIES_DETAILS]: { splits: ActivitySplit[]; streams: ActivityStreams | null }
   [IPC.ACTIVITIES_UPDATE]: ActivityRow
   [IPC.ACTIVITIES_RESTORE]: ActivityRow
+
+  [IPC.APP_INFO]: { version: string; isPackaged: boolean }
+  [IPC.UPDATE_STATUS]: UpdateStatus
+  [IPC.UPDATE_CHECK]: UpdateStatus
+  [IPC.UPDATE_INSTALL]: UpdateStatus
 
   [IPC.SHOES_LIST]: Shoe[]
   [IPC.SHOES_SAVE]: Shoe

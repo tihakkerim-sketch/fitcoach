@@ -48,3 +48,7 @@ Aktueller Umbau: siehe `docs/AUDIT-2026-10.md` (Phasenplan + Entscheidungen in A
 - IPC-Antworten kommen in Playwright als `{success, data}` – in Testskripten auspacken. Zahl-Inputs mit Punkt füllen.
 - Suspense für lazy Seiten nur um `<Outlet />` in `Layout.tsx` (sonst flackert die Sidebar).
 - Claude-Änderungen (`fitcoachChanges`-JSON) verweisen per `sessionId` (`#123` im Bericht); nur geplante Einheiten ab heute, alles in einer Transaktion.
+- **Phase 6 Release:** E2E in `e2e/` (`npm run build && npx playwright test`); `FITCOACH_LOAD_DIST=1` lässt die unverpackte App `dist/` statt Vite laden (kein Vite nötig). E2E-Selektoren hängen an deutschen UI-Texten.
+- CI (`.github/workflows/ci.yml`) läuft auf `windows-latest` bei jedem Push: Typecheck, Unit, Build, E2E, `electron-builder --dir`.
+- **Release:** Version in `package.json` erhöhen, committen, `git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml` baut Installer + `latest.yml` und veröffentlicht das GitHub-Release. Lokal `npm run dist` veröffentlicht nie (`--publish never`).
+- Auto-Update: `electron-updater` (`electron/updater.ts`, Status-Logik `electron/lib/updateStatus.ts`), nur in installierter App; Einstellungen → „App & Updates“. Installer ist **nicht signiert** (SmartScreen-Warnung beim ersten Installieren).

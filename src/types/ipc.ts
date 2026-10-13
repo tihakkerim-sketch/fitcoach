@@ -98,6 +98,12 @@ export const IPC = {
   RECOVERY_LOG_DELETE: 'recovery:delete',
   RECOVERY_SET_FEELING: 'recovery:setFeeling',
 
+  // App-Info & Updates
+  APP_INFO: 'app:info',
+  UPDATE_STATUS: 'update:status',
+  UPDATE_CHECK: 'update:check',
+  UPDATE_INSTALL: 'update:install',
+
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
@@ -113,6 +119,14 @@ export interface ActivityRow extends CreateActivityPayload {
   id: number
   createdAt: number
   shoeId?: number
+}
+
+/** Zustand des Auto-Updates (wird im Main gehalten). */
+export interface UpdateStatus {
+  state: 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error' | 'disabled'
+  version?: string
+  percent?: number
+  message?: string
 }
 
 /** Laufschuh mit berechneter Laufleistung (Start-km + alle Läufe mit diesem Schuh). */

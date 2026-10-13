@@ -9,6 +9,14 @@
     "directories": {
       "output": "release"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "tihakkerim-sketch",
+        "repo": "fitcoach",
+        "releaseType": "release"
+      }
+    ],
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
@@ -30,7 +38,8 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "artifactName": "FitCoach-Setup-${version}.${ext}"
     }
   },
   "scripts": {
@@ -39,8 +48,8 @@
     "dev:electron": "wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && electron .",
     "build": "vite build && tsc -p tsconfig.electron.json",
     "make:icon": "node scripts/make-icon.js",
-    "dist": "npm run build && electron-builder --win",
-    "dist:dir": "npm run build && electron-builder --win --dir",
+    "dist": "npm run build && electron-builder --win --publish never",
+    "dist:dir": "npm run build && electron-builder --win --dir --publish never",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
@@ -56,6 +65,7 @@
     "@radix-ui/react-tabs": "^1.1.22",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.4",
+    "electron-updater": "^6.8.9",
     "fast-xml-parser": "^5.11.2",
     "fit-file-parser": "^1.9.1",
     "react": "^19.3.0",

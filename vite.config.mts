@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import { configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
@@ -17,6 +18,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+  },
+  test: {
+    // Playwright-E2E-Tests laufen separat (npm run test:e2e)
+    exclude: [...configDefaults.exclude, 'e2e/**'],
   },
   server: {
     port: 5173,

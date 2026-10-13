@@ -14,8 +14,14 @@ import { registerCheckinHandlers } from './ipc/checkin'
 import { registerRecoveryHandlers } from './ipc/recovery'
 import { registerSettingsHandlers } from './ipc/settings'
 import { registerShoeHandlers } from './ipc/shoes'
+import { registerUpdateHandlers } from './ipc/update'
+import { initUpdater } from './updater'
 
-const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+// FITCOACH_LOAD_DIST=1: unpackaged app loads the built renderer (dist/) with the
+// production CSP – used by the E2E tests so they need no Vite server.
+const isDev =
+  process.env.FITCOACH_LOAD_DIST !== '1' &&
+  (process.env.NODE_ENV === 'development' || !app.isPackaged)
 
 // Kept so a second launch can focus the existing window
 let mainWindow: BrowserWindow | null = null
@@ -139,8 +145,10 @@ function startApp() {
     registerRecoveryHandlers()
     registerSettingsHandlers()
     registerShoeHandlers()
+    registerUpdateHandlers()
 
     createWindow()
+    initUpdater()
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()

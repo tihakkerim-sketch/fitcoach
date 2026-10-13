@@ -13,6 +13,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { IntervalsSettings } from '@/components/settings/IntervalsSettings'
 import { HrZonesSettings } from '@/components/settings/HrZonesSettings'
 import { ShoesSettings } from '@/components/settings/ShoesSettings'
+import { UpdateSettings } from '@/components/settings/UpdateSettings'
 import { setDayStartHour } from '@/lib/today'
 
 // 1=Mo … 7=So (wie im Vertrag und in den Plänen)
@@ -240,6 +241,8 @@ export default function Settings() {
       <HrZonesSettings />
 
       <ShoesSettings />
+
+      <UpdateSettings />
 
       {/* Wochenziele */}
       <section className="vspace-3">
