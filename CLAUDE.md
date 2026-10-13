@@ -52,3 +52,4 @@ Aktueller Umbau: siehe `docs/AUDIT-2026-10.md` (Phasenplan + Entscheidungen in A
 - CI (`.github/workflows/ci.yml`) läuft auf `windows-latest` bei jedem Push: Typecheck, Unit, Build, E2E, `electron-builder --dir`.
 - **Release:** Version in `package.json` erhöhen, committen, `git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml` baut Installer + `latest.yml` und veröffentlicht das GitHub-Release. Lokal `npm run dist` veröffentlicht nie (`--publish never`).
 - Auto-Update: `electron-updater` (`electron/updater.ts`, Status-Logik `electron/lib/updateStatus.ts`), nur in installierter App; Einstellungen → „App & Updates“. Installer ist **nicht signiert** (SmartScreen-Warnung beim ersten Installieren).
+- Installer-Name ohne Leerzeichen (`nsis.artifactName`), sonst passt `latest.yml` nach GitHub-Upload nicht. `app-update.yml` entsteht nur beim NSIS-Build.
