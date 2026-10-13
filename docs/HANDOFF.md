@@ -1,33 +1,27 @@
 # Übergabe – FitCoach – 2026-10-13
 
 ## Ziel der letzten Session
-Phase 6 „Release“ aus `docs/AUDIT-2026-10.md`: E2E-Tests, Windows-CI, Auto-Update, Installer.
+Offene Schritte aus Phase 6: erstes Release veröffentlichen und Auto-Update Ende-zu-Ende prüfen.
 
 ## Stand
-- Alles in `main` gemergt und gepusht (letzter Code-Commit `748abdc`). Branch `phase-6-release` = `main`.
-- **E2E** (`e2e/`, Playwright + Electron): Onboarding + alle Seiten, TCX-Import + Duplikat, Plan-Einheit abhaken, Lauf anlegen/bearbeiten/löschen/Rückgängig. 5 Tests, ~40 s. Laufen gegen `dist/` (`FITCOACH_LOAD_DIST=1`), kein Vite nötig.
-- **CI** `.github/workflows/ci.yml` auf `windows-latest` bei jedem Push: Typecheck, 355 Unit-Tests, Build, E2E, `electron-builder --dir`. Auf GitHub grün (Branch + main).
-- **Auto-Update** mit `electron-updater` über GitHub Releases (Repo öffentlich, kein Token nötig). Prüft 10 s nach Start, lädt im Hintergrund, fragt „Jetzt neu starten?“. Einstellungen → „App & Updates“ (Version, „Nach Updates suchen“).
-- **Release-Workflow** `.github/workflows/release.yml`: startet bei Tag `vX.Y.Z` (muss zur `package.json`-Version passen), testet, baut `FitCoach-Setup-X.Y.Z.exe` + `latest.yml`, veröffentlicht das Release.
-- Rauchtest der gepackten App (Temp-Ordner): startet, Version 1.0.0, Update-Prüfung erreicht GitHub („noch keine Update-Version veröffentlicht“). Echte DB unberührt.
+- **Release 1.0.0 und 1.0.1 auf GitHub veröffentlicht** (je Installer + Blockmap + `latest.yml`).
+- **Auto-Update funktioniert Ende-zu-Ende:** installierte 1.0.0 hat 1.0.1 gefunden, geladen und installiert (installierte exe = 1.0.1).
+- Fehler behoben: `electron-builder --publish always` hatte bei v1.0.0 **zwei Releases zum selben Tag** angelegt (paralleler Upload). Release-Workflow baut jetzt mit `--publish never` und veröffentlicht per `gh release create` mit allen drei Dateien. 1.0.0 nachträglich repariert (Blockmap umkopiert, doppeltes Release gelöscht).
+- Letzter Code-Commit `541ce03` (Version 1.0.1 + Workflow-Fix), in `main` gepusht.
 
 ## Offen / angefangen
-- **Noch kein Release veröffentlicht** – Tag `v1.0.0` wurde bewusst nicht gepusht (öffentliche Veröffentlichung = Adels Entscheidung).
-- **Keine Code-Signatur** (Zertifikat kostet). Folge: SmartScreen-Warnung beim ersten Installieren; Updates funktionieren trotzdem. Kostenlose Option: SignPath Foundation (Backlog).
-- Auto-Update selbst noch nie Ende-zu-Ende probiert (braucht zwei veröffentlichte Versionen).
+- Keine Code-Signatur → SmartScreen-Warnung beim ersten Installieren (Backlog: SignPath Foundation).
+- Echter Durchlauf mit eigenen Daten (Plan aktivieren, Schuh, Lauf-Import, Coach-Bericht) – aus Phase 5 noch offen, macht Adel selbst.
 
 ## Nächste sinnvolle Schritte
-1. **Empfohlen:** Release 1.0.0 veröffentlichen: `git tag v1.0.0 && git push origin v1.0.0`, Installer vom GitHub-Release installieren (ersetzt den alten; Daten in `%APPDATA%\FitCoach` bleiben).
-2. Danach Version auf 1.0.1 erhöhen + taggen → prüfen, dass die installierte App das Update findet und installiert.
-3. Echter Durchlauf mit eigenen Daten (Plan aktivieren, Schuh, Lauf-Import, Coach-Bericht) – aus Phase 5 noch offen.
+1. **Empfohlen:** Echter Durchlauf mit eigenen Daten in der installierten App; gefundene Fehler mit `/bug` melden.
+2. Kleinere Backlog-Punkte angehen, z. B. Lauf-Kadenz verdoppeln (TCX/FIT liefert halbe Schrittfrequenz).
+3. Neue Version veröffentlichen: Version in `package.json` erhöhen, committen, `git tag vX.Y.Z && git push origin vX.Y.Z`.
 
 ## Gotchas, die neu gelernt wurden
-- `electron-builder` mit `publish`-Config: lokal immer `--publish never` (steht in `npm run dist`).
-- `app-update.yml` entsteht nur beim NSIS-Build, nicht bei `--dir`.
-- Leerzeichen im Installer-Namen werden beim GitHub-Upload zu `-` → `artifactName` ohne Leerzeichen gesetzt, sonst passt `latest.yml` nicht.
-- E2E-Selektoren hängen an deutschen UI-Texten – Textänderungen können Tests brechen.
-- Node-Skripte im Scratchpad finden Projektpakete nur mit `NODE_PATH=<repo>/node_modules`.
+- Nie `electron-builder --publish always` im Release-Workflow: paralleler Upload → mehrere Releases pro Tag. Stattdessen `--publish never` + `gh release create`.
+- `--publish never` erzeugt trotzdem `latest.yml` und `.blockmap`.
+- Tag-Push (öffentliches Release) kann von der Auto-Mode-Prüfung blockiert werden → Adel pusht dann selbst oder erlaubt es ausdrücklich.
 
 ## Wichtige Dateien
-`electron/updater.ts`, `electron/lib/updateStatus.ts`, `electron/ipc/update.ts`, `src/components/settings/UpdateSettings.tsx`,
-`e2e/fixtures.ts`, `e2e/*.spec.ts`, `playwright.config.ts`, `.github/workflows/{ci,release}.yml`, `package.json` (`build.publish`, `nsis.artifactName`)
+`.github/workflows/release.yml`, `package.json` (`version`, `build.publish`, `nsis.artifactName`), `electron/updater.ts`
