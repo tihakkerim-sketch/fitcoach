@@ -8,7 +8,7 @@ Reihenfolge laut `docs/AUDIT-2026-10.md` Abschnitt 7.
 - [ ] Plan: Vorlagen / Woche kopieren / automatische Progression im Editor (bewusst nicht in Phase 2)
 - [ ] Plan: Zuordnung ±1 Tag (Einheit am Folgetag gelaufen) – derzeit nur gleicher Tag
 - [x] Phase 3 – Garmin (intervals.icu-Sync, Mehrfach-Import, Duplikate, Splits/Höhe/Verläufe) – 11.10.2026
-- [ ] intervals.icu-Sync mit echtem Konto testen (sperrt intervals.icu Garmin-Daten über die API, bleibt nur Datei-Import)
+- [ ] intervals.icu-Sync mit echtem Konto: API + Schlüssel funktionieren (14.10.), aber Konto hat noch 0 Aktivitäten → nach Garmin-Verlauf-Import prüfen, ob Original-Dateien kommen oder nur Summen/Stubs
 - [ ] Lauf-Kadenz aus TCX/FIT ist halbe Schrittfrequenz (z. B. 67 statt 134 spm) – verdoppeln für Läufe
 - [ ] Alte Läufe ohne Splits: Details nachberechnen durch erneuten Datei-Import (Duplikat ergänzt dann Details)
 - [ ] Ordner-Überwachung für Garmin-Dateien
