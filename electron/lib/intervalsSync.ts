@@ -2,8 +2,8 @@
  * intervals.icu-Sync: Aktivitäten (Datei bevorzugt, sonst Summenfelder) + Wellness (nur leere Felder).
  * Ohne `electron`-Import.
  */
-import { eq } from 'drizzle-orm'
-import { format, subDays } from 'date-fns'
+import { eq, max } from 'drizzle-orm'
+import { format, subDays, subYears } from 'date-fns'
 import { activities, recoveryLogs } from '../../db/schema'
 import { calcReadiness } from '../../src/lib/recoveryScore'
 import type { CreateActivityPayload, SyncResult } from '../../src/types/ipc'
@@ -178,8 +178,21 @@ function syncWellness(db: TxDb, days: IcuWellness[], r: SyncResult, now: number)
   })
 }
 
+/**
+ * Start des Zeitraums: letzter Sync - 2 Tage (erster Sync: heute - 30 Tage). Liegt die neueste
+ * Aktivität der App weiter zurück, ab deren Datum – sonst entsteht eine Lücke, die nie geholt
+ * wird (z. B. Garmin-Verlauf erst später in intervals.icu geladen). Höchstens ein Jahr zurück.
+ */
+function syncFrom(db: TxDb, opts: SyncOptions): string {
+  const normal = format(opts.lastSyncAt ? subDays(new Date(opts.lastSyncAt), 2) : subDays(opts.now, 30), 'yyyy-MM-dd')
+  const newest = db.select({ date: max(activities.date) }).from(activities).get()?.date
+  if (!newest || newest >= normal) return normal
+  const oldestAllowed = format(subYears(opts.now, 1), 'yyyy-MM-dd')
+  return newest < oldestAllowed ? oldestAllowed : newest
+}
+
 export async function runIntervalsSync(db: TxDb, client: IntervalsClient, opts: SyncOptions): Promise<SyncResult> {
-  const from = format(opts.lastSyncAt ? subDays(new Date(opts.lastSyncAt), 2) : subDays(opts.now, 30), 'yyyy-MM-dd')
+  const from = syncFrom(db, opts)
   const to = format(opts.now, 'yyyy-MM-dd')
   const result: SyncResult = {
     created: 0, duplicates: 0, unavailable: 0, recoveryDays: 0, errors: [],

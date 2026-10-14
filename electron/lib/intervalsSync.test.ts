@@ -50,6 +50,34 @@ describe('Zeitraum', () => {
     await runIntervalsSync(db, c, { now: NOW, lastSyncAt: last })
     expect(c.listActivities).toHaveBeenCalledWith('2026-10-07', '2026-10-11')
   })
+  const saveRun = (date: string) => saveImported(db, {
+    activity: { type: 'running', date, startTime: '07:00', distanceKm: 5, durationMin: 30 }, samples: [],
+  }, { fileName: `${date}.tcx`, source: 'garmin_import' })
+
+  it('fills the gap since the newest activity in the app (first sync)', async () => {
+    saveRun('2026-06-19')
+    const c = fake([])
+    await runIntervalsSync(db, c, { now: NOW })
+    expect(c.listActivities).toHaveBeenCalledWith('2026-06-19', '2026-10-11')
+  })
+  it('fills the gap even after an earlier sync found nothing', async () => {
+    saveRun('2026-06-19')
+    const c = fake([])
+    await runIntervalsSync(db, c, { now: NOW, lastSyncAt: new Date(2026, 9, 10, 20, 0, 0).getTime() })
+    expect(c.listActivities).toHaveBeenCalledWith('2026-06-19', '2026-10-11')
+  })
+  it('newest activity within the normal window: normal window', async () => {
+    saveRun('2026-10-09')
+    const c = fake([])
+    await runIntervalsSync(db, c, { now: NOW, lastSyncAt: new Date(2026, 9, 9, 8, 0, 0).getTime() })
+    expect(c.listActivities).toHaveBeenCalledWith('2026-10-07', '2026-10-11')
+  })
+  it('gap is capped at one year', async () => {
+    saveRun('2024-01-01')
+    const c = fake([])
+    await runIntervalsSync(db, c, { now: NOW })
+    expect(c.listActivities).toHaveBeenCalledWith('2025-10-11', '2026-10-11')
+  })
 })
 
 describe('Aktivitäten', () => {
