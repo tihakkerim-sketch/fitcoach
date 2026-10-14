@@ -2,7 +2,7 @@
  * intervals.icu-Sync: Aktivitäten (Datei bevorzugt, sonst Summenfelder) + Wellness (nur leere Felder).
  * Ohne `electron`-Import.
  */
-import { eq, max } from 'drizzle-orm'
+import { eq, max, ne } from 'drizzle-orm'
 import { format, subDays, subYears } from 'date-fns'
 import { activities, recoveryLogs } from '../../db/schema'
 import { calcReadiness } from '../../src/lib/recoveryScore'
@@ -179,16 +179,19 @@ function syncWellness(db: TxDb, days: IcuWellness[], r: SyncResult, now: number)
 }
 
 /**
- * Start des Zeitraums: letzter Sync - 2 Tage (erster Sync: heute - 30 Tage). Liegt die neueste
- * Aktivität der App weiter zurück, ab deren Datum – sonst entsteht eine Lücke, die nie geholt
- * wird (z. B. Garmin-Verlauf erst später in intervals.icu geladen). Höchstens ein Jahr zurück.
+ * Start des Zeitraums: ab der neuesten Aktivität, die NICHT von intervals.icu kam (ohne solche:
+ * ein Jahr zurück), höchstens ein Jahr. So kommen auch Läufe an, die intervals.icu erst später
+ * nachlädt (Garmin-Verlauf) – ein neuerer Sync-Lauf darf die Lücke nicht schließen. Ältere eigene
+ * Einträge bleiben außen vor (Duplikat-Erkennung greift dort nicht immer, z. B. ohne Distanz).
+ * Bekannte intervals-IDs werden ohne Download übersprungen. Nie später als letzter Sync - 2 Tage.
  */
 function syncFrom(db: TxDb, opts: SyncOptions): string {
-  const normal = format(opts.lastSyncAt ? subDays(new Date(opts.lastSyncAt), 2) : subDays(opts.now, 30), 'yyyy-MM-dd')
-  const newest = db.select({ date: max(activities.date) }).from(activities).get()?.date
-  if (!newest || newest >= normal) return normal
+  const normal = format(opts.lastSyncAt ? subDays(new Date(opts.lastSyncAt), 2) : opts.now, 'yyyy-MM-dd')
   const oldestAllowed = format(subYears(opts.now, 1), 'yyyy-MM-dd')
-  return newest < oldestAllowed ? oldestAllowed : newest
+  const newestOwn = db.select({ date: max(activities.date) }).from(activities)
+    .where(ne(activities.source, 'intervals_icu')).get()?.date ?? oldestAllowed
+  const start = newestOwn < oldestAllowed ? oldestAllowed : newestOwn
+  return start < normal ? start : normal
 }
 
 export async function runIntervalsSync(db: TxDb, client: IntervalsClient, opts: SyncOptions): Promise<SyncResult> {

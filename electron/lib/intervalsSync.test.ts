@@ -37,42 +37,39 @@ const act = (over: Partial<IcuActivity> = {}): IcuActivity => ({
 beforeEach(async () => { db = await makeTestDb() })
 
 describe('Zeitraum', () => {
-  it('first sync: today - 30 days (local dates)', async () => {
+  const saveRun = (date: string, source: 'garmin_import' | 'intervals_icu' = 'garmin_import') => saveImported(db, {
+    activity: { type: 'running', date, startTime: '07:00', distanceKm: 5, durationMin: 30 }, samples: [],
+  }, source === 'intervals_icu'
+    ? { externalId: `icu:${date}`, source }
+    : { fileName: `${date}.tcx`, source })
+
+  it('no own activities: one year back (local dates)', async () => {
     const c = fake([])
     const r = await runIntervalsSync(db, c, { now: NOW })
-    expect(c.listActivities).toHaveBeenCalledWith('2026-09-11', '2026-10-11')
-    expect(c.listWellness).toHaveBeenCalledWith('2026-09-11', '2026-10-11')
-    expect(r).toMatchObject({ from: '2026-09-11', to: '2026-10-11', at: NOW.getTime() })
+    expect(c.listActivities).toHaveBeenCalledWith('2025-10-11', '2026-10-11')
+    expect(c.listWellness).toHaveBeenCalledWith('2025-10-11', '2026-10-11')
+    expect(r).toMatchObject({ from: '2025-10-11', to: '2026-10-11', at: NOW.getTime() })
   })
-  it('follow-up sync: last sync - 2 days', async () => {
-    const c = fake([])
-    const last = new Date(2026, 9, 9, 8, 0, 0).getTime()
-    await runIntervalsSync(db, c, { now: NOW, lastSyncAt: last })
-    expect(c.listActivities).toHaveBeenCalledWith('2026-10-07', '2026-10-11')
-  })
-  const saveRun = (date: string) => saveImported(db, {
-    activity: { type: 'running', date, startTime: '07:00', distanceKm: 5, durationMin: 30 }, samples: [],
-  }, { fileName: `${date}.tcx`, source: 'garmin_import' })
-
-  it('fills the gap since the newest activity in the app (first sync)', async () => {
-    saveRun('2026-06-19')
-    const c = fake([])
-    await runIntervalsSync(db, c, { now: NOW })
-    expect(c.listActivities).toHaveBeenCalledWith('2026-06-19', '2026-10-11')
-  })
-  it('fills the gap even after an earlier sync found nothing', async () => {
+  it('from the newest activity not imported from intervals.icu', async () => {
     saveRun('2026-06-19')
     const c = fake([])
     await runIntervalsSync(db, c, { now: NOW, lastSyncAt: new Date(2026, 9, 10, 20, 0, 0).getTime() })
     expect(c.listActivities).toHaveBeenCalledWith('2026-06-19', '2026-10-11')
   })
-  it('newest activity within the normal window: normal window', async () => {
-    saveRun('2026-10-09')
+  it('a newer intervals.icu run does not close the gap (history loaded later)', async () => {
+    saveRun('2026-06-19')
+    saveRun('2026-10-10', 'intervals_icu')
+    const c = fake([])
+    await runIntervalsSync(db, c, { now: NOW, lastSyncAt: new Date(2026, 9, 10, 20, 0, 0).getTime() })
+    expect(c.listActivities).toHaveBeenCalledWith('2026-06-19', '2026-10-11')
+  })
+  it('recent own file import: last sync - 2 days', async () => {
+    saveRun('2026-10-10')
     const c = fake([])
     await runIntervalsSync(db, c, { now: NOW, lastSyncAt: new Date(2026, 9, 9, 8, 0, 0).getTime() })
     expect(c.listActivities).toHaveBeenCalledWith('2026-10-07', '2026-10-11')
   })
-  it('gap is capped at one year', async () => {
+  it('capped at one year', async () => {
     saveRun('2024-01-01')
     const c = fake([])
     await runIntervalsSync(db, c, { now: NOW })
