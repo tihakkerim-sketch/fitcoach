@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type ElementType } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { FeedbackDialog } from '@/components/adapt/FeedbackDialog'
 import {
   Activity, LayoutDashboard, CalendarDays, Brain,
   TrendingUp, Settings, Moon, Sun, Monitor, BatteryCharging,
@@ -192,6 +193,9 @@ export function Layout() {
           <Outlet />
         </Suspense>
       </main>
+
+      {/* Nach jedem neuen Lauf: „Wie war's?“ (Plan-Anpassung) */}
+      <FeedbackDialog />
 
       {/* Global log modal (triggered by N shortcut) */}
       {quickLogOpen && (

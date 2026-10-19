@@ -6,6 +6,7 @@ import { PlanCard } from '@/components/plans/PlanCard'
 import { EmptyPlanModal } from '@/components/plans/EmptyPlanModal'
 import { ImportPlanModal } from '@/components/plans/ImportPlanModal'
 import { AdaptPlanModal } from '@/components/plans/AdaptPlanModal'
+import { ProposalCards } from '@/components/adapt/ProposalCard'
 import { usePlans } from '@/hooks/usePlans'
 import { useToast } from '@/contexts/ToastContext'
 import { invoke } from '@/lib/ipc'
@@ -64,6 +65,8 @@ export default function PlanView() {
           </Button>
         </div>
       </div>
+
+      <ProposalCards />
 
       {loading && plans.length === 0 && (
         <div className="text-muted-foreground text-sm">Wird geladen …</div>

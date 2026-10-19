@@ -16,6 +16,7 @@ import { TodayPlanCard } from '@/components/dashboard/TodayPlanCard'
 import { PlanWeekStrip } from '@/components/dashboard/PlanWeekStrip'
 import { SessionDialog } from '@/components/plans/SessionDialog'
 import { CoachCard } from '@/components/dashboard/CoachCard'
+import { ProposalCards } from '@/components/adapt/ProposalCard'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type {
@@ -218,6 +219,8 @@ export default function Dashboard() {
           <PlanWeekStrip data={planToday} onOpenSession={x => setOpenSessionId(x.id)} />
         )}
       </div>
+
+      <ProposalCards />
 
       {/* ── Two-column Today section ───────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-6 items-start">
