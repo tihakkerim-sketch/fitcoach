@@ -1,8 +1,9 @@
 /**
  * Coach-Bericht (deutsches Markdown) zum Einfügen in claude.ai. Ohne `electron`-Import.
  */
-import { and, asc, gte, inArray, lte } from 'drizzle-orm'
-import { activities, activitySplits, dailyCheckins } from '../../db/schema'
+import { and, asc, desc, gte, inArray, lte } from 'drizzle-orm'
+import { format } from 'date-fns'
+import { activities, activitySplits, dailyCheckins, planProposals } from '../../db/schema'
 import { addDaysStr, formatPace, isMissed, mondayOf } from '../../src/shared/planCalendar'
 import {
   COACH_CHANGES_FORMAT, FORM_TEXT, activityTrimp, effectiveZones, formatDuration, zoneOf,
@@ -240,6 +241,7 @@ export function buildCoachReport(db: TxDb, today: string, range: { dateFrom: str
       }
       if (a.elevationGainM) parts.push(`${Math.round(a.elevationGainM)} Hm`)
       if (a.perceivedEffort) parts.push(`RPE ${a.perceivedEffort}`)
+      if (a.pain === 1) parts.push('Beschwerden')
       if (a.notes?.trim()) parts.push(`„${oneLine(a.notes)}“`)
       push(`- ${parts.join(' · ')}`)
       const sp = splitsBy.get(a.id)
@@ -251,6 +253,21 @@ export function buildCoachReport(db: TxDb, today: string, range: { dateFrom: str
     }
   }
   push('')
+
+  // ── Automatische Anpassungen ──
+  const proposals = db.select().from(planProposals)
+    .orderBy(desc(planProposals.createdAt), desc(planProposals.id)).limit(5).all()
+  if (proposals.length > 0) {
+    const KIND: Record<string, string> = { run: 'Plan-Vorschlag', pace: 'Tempo-Ziele', not_full: 'Nicht 100 %' }
+    const STATUS: Record<string, string> = { open: 'offen', applied: 'übernommen', rejected: 'abgelehnt', stale: 'veraltet' }
+    push('## Automatische Anpassungen (letzte 5)')
+    for (const p of proposals) {
+      let texts: string[] = []
+      try { texts = (JSON.parse(p.reasons) as { text: string }[]).map(r => r.text) } catch { /* kaputtes JSON */ }
+      push(`- ${short(format(new Date(p.createdAt), 'yyyy-MM-dd'))} ${KIND[p.kind] ?? p.kind} · ${STATUS[p.status] ?? p.status}: ${texts.join(' ') || '–'}`)
+    }
+    push('')
+  }
 
   // ── Kommende 14 Tage ──
   const upTo = addDaysStr(today, 13)

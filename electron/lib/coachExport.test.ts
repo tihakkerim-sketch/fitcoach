@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { activities, activitySplits, dailyCheckins, recoveryLogs, userProfile } from '../../db/schema'
+import { activities, activitySplits, dailyCheckins, planProposals, recoveryLogs, trainingPlans, userProfile } from '../../db/schema'
 import { makeTestDb, type TestDb } from './testDb'
 import { createPlan } from './planWrite'
 import { getPlanDetail } from './planRead'
@@ -26,6 +26,27 @@ describe('buildCoachReport', () => {
 
   it('ohne Befinden keine Zeile', () => {
     expect(buildCoachReport(db, TODAY, RANGE)).not.toContain('Befinden')
+  })
+
+  it('Feedback & Anpassungen: Beschwerden am Lauf und die letzten 5 Vorschläge mit Status', () => {
+    db.insert(activities).values({
+      id: 1, type: 'running', date: '2026-10-13', createdAt: 1, source: 'manual', distanceKm: 8, durationMin: 48,
+      perceivedEffort: 9, pain: 1, notes: 'Wade zwickt',
+    } as never).run()
+    db.insert(trainingPlans).values({ id: 1, name: 'P', startDate: '2026-10-12', isActive: 1, createdAt: 1 }).run()
+    for (let i = 1; i <= 6; i++) {
+      db.insert(planProposals).values({
+        planId: 1, kind: i === 6 ? 'pace' : 'run', status: i === 6 ? 'applied' : 'rejected', createdAt: i * 1000,
+        changes: '[]', reasons: JSON.stringify([{ rule: 'R2', text: `Grund ${i}` }]),
+      }).run()
+    }
+    const md = buildCoachReport(db, TODAY, RANGE)
+    expect(md).toContain('RPE 9 · Beschwerden')
+    expect(md).toContain('„Wade zwickt“')
+    expect(md).toContain('## Automatische Anpassungen (letzte 5)')
+    expect(md).toContain('Tempo-Ziele · übernommen: Grund 6')
+    expect(md).toContain('Plan-Vorschlag · abgelehnt: Grund 2')
+    expect(md).not.toContain('Grund 1')
   })
 
   it('leere DB: alle Abschnitte ohne Absturz', () => {
