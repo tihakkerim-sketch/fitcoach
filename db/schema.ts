@@ -58,6 +58,10 @@ export const activities = sqliteTable('activities', {
 
   // Phase 5
   shoeId: integer('shoe_id').references(() => shoes.id, { onDelete: 'set null' }),
+
+  // Plan-Anpassung (v6)
+  pain: integer('pain'), // 0/1, NULL = nicht gefragt
+  feedbackAt: integer('feedback_at'), // gesetzt bei Speichern UND Überspringen
 })
 
 export const activitySplits = sqliteTable('activity_splits', {
@@ -148,6 +152,7 @@ export const userProfile = sqliteTable('user_profile', {
   weeklyGoalKm: real('weekly_goal_km'),
   weeklyGoalSessions: integer('weekly_goal_sessions'),
   dayStartHour: integer('day_start_hour').notNull().default(4), // Tageswechsel (0–12 Uhr)
+  current10kSec: integer('current_10k_sec'), // Leistung: was heute über 10 km möglich wäre
 })
 
 export const hrZones = sqliteTable('hr_zones', {
@@ -187,4 +192,18 @@ export const recoveryLogs = sqliteTable('recovery_logs', {
   source:         text('source').notNull().default('manual'),  // manual | garmin_import | intervals_icu
   createdAt:      integer('created_at').notNull(),
   updatedAt:      integer('updated_at').notNull(),
+})
+
+// ── Plan-Vorschläge (Auto-Anpassung, v6) ─────────────────────────────────────
+export const planProposals = sqliteTable('plan_proposals', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  planId: integer('plan_id').notNull().references(() => trainingPlans.id, { onDelete: 'cascade' }),
+  activityId: integer('activity_id').references(() => activities.id, { onDelete: 'set null' }),
+  kind: text('kind').notNull(), // run | pace | not_full
+  meta: text('meta').notNull().default('{}'), // JSON
+  changes: text('changes').notNull(), // JSON CoachChange[]
+  reasons: text('reasons').notNull(), // JSON Reason[]
+  status: text('status').notNull().default('open'), // open | applied | rejected | stale
+  createdAt: integer('created_at').notNull(),
+  resolvedAt: integer('resolved_at'),
 })

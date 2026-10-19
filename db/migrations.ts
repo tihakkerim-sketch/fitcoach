@@ -533,12 +533,35 @@ function v5ShoesFeeling({ db }: MigrationCtx): void {
   `)
 }
 
+/** v6: Feedback nach dem Lauf, Leistungszahl, Plan-Vorschläge (Auto-Anpassung). */
+function v6PlanAdapt({ db }: MigrationCtx): void {
+  db.exec(`
+    ALTER TABLE activities ADD COLUMN pain integer;
+    ALTER TABLE activities ADD COLUMN feedback_at integer;
+    ALTER TABLE user_profile ADD COLUMN current_10k_sec integer;
+    CREATE TABLE plan_proposals (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      plan_id integer NOT NULL REFERENCES training_plans(id) ON DELETE CASCADE,
+      activity_id integer REFERENCES activities(id) ON DELETE SET NULL,
+      kind text NOT NULL,
+      meta text NOT NULL DEFAULT '{}',
+      changes text NOT NULL,
+      reasons text NOT NULL,
+      status text NOT NULL DEFAULT 'open',
+      created_at integer NOT NULL,
+      resolved_at integer
+    );
+    CREATE INDEX plan_proposals_status_idx ON plan_proposals(status, kind);
+  `)
+}
+
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: 'baseline', up: v1Baseline },
   { version: 2, name: 'phase-1-cleanup', up: v2Cleanup },
   { version: 3, name: 'plan-v2', up: v3PlanV2 },
   { version: 4, name: 'garmin-details', up: v4GarminDetails },
   { version: 5, name: 'shoes-feeling', up: v5ShoesFeeling },
+  { version: 6, name: 'plan-adapt', up: v6PlanAdapt },
 ]
 
 // ── Runner ───────────────────────────────────────────────────────────────────

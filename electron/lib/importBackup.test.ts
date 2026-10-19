@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   activities, activitySplits, activityStreams, appSettings, userProfile, hrZones, trainingPlans, planWeeks, planSessions,
-  dailyCheckins, recoveryLogs, shoes,
+  dailyCheckins, recoveryLogs, shoes, planProposals,
 } from '../../db/schema'
 import { importBackup, type Db } from './importBackup'
 import { exportBackup, BACKUP_VERSION } from './backupFormat'
@@ -115,6 +115,7 @@ describe('importBackup', () => {
     }).run()
     d.insert(dailyCheckins).values({ id: 10, date: '2026-07-07', createdAt: 1, updatedAt: 2 }).run()
     d.insert(recoveryLogs).values({ id: 11, date: '2026-07-07', hrvRmssd: 55.5, feeling: 4, createdAt: 1, updatedAt: 2 }).run()
+    d.insert(planProposals).values({ id: 12, planId: 3, activityId: 7, kind: 'run', meta: '{}', changes: '[]', reasons: '[]', createdAt: 3 }).run()
   }
 
   function dump(d: Db) {
@@ -130,6 +131,7 @@ describe('importBackup', () => {
       planSessions: d.select().from(planSessions).all(),
       dailyCheckins: d.select().from(dailyCheckins).all(),
       recoveryLogs: d.select().from(recoveryLogs).all(),
+      planProposals: d.select().from(planProposals).all(),
     }
   }
 
@@ -179,11 +181,11 @@ describe('importBackup', () => {
     expect(db.select().from(planSessions).all()).toHaveLength(0)
   })
 
-  it('v7-Rundlauf behält Startdatum und Zeilenzahlen', async () => {
+  it('v8-Rundlauf behält Startdatum und Zeilenzahlen', async () => {
     const src = await makeDb()
     seedEverything(src)
     const file = JSON.parse(JSON.stringify(exportBackup(src))) as Record<string, unknown>
-    expect(file.version).toBe(7)
+    expect(file.version).toBe(8)
     expect(file.planPhases).toBeUndefined()
     const result = importBackup(db, file)
     expect(result.success).toBe(true)
@@ -195,12 +197,25 @@ describe('importBackup', () => {
     expect(db.select().from(activities).all()[0].shoeId).toBe(2)
     expect(db.select().from(recoveryLogs).all()[0].feeling).toBe(4)
     expect(db.select().from(userProfile).all()[0].dayStartHour).toBe(4)
+    expect(db.select().from(planProposals).all()).toMatchObject([{ id: 12, kind: 'run', status: 'open' }])
+  })
+
+  it('v7-Datei ohne planProposals und neue Spalten ist importierbar', async () => {
+    const file = await v4File()
+    file.version = 7
+    delete file.planProposals
+    for (const a of file.activities as Record<string, unknown>[]) { delete a.pain; delete a.feedbackAt }
+    for (const u of file.userProfile as Record<string, unknown>[]) delete u.current10kSec
+    expect(importBackup(db, file).success).toBe(true)
+    expect(db.select().from(planProposals).all()).toHaveLength(0)
+    expect(db.select().from(activities).all()[0].pain).toBeNull()
   })
 
   it('v6-Datei ohne shoes und neue Spalten ist importierbar (Schuhe werden geleert, Standardwerte greifen)', async () => {
     const file = await v4File()
     file.version = 6
     delete file.shoes
+    delete file.planProposals
     for (const a of file.activities as Record<string, unknown>[]) delete a.shoeId
     for (const r of file.recoveryLogs as Record<string, unknown>[]) delete r.feeling
     for (const u of file.userProfile as Record<string, unknown>[]) delete u.dayStartHour
@@ -229,20 +244,20 @@ describe('importBackup', () => {
     expect(dump(db)).toEqual(before)
   })
 
-  it('unbekannte Version 8 wird abgelehnt', async () => {
+  it('unbekannte Version 9 wird abgelehnt', async () => {
     const file = await v4File()
-    file.version = 8
+    file.version = 9
     const before = dump(db)
     expect(importBackup(db, file).success).toBe(false)
     expect(dump(db)).toEqual(before)
   })
 
-  it('exports version 7 containing every table', async () => {
+  it('exports version 8 containing every table', async () => {
     const src = await makeDb()
     seedEverything(src)
     const exported = exportBackup(src)
-    expect(exported.version).toBe(7)
-    expect(BACKUP_VERSION).toBe(7)
+    expect(exported.version).toBe(8)
+    expect(BACKUP_VERSION).toBe(8)
     for (const [key, rows] of Object.entries(dump(src))) {
       expect(rows.length, 'seed ' + key).toBeGreaterThan(0)
       expect(Array.isArray(exported[key]), key).toBe(true)

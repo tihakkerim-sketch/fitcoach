@@ -18,10 +18,10 @@ import type { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import type { TxDb } from './transaction'
 import {
   shoes, activities, activitySplits, activityStreams, trainingPlans, planWeeks, planSessions,
-  userProfile, hrZones, dailyCheckins, recoveryLogs,
+  userProfile, hrZones, dailyCheckins, recoveryLogs, planProposals,
 } from '../../db/schema'
 
-export const BACKUP_VERSION = 7
+export const BACKUP_VERSION = 8
 
 export interface BackupTable {
   key: string
@@ -46,9 +46,10 @@ export const BACKUP_TABLES: readonly BackupTable[] = [
   { key: 'planSessions',    table: planSessions,    legacy: true  },
   { key: 'dailyCheckins',   table: dailyCheckins,   legacy: false },
   { key: 'recoveryLogs',    table: recoveryLogs,    legacy: false },
+  { key: 'planProposals',   table: planProposals,   legacy: false, since: 8 },
 ]
 
-/** Build the full v7 backup object (all tables) from the database. */
+/** Build the full v8 backup object (all tables) from the database. */
 export function exportBackup(db: TxDb): Record<string, unknown> {
   const out: Record<string, unknown> = {
     exportedAt: new Date().toISOString(),

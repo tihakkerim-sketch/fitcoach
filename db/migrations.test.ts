@@ -367,7 +367,7 @@ describe('migrations', () => {
       runMigrations(db, backupDir, { now, migrations: MIGRATIONS.filter(m => m.version <= 4) })
       db.exec(`INSERT INTO activities (id, type, date, created_at, source) VALUES (1, 'running', '2026-09-01', 1, 'manual');
         INSERT INTO user_profile (id, name) VALUES (1, 'A');`)
-      const res = runMigrations(db, backupDir, { now })
+      const res = runMigrations(db, backupDir, { now, migrations: MIGRATIONS.filter(m => m.version <= 5) })
       expect(res).toMatchObject({ from: 4, to: 5 })
       expect(tableNames(db)).toContain('shoes')
       expect(columnNames(db, 'activities')).toContain('shoe_id')
@@ -399,6 +399,24 @@ describe('migrations', () => {
         { date: '2026-09-03', feeling: 2, source: 'manual', hrv: null, c: 20, u: 21 },
       ])
       expect(count(db, 'daily_checkins')).toBe(3)
+    })
+  })
+
+  describe('v6 plan-adapt', () => {
+    it('v6 adds pain, feedback_at, current_10k_sec and plan_proposals', () => {
+      runMigrations(db, backupDir, { now, migrations: MIGRATIONS.filter(m => m.version <= 5) })
+      db.exec(`INSERT INTO activities (id, type, date, created_at, source) VALUES (1, 'running', '2026-09-01', 1, 'manual');
+        INSERT INTO training_plans (id, name, start_date, is_active, created_at) VALUES (3, 'P', '2026-08-31', 1, 1);`)
+      const res = runMigrations(db, backupDir, { now })
+      expect(res).toMatchObject({ from: 5, to: 6 })
+      expect(columnNames(db, 'activities')).toEqual(expect.arrayContaining(['pain', 'feedback_at']))
+      expect(columnNames(db, 'user_profile')).toContain('current_10k_sec')
+      db.exec(`INSERT INTO plan_proposals (plan_id, activity_id, kind, changes, reasons, created_at) VALUES (3, 1, 'run', '[]', '[]', 5)`)
+      expect((db.prepare('SELECT status, meta FROM plan_proposals').get() as { status: string; meta: string })).toEqual({ status: 'open', meta: '{}' })
+      db.exec('DELETE FROM activities WHERE id = 1')
+      expect((db.prepare('SELECT activity_id AS a FROM plan_proposals').get() as { a: number | null }).a).toBeNull()
+      db.exec('DELETE FROM training_plans WHERE id = 3')
+      expect(count(db, 'plan_proposals')).toBe(0)
     })
   })
 
