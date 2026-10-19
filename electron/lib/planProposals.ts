@@ -122,7 +122,8 @@ export function saveFeedback(db: TxDb, p: FeedbackInput, today: string, now: num
   const current = loadProfile(db)?.current10kSec ?? null
   const check = paceCheck(input.recent, current, lastPaceChangeDate(db), today)
   if ((check.state === 'faster' || check.state === 'slower') && current && check.new10kSec) {
-    const pace = storeProposal(db, planId, 'pace', scalePaces(input.sessions, today, check.new10kSec / current), now,
+    const all = getActivePlanDetail(db)!.weeks.flatMap(w => w.sessions).map(toAdaptSession) // ganzer restlicher Plan
+    const pace = storeProposal(db, planId, 'pace', scalePaces(all, today, check.new10kSec / current), now,
       { activityId: p.activityId, meta: { old10kSec: current, new10kSec: check.new10kSec } })
     if (pace) created.push(pace)
   }

@@ -90,6 +90,27 @@ describe('saveFeedback', () => {
     expect(st[51]).toBe('open')
     expect(listOpenProposals(db).map(p => p.kind).sort()).toEqual(['pace', 'run'])
   })
+  it('pace proposal after 2 fast easy-feeling tempo runs scales the whole remaining plan', () => {
+    db.update(userProfile).set({ current10kSec: 3000 }).run()
+    db.delete(trainingPlans).run() // frischer Plan ab 12.10. (Woche 0), heute = Woche 1
+    db.insert(trainingPlans).values({ id: 2, name: 'P2', startDate: '2026-10-12', isActive: 1, createdAt: 1 }).run()
+    db.insert(planWeeks).values([0, 1, 2, 3].map(i => ({ id: 10 + i, planId: 2, weekIndex: i }))).run()
+    db.insert(planSessions).values({ id: 1, weekId: 11, dayOfWeek: 1, type: 'running', targetDistanceKm: 8, targetHrZone: 2 }).run()
+    db.insert(planSessions).values({ id: 2, weekId: 11, dayOfWeek: 3, type: 'running', targetHrZone: 4, targetPaceFastSec: 300, targetPaceSlowSec: 310 }).run()
+    db.insert(planSessions).values([
+      { id: 20, weekId: 10, dayOfWeek: 2, type: 'running', targetHrZone: 4, targetPaceFastSec: 300, targetPaceSlowSec: 310 },
+      { id: 21, weekId: 10, dayOfWeek: 4, type: 'running', targetHrZone: 4, targetPaceFastSec: 300, targetPaceSlowSec: 310 },
+      { id: 30, weekId: 13, dayOfWeek: 3, type: 'running', targetHrZone: 4, targetPaceFastSec: 300, targetPaceSlowSec: 310 }, // 4.11. – nach heute+13
+    ]).run()
+    linkRun(db, 40, 20, '2026-10-13', { distanceKm: 10, movingTimeMin: 48 }) // 288 s/km, q 0.96
+    linkRun(db, 41, 21, '2026-10-15', { distanceKm: 10, movingTimeMin: 48 })
+    db.update(activities).set({ perceivedEffort: 5, feedbackAt: 1 }).where(eq(activities.id, 40)).run()
+    linkRun(db, 10, 1, TODAY)
+    const created = saveFeedback(db, { activityId: 41, effort: 5, pain: false, notes: null, skipped: false }, TODAY, NOW)
+    const pace = created.find(p => p.kind === 'pace')!
+    expect(pace.meta).toEqual({ old10kSec: 3000, new10kSec: 2940 })
+    expect(pace.changes.map(c => (c.action === 'update' ? c.sessionId : 0)).sort((x, y) => x - y)).toEqual([2, 30])
+  })
 })
 
 describe('applyProposal / rejectProposal', () => {
