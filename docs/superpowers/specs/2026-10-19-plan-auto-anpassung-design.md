@@ -20,7 +20,7 @@ passend angepassten Plan zu haben. Keine Kosten, offline.
 | Eingabe nach dem Lauf | Anstrengung 1–10 + Notiz (+ Haken „Beschwerden“) |
 | Reichweite | Nur die nächsten 7 Tage (ab heute), Plan-Gerüst bleibt |
 
-Annahmen (im Chat bestätigt): Haken „Beschwerden“ zusätzlich; höchstens EIN offener Vorschlag
+Annahmen (im Chat bestätigt): Haken „Beschwerden“ zusätzlich; höchstens EIN offener Vorschlag je Art (Lauf / Tempo / Nicht 100 %)
 (neuer ersetzt alten); ohne Feedback entsteht der Vorschlag nur aus Messdaten.
 
 **Ergänzt nach Runna-Analyse (2026-10-19):** eine Leistungszahl steuert alle Tempo-Ziele (4a) und
