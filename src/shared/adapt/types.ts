@@ -37,7 +37,7 @@ export interface RunFeedback {
 export interface AdaptInput {
   today: string
   planEnd: string // letzter Tag des Plans
-  /** Alle Einheiten von heute−1 bis heute+13 (Nachbartage für die Leitplanken). */
+  /** Alle Einheiten von heute−7 bis heute+13 (Ausgelassenes für R6, Nachbartage für die Leitplanken). */
   sessions: AdaptSession[]
   /** Zugeordnete Läufe der letzten 28 Tage, ältester zuerst. */
   recent: RunFeedback[]
