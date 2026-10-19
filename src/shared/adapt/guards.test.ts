@@ -61,6 +61,11 @@ describe('applyGuards', () => {
     expect(applyGuards(i, { changes: [ch], reasons: [] }, OPTS).changes).toEqual([ch])
   })
 
+  it('drops move onto a day that already has a session', () => {
+    const i = input([s(1, '2026-10-20', { targetHrZone: 4 }), s(2, '2026-10-21')])
+    expect(applyGuards(i, { changes: [{ action: 'move', sessionId: 1, date: '2026-10-21' }], reasons: [] }, OPTS).changes).toEqual([])
+  })
+
   it('keeps move to a day without hard neighbours', () => {
     const i = input([s(1, '2026-10-20', { targetHrZone: 4 }), s(2, '2026-10-23', { targetHrZone: 4 })])
     const ch = { action: 'move' as const, sessionId: 1, date: '2026-10-21' }

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { activities, planProposals, planSessions, planWeeks, trainingPlans, userProfile } from '../../db/schema'
 import { makeTestDb, type TestDb } from './testDb'
 import {
@@ -179,5 +179,72 @@ describe('createNotFullProposal', () => {
     expect(p.kind).toBe('not_full')
     expect(p.changes[0]).toMatchObject({ action: 'update', sessionId: 1, set: { type: 'rest' } })
     expect(p.meta).toEqual({ reason: 'sick', days: 2 })
+  })
+})
+
+describe('review fixes', () => {
+  const feedback = (over: Record<string, unknown> = {}) =>
+    ({ activityId: 10, effort: 9, pain: false, notes: null, skipped: false, ...over })
+
+  it('#1 keeps existing notes when the dialog note is empty; pending feedback carries effort/notes', () => {
+    linkRun(db, 10, 1, TODAY, { notes: 'Wade zwickt', perceivedEffort: 6 })
+    expect(listPendingFeedback(db, TODAY)[0]).toMatchObject({ effort: 6, notes: 'Wade zwickt' })
+    saveFeedback(db, feedback({ effort: 7 }), TODAY, NOW)
+    expect(db.select().from(activities).get()).toMatchObject({ notes: 'Wade zwickt', perceivedEffort: 7 })
+  })
+
+  it('#2 session edited after the proposal → stale, edit kept', () => {
+    linkRun(db, 10, 1, TODAY)
+    const [p] = saveFeedback(db, feedback(), TODAY, NOW)
+    db.update(planSessions).set({ targetDistanceKm: 12 }).where(eq(planSessions.id, 2)).run()
+    expect(applyProposal(db, p.id, TODAY, NOW)).toEqual({ status: 'stale' })
+    expect(session(2).targetDistanceKm).toBe(12)
+  })
+
+  it('#4 a rejected pace proposal is not proposed again for the same runs', () => {
+    db.update(userProfile).set({ current10kSec: 3000 }).run()
+    db.update(planSessions).set({ targetHrZone: 4, targetPaceFastSec: 300 }).where(eq(planSessions.id, 1)).run()
+    db.insert(planWeeks).values({ id: 9, planId: 1, weekIndex: -1 } as never).run()
+    db.insert(planSessions).values({ id: 7, weekId: 9, dayOfWeek: 6, type: 'running', targetHrZone: 4, targetPaceFastSec: 300 }).run()
+    linkRun(db, 11, 7, '2026-10-17', { distanceKm: 10, movingTimeMin: 48, perceivedEffort: 5, feedbackAt: 1 })
+    linkRun(db, 10, 1, TODAY, { distanceKm: 10, movingTimeMin: 48 })
+    const first = saveFeedback(db, feedback({ effort: 5 }), TODAY, NOW).find(p => p.kind === 'pace')!
+    rejectProposal(db, first.id, NOW)
+    db.update(activities).set({ feedbackAt: null }).where(eq(activities.id, 10)).run()
+    expect(saveFeedback(db, feedback({ effort: 5 }), TODAY, NOW + 1).some(p => p.kind === 'pace')).toBe(false)
+  })
+
+  it('#5 setPerformance marks an open pace proposal stale', () => {
+    db.update(userProfile).set({ current10kSec: 3000 }).run()
+    db.insert(planProposals).values({ id: 60, planId: 1, kind: 'pace', meta: JSON.stringify({ old10kSec: 3000, new10kSec: 2940 }), changes: '[]', reasons: '[]', createdAt: 1 }).run()
+    setPerformance(db, { distanceKm: 10, timeSec: 2900 }, TODAY, NOW)
+    expect(db.select().from(planProposals).where(eq(planProposals.id, 60)).get()!.status).toBe('stale')
+  })
+
+  it('#6 pace proposal still applies after one of its sessions was completed (rebuilt on apply)', () => {
+    db.update(userProfile).set({ current10kSec: 3000 }).run()
+    db.insert(planProposals).values({
+      id: 60, planId: 1, kind: 'pace', meta: JSON.stringify({ old10kSec: 3000, new10kSec: 2940 }),
+      changes: JSON.stringify([{ action: 'update', sessionId: 2, set: { targetPaceFastSec: 294, targetPaceSlowSec: 304 } }]),
+      reasons: '[]', createdAt: 1,
+    }).run()
+    db.update(planSessions).set({ targetPaceFastSec: 330, targetPaceSlowSec: 340 }).where(eq(planSessions.id, 3)).run()
+    db.update(planSessions).set({ status: 'completed' }).where(eq(planSessions.id, 2)).run()
+    expect(applyProposal(db, 60, TODAY, NOW)).toEqual({ status: 'applied' })
+    expect(session(3).targetPaceFastSec).toBe(Math.round(330 * 2940 / 3000))
+    expect(session(2).targetPaceFastSec).toBe(300)
+  })
+
+  it('#7 saveFeedback is atomic: failure while storing the proposal rolls back the feedback', () => {
+    linkRun(db, 10, 1, TODAY)
+    db.run(sql`DROP TABLE plan_proposals`)
+    expect(() => saveFeedback(db, feedback(), TODAY, NOW)).toThrow()
+    expect(db.select().from(activities).get()!.feedbackAt).toBeNull()
+  })
+
+  it('#9 open proposals of an inactive plan are not listed', () => {
+    db.insert(planProposals).values({ id: 70, planId: 1, kind: 'run', changes: '[]', reasons: '[]', createdAt: 1 }).run()
+    db.update(trainingPlans).set({ isActive: 0 }).run()
+    expect(listOpenProposals(db)).toEqual([])
   })
 })

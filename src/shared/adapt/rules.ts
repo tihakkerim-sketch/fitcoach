@@ -13,12 +13,12 @@ import type { AdaptInput, AdaptResult, AdaptSession, CoachChange, Reason, RunFee
 const day = (date: string) => format(new Date(`${date}T12:00:00`), 'EEEEEE', { locale: de })
 const label = (s: AdaptSession) => s.title || (isHard(s) ? 'harte Einheit' : 'Lauf')
 
-/** Darf `s` auf `date` liegen, ohne neben/auf einem harten Tag zu landen? */
+/** Darf `s` auf `date` liegen: Tag frei und kein harter Nachbartag? */
 function canMoveTo(input: AdaptInput, s: AdaptSession, date: string): boolean {
   if (date > input.planEnd) return false
-  const near = [addDaysStr(date, -1), date, addDaysStr(date, 1)]
+  const near = [addDaysStr(date, -1), addDaysStr(date, 1)]
   return !input.sessions.some(o => o.id !== s.id && o.status !== 'skipped' && o.type !== 'rest'
-    && near.includes(o.date) && isHard(o))
+    && (o.date === date || (near.includes(o.date) && isHard(o))))
 }
 
 /** Lockerer Lauf deutlich zu hart (Anstrengung oder Puls über der Zielzone)? */
@@ -47,9 +47,10 @@ export function adaptAfterRun(input: AdaptInput, run: RunFeedback): AdaptResult 
     touched.add(s.id)
   }
 
-  // R1 – Beschwerden
+  // R1 – Beschwerden (auch von einem Lauf gestern, falls dessen Vorschlag inzwischen ersetzt wurde)
   let r1 = false
-  if (run.pain) {
+  const yesterday = addDaysStr(today, -1)
+  if (run.pain || input.recent.some(f => f.pain && f.date >= yesterday)) {
     for (const s of window.filter(x => isHard(x) && x.date <= tomorrow)) {
       r1 = true
       if (s.date === tomorrow) {

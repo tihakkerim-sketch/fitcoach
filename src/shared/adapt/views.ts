@@ -18,6 +18,9 @@ export interface PendingFeedback {
   date: string
   sessionTitle: string | null
   distanceKm: number | null
+  /** schon gespeicherte Werte (z. B. aus dem Eintrage-Dialog) als Startwerte */
+  effort: number | null
+  notes: string | null
 }
 
 export type PaceStatusView = PaceCheck & { suggested10kSec: number | null; history: { at: number; sec: number }[] }

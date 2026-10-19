@@ -93,6 +93,18 @@ describe('adaptAfterRun', () => {
     expect(r.changes.map(c => c.action === 'update' && c.sessionId)).toEqual([2])
   })
 
+  it('R1 also fires for pain on a run yesterday when the current run had none', () => {
+    const recent = [run({ activityId: 7, date: '2026-10-18', pain: true }), run({ effort: 9 })]
+    const r = adaptAfterRun(input([hard(2, '2026-10-20')], { recent }), run({ effort: 9 }))
+    expect(r.changes[0]).toMatchObject({ sessionId: 2, set: { type: 'rest' } })
+    expect(r.reasons[0].rule).toBe('R1')
+  })
+
+  it('R2 does not move onto a day that already has a session – shortens instead', () => {
+    const r = adaptAfterRun(input([hard(3, '2026-10-20', { targetDistanceKm: 10 }), s(4, '2026-10-21')]), run({ effort: 8 }))
+    expect(r.changes).toEqual([{ action: 'update', sessionId: 3, set: { targetDistanceKm: 9 } }])
+  })
+
   it('R6 skipped session last week only adds a reason', () => {
     const r = adaptAfterRun(input([s(9, '2026-10-16', { status: 'skipped' })]), run())
     expect(r.changes).toEqual([])

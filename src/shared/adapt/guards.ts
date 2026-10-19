@@ -44,6 +44,8 @@ function simulate(sessions: AdaptSession[], c: CoachChange, today: string, planE
   if (c.action === 'remove') return sessions.filter(s => s.id !== c.sessionId)
   if (c.action === 'move') {
     if (c.date < today || c.date > planEnd) return null
+    // nie zwei Einheiten an einem Tag
+    if (sessions.some(o => o.id !== c.sessionId && o.date === c.date && o.type !== 'rest' && o.status !== 'skipped')) return null
     return sessions.map(s => (s.id === c.sessionId ? { ...s, date: c.date } : s))
   }
   return sessions.map(s => (s.id === c.sessionId ? applyUpdate(s, c.set) : s))

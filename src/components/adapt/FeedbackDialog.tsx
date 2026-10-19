@@ -28,6 +28,13 @@ export function FeedbackDialog() {
 
   const current = pending[0] ?? null
 
+  // schon gespeicherte Anstrengung/Notiz als Startwerte (nichts geht verloren)
+  useEffect(() => {
+    setEffort(current?.effort ?? null)
+    setNotes(current?.notes ?? '')
+    setPain(false)
+  }, [current?.activityId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const submit = async (skipped: boolean) => {
     if (!current || busy) return
     setBusy(true)

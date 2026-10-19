@@ -8,7 +8,7 @@ import { format } from 'date-fns'
 import { activities, planProposals, userProfile } from '../../db/schema'
 import {
   adaptAfterRun, notFullProposal, paceCheck, scalePaces, to10kSec,
-  type AdaptResult, type CoachChange, type NotFullReason, type PaceStatusView, type PendingFeedback,
+  type AdaptResult, type AdaptSession, type CoachChange, type NotFullReason, type PaceStatusView, type PendingFeedback,
   type ProposalKind, type ProposalView, type Reason,
 } from '../../src/shared/adapt'
 
@@ -18,6 +18,7 @@ import { addDaysStr } from '../../src/shared/planCalendar'
 import { loadAdaptInput, toAdaptSession } from './adaptData'
 import { applyCoachChanges } from './coachChanges'
 import { getActivePlanDetail, loadProfile, toCoachActivity } from './coachData'
+import { getPlanDetail } from './planRead'
 import { runInTransaction, type TxDb } from './transaction'
 
 export interface FeedbackInput {
@@ -31,29 +32,52 @@ export interface FeedbackInput {
 
 type ProposalRow = typeof planProposals.$inferSelect
 
+/** Zustand der betroffenen Einheiten beim Erstellen; weicht er beim Übernehmen ab → `stale`. */
+const SNAPSHOT = '_snapshot'
+
+/** Vorschlag passt nicht mehr zum Plan. */
+class StaleProposal extends Error {}
+
 const parse = <T>(text: string, fallback: T): T => {
   try { return JSON.parse(text) as T } catch { return fallback }
 }
 
 function toView(r: ProposalRow): ProposalView {
+  const { [SNAPSHOT]: _snap, ...meta } = parse<Record<string, unknown>>(r.meta, {})
+  void _snap
   return {
     id: r.id, kind: r.kind as ProposalKind, createdAt: r.createdAt,
-    changes: parse<CoachChange[]>(r.changes, []), reasons: parse<Reason[]>(r.reasons, []),
-    meta: parse<Record<string, unknown>>(r.meta, {}),
+    changes: parse<CoachChange[]>(r.changes, []), reasons: parse<Reason[]>(r.reasons, []), meta,
   }
+}
+
+function sessionsOfPlan(db: TxDb, planId: number): AdaptSession[] | null {
+  const plan = getPlanDetail(db, planId)
+  return plan ? plan.weeks.flatMap(w => w.sessions).map(toAdaptSession) : null
+}
+
+function snapshotOf(changes: CoachChange[], sessions: AdaptSession[]): Record<string, AdaptSession> {
+  const snap: Record<string, AdaptSession> = {}
+  for (const c of changes) {
+    if (c.action === 'add') continue
+    const s = sessions.find(x => x.id === c.sessionId)
+    if (s) snap[String(s.id)] = s
+  }
+  return snap
 }
 
 /** Neuen offenen Vorschlag speichern; vorhandene offene derselben Art werden `stale`. */
 function storeProposal(
   db: TxDb, planId: number, kind: ProposalKind, r: AdaptResult, now: number,
-  extra: { activityId?: number | null; meta?: Record<string, unknown> } = {},
+  extra: { activityId?: number | null; meta?: Record<string, unknown>; sessions?: AdaptSession[] } = {},
 ): ProposalView | null {
   if (r.changes.length === 0) return null
+  const meta = extra.sessions ? { ...extra.meta, [SNAPSHOT]: snapshotOf(r.changes, extra.sessions) } : extra.meta
   return runInTransaction(db, () => {
     db.update(planProposals).set({ status: 'stale', resolvedAt: now })
       .where(and(eq(planProposals.status, 'open'), eq(planProposals.kind, kind))).run()
     const row = db.insert(planProposals).values({
-      planId, activityId: extra.activityId ?? null, kind, meta: JSON.stringify(extra.meta ?? {}),
+      planId, activityId: extra.activityId ?? null, kind, meta: JSON.stringify(meta ?? {}),
       changes: JSON.stringify(r.changes), reasons: JSON.stringify(r.reasons), createdAt: now,
     }).returning().get()
     return toView(row)
@@ -74,24 +98,31 @@ export function listPendingFeedback(db: TxDb, today: string): PendingFeedback[] 
   return rows
     .sort((a, b) => a.date.localeCompare(b.date) || (a.startTime ?? '').localeCompare(b.startTime ?? '') || a.id - b.id)
     .map(a => ({
-      activityId: a.id, date: a.date, distanceKm: a.distanceKm,
+      activityId: a.id, date: a.date, distanceKm: a.distanceKm, effort: a.perceivedEffort, notes: a.notes,
       sessionTitle: sessions.find(s => s.linkedActivityId === a.id)?.title ?? null,
     }))
 }
 
-/** Datum der letzten übernommenen Leistungs-Änderung (für den Leistungs-Check). */
+/** Datum der letzten übernommenen ODER abgelehnten Leistungs-Änderung (Startpunkt des Leistungs-Checks). */
 function lastPaceChangeDate(db: TxDb): string | null {
   const row = db.select({ at: planProposals.resolvedAt }).from(planProposals)
-    .where(and(eq(planProposals.kind, 'pace'), eq(planProposals.status, 'applied')))
+    .where(and(eq(planProposals.kind, 'pace'), inArray(planProposals.status, ['applied', 'rejected'])))
     .orderBy(desc(planProposals.resolvedAt)).get()
   return row?.at ? format(new Date(row.at), 'yyyy-MM-dd') : null
 }
 
 export function saveFeedback(db: TxDb, p: FeedbackInput, today: string, now: number): ProposalView[] {
-  db.update(activities).set(p.skipped
-    ? { feedbackAt: now }
-    : { feedbackAt: now, perceivedEffort: p.effort, pain: p.pain ? 1 : 0, notes: p.notes })
-    .where(eq(activities.id, p.activityId)).run()
+  return runInTransaction(db, () => saveFeedbackTx(db, p, today, now))
+}
+
+function saveFeedbackTx(db: TxDb, p: FeedbackInput, today: string, now: number): ProposalView[] {
+  const set: Partial<typeof activities.$inferInsert> = { feedbackAt: now }
+  if (!p.skipped) {
+    if (p.effort != null) set.perceivedEffort = p.effort
+    set.pain = p.pain ? 1 : 0
+    if (p.notes?.trim()) set.notes = p.notes.trim() // leere Notiz überschreibt nie eine vorhandene
+  }
+  db.update(activities).set(set).where(eq(activities.id, p.activityId)).run()
 
   const loaded = loadAdaptInput(db, today)
   if (!loaded) return []
@@ -100,7 +131,8 @@ export function saveFeedback(db: TxDb, p: FeedbackInput, today: string, now: num
   if (!run) return []
 
   const created: ProposalView[] = []
-  const runProposal = storeProposal(db, planId, 'run', adaptAfterRun(input, run), now, { activityId: p.activityId })
+  const runProposal = storeProposal(db, planId, 'run', adaptAfterRun(input, run), now,
+    { activityId: p.activityId, sessions: input.sessions })
   if (runProposal) created.push(runProposal)
 
   const current = loadProfile(db)?.current10kSec ?? null
@@ -120,11 +152,14 @@ export function createNotFullProposal(
   const loaded = loadAdaptInput(db, today)
   if (!loaded) return null
   return storeProposal(db, loaded.planId, 'not_full', notFullProposal(loaded.input, p.reason, p.days), now,
-    { meta: { reason: p.reason, days: p.days } })
+    { meta: { reason: p.reason, days: p.days }, sessions: loaded.input.sessions })
 }
 
+/** Offene Vorschläge des aktiven Plans. */
 export function listOpenProposals(db: TxDb): ProposalView[] {
-  return db.select().from(planProposals).where(eq(planProposals.status, 'open'))
+  const plan = getActivePlanDetail(db)
+  if (!plan) return []
+  return db.select().from(planProposals).where(and(eq(planProposals.status, 'open'), eq(planProposals.planId, plan.id)))
     .orderBy(desc(planProposals.createdAt), desc(planProposals.id)).all().map(toView)
 }
 
@@ -137,11 +172,26 @@ export function applyProposal(db: TxDb, id: number, today: string, now: number):
   const row = db.select().from(planProposals).where(eq(planProposals.id, id)).get()
   if (!row || row.status !== 'open') throw new Error('Dieser Vorschlag ist nicht mehr offen.')
   const p = toView(row)
+  const snapshot = parse<Record<string, unknown>>(row.meta, {})[SNAPSHOT] as Record<string, AdaptSession> | undefined
   try {
     runInTransaction(db, () => {
-      applyCoachChanges(db, { planId: row.planId, changes: p.changes }, today)
-      const next = p.meta.new10kSec
-      if (p.kind === 'pace' && typeof next === 'number') setCurrent10k(db, next)
+      const sessions = sessionsOfPlan(db, row.planId)
+      if (!sessions) throw new StaleProposal()
+      let changes = p.changes
+      if (p.kind === 'pace') {
+        // Tempo-Ziele beim Übernehmen neu berechnen (nur noch änderbare Einheiten), solange die Leistung gleich ist
+        const current = loadProfile(db)?.current10kSec ?? null
+        const next = p.meta.new10kSec
+        if (typeof next !== 'number' || current == null || current !== p.meta.old10kSec) throw new StaleProposal()
+        changes = scalePaces(sessions, today, next / current).changes
+        setCurrent10k(db, next)
+      } else if (snapshot) {
+        for (const [sid, before] of Object.entries(snapshot)) {
+          const cur = sessions.find(s => s.id === Number(sid))
+          if (!cur || JSON.stringify(cur) !== JSON.stringify(before)) throw new StaleProposal()
+        }
+      }
+      if (changes.length) applyCoachChanges(db, { planId: row.planId, changes }, today)
       db.update(planProposals).set({ status: 'applied', resolvedAt: now }).where(eq(planProposals.id, id)).run()
     })
     return { status: 'applied' }
@@ -189,6 +239,9 @@ export function setPerformance(
   return runInTransaction(db, () => {
     const prev = loadProfile(db)?.current10kSec ?? null
     const loaded = loadAdaptInput(db, today)
+    // offene Tempo-Vorschläge beruhen auf dem alten Wert
+    db.update(planProposals).set({ status: 'stale', resolvedAt: now })
+      .where(and(eq(planProposals.kind, 'pace'), eq(planProposals.status, 'open'))).run()
     let scaled = 0
     if (prev && loaded) {
       const plan = getActivePlanDetail(db)!
