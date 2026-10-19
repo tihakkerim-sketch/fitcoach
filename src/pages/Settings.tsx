@@ -12,6 +12,7 @@ import type { UserProfile } from '@/types/ipc'
 import { useTheme } from '@/contexts/ThemeContext'
 import { IntervalsSettings } from '@/components/settings/IntervalsSettings'
 import { HrZonesSettings } from '@/components/settings/HrZonesSettings'
+import { PerformanceSettings } from '@/components/settings/PerformanceSettings'
 import { ShoesSettings } from '@/components/settings/ShoesSettings'
 import { UpdateSettings } from '@/components/settings/UpdateSettings'
 import { setDayStartHour } from '@/lib/today'
@@ -239,6 +240,8 @@ export default function Settings() {
       </section>
 
       <HrZonesSettings />
+
+      <PerformanceSettings />
 
       <ShoesSettings />
 

@@ -17,6 +17,7 @@ import { PlanWeekStrip } from '@/components/dashboard/PlanWeekStrip'
 import { SessionDialog } from '@/components/plans/SessionDialog'
 import { CoachCard } from '@/components/dashboard/CoachCard'
 import { ProposalCards } from '@/components/adapt/ProposalCard'
+import { NotFullButton } from '@/components/adapt/NotFullDialog'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
 import type {
@@ -210,9 +211,12 @@ export default function Dashboard() {
                 : 'Trag deine erste Aktivität ein, dann wird es hier lebendig.'}
             </p>
           </div>
-          <Button variant="gradient" onClick={() => setLogOpen(true)} className="shrink-0 mt-1">
+          <div className="flex gap-2 shrink-0 mt-1">
+          {planToday?.plan && <NotFullButton />}
+          <Button variant="gradient" onClick={() => setLogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" /> Aktivität eintragen
           </Button>
+          </div>
         </div>
 
         {planToday && (

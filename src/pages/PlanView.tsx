@@ -7,6 +7,8 @@ import { EmptyPlanModal } from '@/components/plans/EmptyPlanModal'
 import { ImportPlanModal } from '@/components/plans/ImportPlanModal'
 import { AdaptPlanModal } from '@/components/plans/AdaptPlanModal'
 import { ProposalCards } from '@/components/adapt/ProposalCard'
+import { PaceStatusCard } from '@/components/adapt/PaceStatusCard'
+import { NotFullButton } from '@/components/adapt/NotFullDialog'
 import { usePlans } from '@/hooks/usePlans'
 import { useToast } from '@/contexts/ToastContext'
 import { invoke } from '@/lib/ipc'
@@ -49,6 +51,7 @@ export default function PlanView() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {currentActive && <NotFullButton />}
           {currentActive && (
             <Button variant="outline" onClick={() => setAdaptTarget(currentActive)}>
               <GitBranch className="h-4 w-4 mr-2" />
@@ -67,6 +70,7 @@ export default function PlanView() {
       </div>
 
       <ProposalCards />
+      {currentActive && <PaceStatusCard />}
 
       {loading && plans.length === 0 && (
         <div className="text-muted-foreground text-sm">Wird geladen …</div>
