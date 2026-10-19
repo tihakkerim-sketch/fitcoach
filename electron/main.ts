@@ -9,6 +9,7 @@ import { registerIntervalsHandlers } from './ipc/intervals'
 import { registerDataHandlers } from './ipc/data'
 import { registerSummaryHandlers } from './ipc/summary'
 import { registerCoachHandlers } from './ipc/coach'
+import { registerAdaptHandlers } from './ipc/adapt'
 import { registerStatsHandlers } from './ipc/stats'
 import { registerCheckinHandlers } from './ipc/checkin'
 import { registerRecoveryHandlers } from './ipc/recovery'
@@ -140,6 +141,7 @@ function startApp() {
     registerDataHandlers()
     registerSummaryHandlers()
     registerCoachHandlers()
+    registerAdaptHandlers()
     registerStatsHandlers()
     registerCheckinHandlers()
     registerRecoveryHandlers()

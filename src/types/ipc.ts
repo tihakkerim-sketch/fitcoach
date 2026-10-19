@@ -70,6 +70,16 @@ export const IPC = {
   COACH_STATUS: 'coach:status',
   COACH_APPLY_CHANGES: 'coach:applyChanges',
 
+  // Plan-Anpassung
+  ADAPT_PENDING_FEEDBACK: 'adapt:pendingFeedback',
+  ADAPT_FEEDBACK: 'adapt:feedback',
+  ADAPT_PROPOSALS: 'adapt:proposals',
+  ADAPT_APPLY: 'adapt:apply',
+  ADAPT_REJECT: 'adapt:reject',
+  ADAPT_NOT_FULL: 'adapt:notFull',
+  ADAPT_PACE_STATUS: 'adapt:paceStatus',
+  ADAPT_SET_PERFORMANCE: 'adapt:setPerformance',
+
   // Export
   EXPORT_GENERATE_SUMMARY: 'export:generateSummary',
   EXPORT_SAVE_MD: 'export:saveMd',

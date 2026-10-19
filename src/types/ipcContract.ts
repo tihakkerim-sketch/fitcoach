@@ -19,6 +19,7 @@ import type {
   IntervalsStatus, SyncResult, Shoe, UpdateStatus,
 } from './ipc'
 import type { CoachStatus } from '../shared/coach/types'
+import type { PaceStatusView, PendingFeedback, ProposalView } from '../shared/adapt/views'
 
 // ── Building blocks ───────────────────────────────────────────────────────────
 
@@ -307,6 +308,25 @@ export const coachApplySchema = z.object({
 })
 export type CoachApplyPayload = z.infer<typeof coachApplySchema>
 
+// ── Plan-Anpassung ───────────────────────────────────────────────────────────
+
+export const adaptFeedbackSchema = z.object({
+  activityId: id,
+  effort: z.number().int().min(1).max(10).nullable(),
+  pain: z.boolean(),
+  notes: longText.nullable(),
+  skipped: z.boolean(),
+})
+export const adaptNotFullSchema = z.object({
+  reason: z.enum(['sick', 'pain', 'busy']),
+  days: z.number().int().min(1).max(7),
+})
+export const adaptPerformanceSchema = z.object({
+  distanceKm: z.union([z.literal(5), z.literal(10), z.literal(21.0975)]),
+  timeSec: z.number().int().min(600).max(14400),
+})
+const adaptIdSchema = z.object({ id })
+
 // ── Export ────────────────────────────────────────────────────────────────────
 
 export const summarySchema = z.object({ dateFrom: dateString, dateTo: dateString })
@@ -454,6 +474,15 @@ export const ipcInputs = {
   [IPC.COACH_STATUS]: z.undefined(),
   [IPC.COACH_APPLY_CHANGES]: coachApplySchema,
 
+  [IPC.ADAPT_PENDING_FEEDBACK]: z.undefined(),
+  [IPC.ADAPT_FEEDBACK]: adaptFeedbackSchema,
+  [IPC.ADAPT_PROPOSALS]: z.undefined(),
+  [IPC.ADAPT_APPLY]: adaptIdSchema,
+  [IPC.ADAPT_REJECT]: adaptIdSchema,
+  [IPC.ADAPT_NOT_FULL]: adaptNotFullSchema,
+  [IPC.ADAPT_PACE_STATUS]: z.undefined(),
+  [IPC.ADAPT_SET_PERFORMANCE]: adaptPerformanceSchema,
+
   [IPC.EXPORT_GENERATE_SUMMARY]: summarySchema,
   [IPC.EXPORT_SAVE_MD]: saveMdSchema,
 
@@ -527,6 +556,15 @@ export interface IpcResults {
 
   [IPC.COACH_STATUS]: CoachStatus
   [IPC.COACH_APPLY_CHANGES]: { applied: number }
+
+  [IPC.ADAPT_PENDING_FEEDBACK]: PendingFeedback[]
+  [IPC.ADAPT_FEEDBACK]: ProposalView[]
+  [IPC.ADAPT_PROPOSALS]: ProposalView[]
+  [IPC.ADAPT_APPLY]: { status: 'applied' | 'stale' }
+  [IPC.ADAPT_REJECT]: void
+  [IPC.ADAPT_NOT_FULL]: ProposalView | null
+  [IPC.ADAPT_PACE_STATUS]: PaceStatusView
+  [IPC.ADAPT_SET_PERFORMANCE]: { current10kSec: number; scaled: number }
 
   [IPC.EXPORT_GENERATE_SUMMARY]: string
   [IPC.EXPORT_SAVE_MD]: string

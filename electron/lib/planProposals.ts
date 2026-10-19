@@ -8,32 +8,17 @@ import { format } from 'date-fns'
 import { activities, planProposals, userProfile } from '../../db/schema'
 import {
   adaptAfterRun, notFullProposal, paceCheck, scalePaces, to10kSec,
-  type AdaptResult, type CoachChange, type NotFullReason, type PaceCheck, type Reason,
+  type AdaptResult, type CoachChange, type NotFullReason, type PaceStatusView, type PendingFeedback,
+  type ProposalKind, type ProposalView, type Reason,
 } from '../../src/shared/adapt'
+
+export type { PaceStatusView, PendingFeedback, ProposalKind, ProposalView }
 import { predictRace } from '../../src/shared/coach'
 import { addDaysStr } from '../../src/shared/planCalendar'
 import { loadAdaptInput, toAdaptSession } from './adaptData'
 import { applyCoachChanges } from './coachChanges'
 import { getActivePlanDetail, loadProfile, toCoachActivity } from './coachData'
 import { runInTransaction, type TxDb } from './transaction'
-
-export type ProposalKind = 'run' | 'pace' | 'not_full'
-
-export interface ProposalView {
-  id: number
-  kind: ProposalKind
-  createdAt: number
-  changes: CoachChange[]
-  reasons: Reason[]
-  meta: Record<string, unknown>
-}
-
-export interface PendingFeedback {
-  activityId: number
-  date: string
-  sessionTitle: string | null
-  distanceKm: number | null
-}
 
 export interface FeedbackInput {
   activityId: number
@@ -43,7 +28,6 @@ export interface FeedbackInput {
   skipped: boolean
 }
 
-export type PaceStatusView = PaceCheck & { suggested10kSec: number | null; history: { at: number; sec: number }[] }
 
 type ProposalRow = typeof planProposals.$inferSelect
 
