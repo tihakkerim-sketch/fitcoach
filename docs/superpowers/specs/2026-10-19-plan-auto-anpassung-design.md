@@ -1,17 +1,17 @@
 # Plan-Auto-Anpassung nach jedem Lauf – Design
 
-Stand: 2026-10-19 · Status: Entwurf im Chat freigegeben, Spec-Review durch Adel offen
+Stand: 2026-10-19 · Status: Entwurf im Chat freigegeben, Spec-Review durch Kerim offen
 
 ## 1. Ziel
 
 Heute: Lauf auswerten → Coach-Bericht kopieren → Claude → JSON zurück → übernehmen. Das ist nach
 jedem Lauf zu aufwendig. Ziel: Nach jedem Lauf schlägt die App selbst eine Anpassung der nächsten
-7 Tage vor; Adel übernimmt sie mit einem Klick. Der Claude-Weg bleibt für größere Umbauten.
+7 Tage vor; Kerim übernimmt sie mit einem Klick. Der Claude-Weg bleibt für größere Umbauten.
 
-**Erfolg:** Nach einem Lauf braucht Adel ≤ 10 Sekunden (Feedback + Übernehmen/Ablehnen), um einen
+**Erfolg:** Nach einem Lauf braucht Kerim ≤ 10 Sekunden (Feedback + Übernehmen/Ablehnen), um einen
 passend angepassten Plan zu haben. Keine Kosten, offline.
 
-## 2. Entscheidungen (von Adel)
+## 2. Entscheidungen (von Kerim)
 
 | Frage | Entscheidung |
 |---|---|
@@ -68,7 +68,7 @@ Hat R1/R2/R3 gegriffen, laufen R4/R5 nicht.
 
 ### 4a. Leistungszahl + Leistungs-Check (nach Runnas „Pace Insights“)
 
-- **Leistung** = eine aktuelle 10-km-Zeit (`user_profile.current_10k_sec`), d. h. was Adel *heute*
+- **Leistung** = eine aktuelle 10-km-Zeit (`user_profile.current_10k_sec`), d. h. was Kerim *heute*
   laufen könnte – nicht das Ziel. Eingabe in den Einstellungen als 5 km / 10 km / Halbmarathon,
   intern per Riegel (`riegel()` aus `src/shared/coach/prognosis.ts`) auf 10 km umgerechnet.
   Leer → App schlägt den Wert aus der vorhandenen Prognose (`predictRace`) vor.

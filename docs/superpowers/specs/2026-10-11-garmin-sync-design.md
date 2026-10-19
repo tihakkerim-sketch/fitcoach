@@ -7,11 +7,11 @@ Kein Abtippen mehr: Läufe kommen per intervals.icu-Sync oder per Mehrfach-Datei
 doppelte werden erkannt, jeder Lauf hat Splits pro km, Höhenmeter und Verläufe (Puls, Pace, Höhe).
 Recovery-Werte (HRV, Schlaf, Ruhepuls) kommen aus intervals.icu.
 
-## Entscheidungen (Adel, 11.10.2026)
+## Entscheidungen (Kerim, 11.10.2026)
 - Sync **beim App-Start + Knopf** „Jetzt synchronisieren“.
 - Recovery-Sync **füllt nur leere Felder**; eigene Eingaben bleiben.
 - Lauf-Details: **Splits + Höhe + Verläufe (Diagramme)**.
-- Adel hat noch kein intervals.icu-Konto → Klick-Anleitung am Ende.
+- Kerim hat noch kein intervals.icu-Konto → Klick-Anleitung am Ende.
 - Datei-Import speichert direkt (kein Formular mehr), danach Ergebnisliste.
 
 ## Risiko

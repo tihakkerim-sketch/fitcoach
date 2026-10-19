@@ -13,7 +13,7 @@ Erfolg heißt:
 - Ein neuer Lauf am Tag einer geplanten Lauf-Einheit macht diese automatisch „erledigt" + verknüpft; Abweichung sichtbar.
 - Der bestehende Plan (13 Wochen, ab Mo 18.05.2026) wird ohne Verlust umgewandelt und als Archiv angezeigt.
 
-## Entscheidungen (Adel, 11.10.2026)
+## Entscheidungen (Kerim, 11.10.2026)
 
 | Frage | Entscheidung |
 |---|---|
