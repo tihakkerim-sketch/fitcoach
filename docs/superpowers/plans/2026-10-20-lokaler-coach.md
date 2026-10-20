@@ -25,7 +25,7 @@
 ---
 
 ### Task 0: Messen (vor dem Bauen, auf Kerims PC)
-- [ ] Kerim installiert Ollama + `qwen3:14b` (Anleitung unten, Abschnitt „Einrichtung PC“).
+- [ ] Kerim installiert Ollama + `qwen3:8b` (Anleitung unten, Abschnitt „Einrichtung PC“).
 - [ ] Bericht der letzten 4 Wochen aus der App kopieren, Länge in Tokens grob messen (`ollama run` mit `/set verbose`).
 - [ ] Ergebnis entscheidet `num_ctx` (Standard 8192; reicht der Bericht nicht → 12288, VRAM prüfen mit `nvidia-smi`).
 
@@ -59,7 +59,7 @@
 
 ### Task 5: Einstellungen-UI
 **Files:** Create `src/components/settings/OllamaSettings.tsx`; Modify `src/pages/Settings.tsx`
-- [ ] Abschnitt „Lokaler Coach (Ollama)“: Schalter, Adresse, „Verbindung testen“ → Modell-Auswahl (Name + GB), Speichern, Datenschutz-Hinweis aus Spec, Kurz-Anleitung mit Link-Text `ollama pull qwen3:14b`.
+- [ ] Abschnitt „Lokaler Coach (Ollama)“: Schalter, Adresse, „Verbindung testen“ → Modell-Auswahl (Name + GB), Speichern, Datenschutz-Hinweis aus Spec, Kurz-Anleitung mit Link-Text `ollama pull qwen3:8b`.
 
 ### Task 6: Coach-Seite
 **Files:** Create `src/components/coach/LocalCoachSection.tsx`; Modify `src/pages/Coach.tsx`, `src/components/coach/ChangeReview.tsx`
@@ -76,14 +76,14 @@
 ### Task 8: Doku + Abschluss
 - [ ] `CLAUDE.md` Gotchas (Ollama-Schlüssel in `app_settings`, Fake-Server in E2E), `docs/AUDIT-2026-10.md` §8 Entscheidung aktualisieren, `docs/BACKLOG.md`.
 - [ ] Typechecks, `npx vitest run`, `npm run build`, `npx playwright test` grün → Version erhöhen → Release (Tag pusht Kerim).
-- [ ] Echter Test auf dem PC mit `qwen3:14b` und Kopie der DB: Dauer messen, Qualität der Vorschläge ansehen.
+- [ ] Echter Test auf dem PC mit `qwen3:8b` und Kopie der DB: Dauer messen, Qualität der Vorschläge ansehen.
 
 ---
 
 ## Einrichtung PC (Kerim, einmalig, ~15 min + Download)
-1. Auf dem PC prüfen: mindestens **20 GB frei** auf C:, Grafikspeicher in Task-Manager → Leistung → GPU („Dedizierter GPU-Speicher“: 12 GB → `qwen3:14b`, 8 GB → `qwen3:8b`).
+1. Auf dem PC prüfen: mindestens **15 GB frei** auf C: (RTX 4060, 8 GB VRAM → `qwen3:8b`).
 2. Konsole öffnen: `winget install Ollama.Ollama`
-3. `ollama pull qwen3:14b` (lädt ~9,3 GB).
-4. Test: `ollama run qwen3:14b "Sag Hallo auf Deutsch"` → Antwort kommt.
+3. `ollama pull qwen3:8b` (lädt ~5,2 GB).
+4. Test: `ollama run qwen3:8b "Sag Hallo auf Deutsch"` → Antwort kommt.
 5. Nur wenn FitCoach auf dem **Laptop** läuft: Windows-Umgebungsvariable `OLLAMA_HOST` = `0.0.0.0` setzen, Ollama neu starten, in der Windows-Firewall Port 11434 für **private Netzwerke** freigeben; im Laptop-FitCoach Adresse `http://<PC-Name>:11434` eintragen.
-6. Platz zurückholen: `ollama rm qwen3:14b` (Modell) bzw. Ollama deinstallieren.
+6. Platz zurückholen: `ollama rm qwen3:8b` (Modell) bzw. Ollama deinstallieren.

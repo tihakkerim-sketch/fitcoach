@@ -10,9 +10,9 @@ Vorschau „Übernehmen“. Nichts ändert sich ohne Klick. Copy-Paste bleibt al
 **Ändert Entscheidung aus `docs/AUDIT-2026-10.md` §8** („KI-Coach: nur Copy-Paste, kein Ollama“) → nach OK dort nachtragen.
 
 ## Annahmen (Kerim widerspricht nur, wo es nicht passt)
-1. Ollama läuft auf dem **PC** (Ryzen 5 5600, RTX 3060, 16 GB RAM, **256 GB SSD**). FitCoach läuft auf dem PC
+1. Ollama läuft auf dem **PC** (Ryzen 5 5600, RTX 4060 mit 8 GB VRAM, 16 GB RAM, **256 GB SSD**). FitCoach läuft auf dem PC
    oder auf dem Laptop; die Ollama-Adresse ist einstellbar (Standard `http://localhost:11434`).
-2. **Ein** Modell, Standard **`qwen3:14b`** (~9,3 GB) bei 12 GB VRAM; bei 8 GB VRAM `qwen3:8b` (~5,2 GB).
+2. **Ein** Modell, Standard **`qwen3:8b`** (~5,2 GB, passt komplett in die 8 GB VRAM der RTX 4060). `qwen3:14b` (~9,3 GB) würde teils auf CPU/RAM ausweichen → deutlich langsamer, RAM knapp.
    Modellname ist einstellbar.
 3. Das Modell **entscheidet nicht allein**: Seine Änderungen laufen durch dieselbe Prüfung wie Claudes Antworten
    (`parseCoachChanges` im Renderer, `coachApplySchema` + `applyCoachChanges` im Main). Die Regel-Anpassung
@@ -24,9 +24,9 @@ Vorschau „Übernehmen“. Nichts ändert sich ohne Klick. Copy-Paste bleibt al
 | Teil | Größe |
 |---|---|
 | Ollama (inkl. CUDA-Bibliotheken) | ~3–5 GB |
-| `qwen3:14b` (Q4_K_M) | ~9,3 GB |
+| `qwen3:8b` (Q4_K_M) | ~5,2 GB |
 | Puffer (Updates, Auslagerung) | ~5 GB |
-| **Gesamt** | **~20 GB frei nötig** |
+| **Gesamt** | **~15 GB frei nötig** |
 
 - Nur ein Modell behalten; altes mit `ollama rm <name>` löschen.
 - Modelle liegen unter `%USERPROFILE%\.ollama\models`; mit Umgebungsvariable `OLLAMA_MODELS` auf eine
@@ -60,7 +60,7 @@ Fehlerhinweis, danach Status `error` mit Rohtext zum Kopieren.
 | Fall | Anzeige |
 |---|---|
 | PC aus / Ollama läuft nicht | „Lokaler Coach nicht erreichbar unter …. Läuft Ollama auf dem PC?“ + Copy-Paste-Weg bleibt |
-| Modell nicht installiert | „Modell qwen3:14b fehlt. Auf dem PC: `ollama pull qwen3:14b`“ |
+| Modell nicht installiert | „Modell qwen3:8b fehlt. Auf dem PC: `ollama pull qwen3:8b`“ |
 | Kein aktiver Plan | wie heute in `ChangeReview` |
 | Zeitüberschreitung (15 min ohne neues Zeichen: 2 min) | `error`, abbrechbar jederzeit |
 | Ungültiges JSON nach 2 Versuchen | `error` + Rohtext |
