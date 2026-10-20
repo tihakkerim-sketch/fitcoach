@@ -14,6 +14,7 @@ import { IntervalsSettings } from '@/components/settings/IntervalsSettings'
 import { HrZonesSettings } from '@/components/settings/HrZonesSettings'
 import { PerformanceSettings } from '@/components/settings/PerformanceSettings'
 import { ShoesSettings } from '@/components/settings/ShoesSettings'
+import { OllamaSettings } from '@/components/settings/OllamaSettings'
 import { UpdateSettings } from '@/components/settings/UpdateSettings'
 import { setDayStartHour } from '@/lib/today'
 
@@ -244,6 +245,8 @@ export default function Settings() {
       <PerformanceSettings />
 
       <ShoesSettings />
+
+      <OllamaSettings />
 
       <UpdateSettings />
 
