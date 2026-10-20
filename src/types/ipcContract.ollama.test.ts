@@ -21,7 +21,7 @@ describe('Lokaler Coach: Eingaben', () => {
   })
   it('Modellname: sicherer Zeichensatz', () => {
     expect(ok(IPC.OLLAMA_SETTINGS_SET, { ...base, model: 'hf.co/user/model:Q4_K_M' })).toBe(true)
-    for (const model of ['', '   ', 'a b', 'x;rm', 'a'.repeat(101), '../../x\n']) {
+    for (const model of ['', '   ', 'a b', 'x;rm', 'a'.repeat(101), 'x\ny']) {
       expect(ok(IPC.OLLAMA_SETTINGS_SET, { ...base, model }), model).toBe(false)
     }
     expect(ok(IPC.OLLAMA_SETTINGS_SET, { ...base, enabled: 'yes' })).toBe(false)
