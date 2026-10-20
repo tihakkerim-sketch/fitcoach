@@ -4,6 +4,7 @@
 import { z } from 'zod'
 import { COACH_CHANGES_FORMAT } from '../../src/shared/coach/changesFormat'
 import type { OllamaChatMessage } from './ollamaClient'
+import type { LocalCoachAnswer } from '../../src/types/ipc'
 
 const SYSTEM_PROMPT = `Du bist ein erfahrener, vorsichtiger Lauf-Coach. Du bekommst den Trainingsbericht eines Läufers und schlägst höchstens kleine Anpassungen am Plan vor.
 
@@ -45,7 +46,14 @@ export const LOCAL_COACH_SCHEMA = {
           type: 'array',
           items: {
             type: 'object',
-            properties: { action: { type: 'string', enum: ['update', 'move', 'remove', 'add'] } },
+            properties: {
+              action: { type: 'string', enum: ['update', 'move', 'remove', 'add'] },
+              sessionId: { type: 'integer' },
+              date: { type: 'string' },
+              set: { type: 'object' },
+              session: { type: 'object' },
+              reason: { type: 'string' },
+            },
             required: ['action'],
           },
         },
@@ -65,7 +73,10 @@ export const localCoachAnswerSchema = z.object({
   }),
 })
 
-export type LocalCoachAnswer = z.infer<typeof localCoachAnswerSchema>
+// Einzige Typdefinition liegt in src/types/ipc.ts; hier nur prüfen, dass das Schema dazu passt.
+export type { LocalCoachAnswer }
+const _schemaMatchesType: (a: z.infer<typeof localCoachAnswerSchema>) => LocalCoachAnswer = a => a
+void _schemaMatchesType
 export type ParsedLocalCoachAnswer = { ok: true; answer: LocalCoachAnswer } | { ok: false; message: string }
 
 /** Mögliche JSON-Texte: roh, ```json-Block, äußerstes `{…}`. */

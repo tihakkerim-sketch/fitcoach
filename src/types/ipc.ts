@@ -387,3 +387,28 @@ export interface RecoveryLog {
   createdAt: number
   updatedAt: number
 }
+
+/** Zustand des lokalen KI-Coachs (Ollama), wird im Main gehalten. */
+export type LocalCoachStatus =
+  | { state: 'idle' }
+  | { state: 'connecting'; startedAt: number }
+  | { state: 'generating'; startedAt: number; chars: number }
+  | { state: 'done'; startedAt: number; finishedAt: number }
+  | { state: 'error'; message: string; raw?: string }
+  | { state: 'cancelled' }
+
+/** Geprüfte Antwort des lokalen Coachs. */
+export interface LocalCoachAnswer {
+  explanation: string
+  fitcoachChanges: { fitcoachChanges: 1; summary: string; changes: Record<string, unknown>[] }
+}
+
+/** Gespeichertes Ergebnis des letzten Laufs. */
+export interface LocalCoachResult {
+  answer: LocalCoachAnswer
+  model: string
+  /** ISO-Zeitstempel */
+  createdAt: string
+  dateFrom: string
+  dateTo: string
+}

@@ -43,6 +43,13 @@ describe('LOCAL_COACH_SCHEMA', () => {
     const fc = s.properties.fitcoachChanges
     expect(fc.required).toEqual(['fitcoachChanges', 'summary', 'changes'])
     expect(fc.properties.changes.items).toMatchObject({ type: 'object', required: ['action'] })
+    expect(fc.properties.changes.items.properties).toMatchObject({
+      sessionId: { type: 'integer' },
+      date: { type: 'string' },
+      set: { type: 'object' },
+      session: { type: 'object' },
+      reason: { type: 'string' },
+    })
   })
 })
 
