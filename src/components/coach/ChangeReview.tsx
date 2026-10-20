@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -9,8 +9,8 @@ import { emitDataChanged } from '@/lib/dataEvents'
 import { parseCoachChanges, type ChangeItem } from '@/lib/coachChanges'
 import { cn } from '@/lib/utils'
 
-export function ChangeReview() {
-  const [text, setText] = useState('')
+export function ChangeReview({ initialText }: { initialText?: string } = {}) {
+  const [text, setText] = useState(initialText ?? '')
   const [planId, setPlanId] = useState<number | null>(null)
   const [summary, setSummary] = useState<string | null>(null)
   const [items, setItems] = useState<ChangeItem[] | null>(null)
@@ -21,7 +21,7 @@ export function ChangeReview() {
 
   const reset = () => { setItems(null); setSummary(null); setPlanId(null); setSelected(new Set()) }
 
-  const preview = async () => {
+  const preview = async (source: string = text) => {
     setError(null); setSuccess(null); reset(); setBusy(true)
     try {
       const plans = await invoke(IPC.PLANS_LIST)
@@ -29,7 +29,7 @@ export function ChangeReview() {
       if (!active) { setError('Es gibt keinen aktiven Trainingsplan. Aktiviere zuerst einen Plan unter „Plans“.'); return }
       const plan = await invoke(IPC.PLANS_GET, active.id)
       if (!plan) { setError('Der aktive Plan konnte nicht geladen werden.'); return }
-      const res = parseCoachChanges(text, plan, today())
+      const res = parseCoachChanges(source, plan, today())
       setPlanId(plan.id)
       setSummary(res.summary)
       setItems(res.items)
@@ -40,6 +40,14 @@ export function ChangeReview() {
       setBusy(false)
     }
   }
+
+  // Vorbelegter Text (z. B. vom lokalen Coach): einsetzen und Vorschau automatisch starten
+  useEffect(() => {
+    if (!initialText?.trim()) return
+    setText(initialText)
+    void preview(initialText)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialText])
 
   const toggle = (i: number) =>
     setSelected(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n })
@@ -70,7 +78,7 @@ export function ChangeReview() {
       </p>
       <Textarea rows={6} value={text} onChange={e => setText(e.target.value)} placeholder="Antwort von Claude hier einfügen…" className="font-mono text-xs" />
       <div className="flex gap-2">
-        <Button variant="outline" onClick={preview} disabled={busy || !text.trim()}>Vorschau</Button>
+        <Button variant="outline" onClick={() => preview()} disabled={busy || !text.trim()}>Vorschau</Button>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}

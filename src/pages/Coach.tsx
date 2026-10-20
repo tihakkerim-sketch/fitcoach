@@ -6,6 +6,7 @@ import { WarningsCard } from '@/components/coach/WarningsCard'
 import { PrognosisCard } from '@/components/coach/PrognosisCard'
 import { RecoveryTrendCard } from '@/components/coach/RecoveryTrendCard'
 import { ReportSection } from '@/components/coach/ReportSection'
+import { LocalCoachSection } from '@/components/coach/LocalCoachSection'
 import { ChangeReview } from '@/components/coach/ChangeReview'
 import { useCoachStatus } from '@/hooks/useCoachStatus'
 
@@ -65,6 +66,7 @@ export default function Coach() {
       )}
 
       <Section title="Coach-Bericht für Claude"><ReportSection /></Section>
+      <LocalCoachSection Section={Section} />
       <Section title="Antwort von Claude einfügen"><ChangeReview /></Section>
     </div>
   )
