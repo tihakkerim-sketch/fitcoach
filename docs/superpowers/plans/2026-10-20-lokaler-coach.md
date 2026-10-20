@@ -25,7 +25,7 @@
 ---
 
 ### Task 0: Messen (vor dem Bauen, auf Kerims PC)
-- [ ] Kerim installiert Ollama + `qwen3:8b` (Anleitung unten, Abschnitt „Einrichtung PC“).
+- [x] Kerim installiert Ollama + `qwen3:8b` – erledigt 2026-10-20: Ollama 0.40.6 auf `KerimsPC` (192.168.0.66:11434, im Heimnetz freigegeben). Messung vom Laptop: Modell laden 6 s (kalt), Ausgabe ~40 Tokens/s, JSON mit `format` + `think:false` sauber, kurze Anfrage 6–12 s gesamt.
 - [ ] Bericht der letzten 4 Wochen aus der App kopieren, Länge in Tokens grob messen (`ollama run` mit `/set verbose`).
 - [ ] Ergebnis entscheidet `num_ctx` (Standard 8192; reicht der Bericht nicht → 12288, VRAM prüfen mit `nvidia-smi`).
 
