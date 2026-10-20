@@ -1,32 +1,34 @@
-# Übergabe – FitCoach – 2026-10-14
+# Übergabe – FitCoach – 2026-10-20
 
 ## Ziel der letzten Session
-Offene Schritte aus Phase 6: erstes Release veröffentlichen und Auto-Update Ende-zu-Ende prüfen.
+Plan `docs/superpowers/plans/2026-10-20-lokaler-coach.md` umsetzen: Knopf „Lokalen Coach fragen“ schickt den Coach-Bericht an Ollama (`qwen3:8b` auf Kerims PC), Antwort landet in der Übernehmen-Vorschau.
 
 ## Stand
-- **Release 1.0.0 und 1.0.1 auf GitHub veröffentlicht** (je Installer + Blockmap + `latest.yml`).
-- **Auto-Update funktioniert Ende-zu-Ende:** installierte 1.0.0 hat 1.0.1 gefunden, geladen und installiert (installierte exe = 1.0.1).
-- Fehler behoben: `electron-builder --publish always` hatte bei v1.0.0 **zwei Releases zum selben Tag** angelegt (paralleler Upload). Release-Workflow baut jetzt mit `--publish never` und veröffentlicht per `gh release create` mit allen drei Dateien. 1.0.0 nachträglich repariert (Blockmap umkopiert, doppeltes Release gelöscht).
-- **1.0.2 veröffentlicht** (`57b0e4f`): intervals.icu-Sync fragt jetzt ab dem Datum der neuesten Aktivität in der App ab (max. 1 Jahr), nicht nur ab letztem Sync – sonst blieb die Lücke seit 19.06.26 für immer offen.
-- **1.0.3** (`f84405b`): Zeitraum ab der neuesten Aktivität, die NICHT von intervals.icu kam (max. 1 Jahr) – sonst schloss ein Sync-Lauf (13.10.) die Lücke, bevor intervals.icu den Garmin-Verlauf nachlud. Probelauf auf DB-Kopie mit echtem Konto: 7 Läufe (Aug + 08./11.10.) neu, 19.06. als Duplikat erkannt, keine Doppelten.
-- Befund am echten Konto (nur lesend): intervals.icu enthält **0 Aktivitäten** – Garmin schickt nach dem Verbinden nur neue Läufe. Kerim muss in intervals.icu „Download Old Data“ (bzw. „Import All Garmin Data“) auslösen. Garmin-Wellness-Download ist dort aus.
+- Branch **`lokaler-coach`** (von `plan-auto-anpassung` abgezweigt, 13 Commits seit `b13185d`), **nicht** nach `main` gemergt, nicht released.
+- Fertig: Client/Prompt/Job (`electron/lib/ollama*.ts`), IPC (`electron/ipc/ollama.ts`, 8 Kanäle inkl. `OLLAMA_MARK_APPLIED`), Einstellungen „Lokaler Coach (Ollama)“, Coach-Abschnitt „Lokaler Coach“, E2E mit Fake-Ollama.
+- Geprüft: Typecheck (beide), vitest 484/484, Build, Playwright 8/8 grün. Jede Aufgabe einzeln + Gesamtprüfung durch Reviewer, Befunde behoben.
+- Übernommenes Ergebnis wird als „Änderungen übernommen am …“ markiert und nicht erneut angeboten (sonst doppelte `add`-Einheiten).
+- Hinweis: `main` enthält auch die Plan-Auto-Anpassung noch nicht (Branch `plan-auto-anpassung` ist ebenfalls offen).
 
 ## Offen / angefangen
-- Kerim muss 1.0.3 installieren + „Jetzt synchronisieren“ → 7 fehlende Läufe kommen. Juni bewusst ausgelassen (Schwimmen 04.06. ohne Distanz/Startzeit würde doppelt).
-- Keine Code-Signatur → SmartScreen-Warnung beim ersten Installieren (Backlog: SignPath Foundation).
-- Echter Durchlauf mit eigenen Daten (Plan aktivieren, Schuh, Lauf-Import, Coach-Bericht) – aus Phase 5 noch offen, macht Kerim selbst.
+- **Echter Test mit eigenen Daten** (Kerim): Probelauf mit DB-Kopie gegen den PC wurde von der Auto-Mode-Prüfung blockiert (echte Gesundheitsdaten übers Netz) → Kerim testet in der App.
+- Bericht-Länge in Tokens messen; `num_ctx` ist automatisch 8192 bzw. 12288 bei langem Bericht.
+- Merge nach `main`, Version erhöhen (1.0.3 → 1.1.0), Tag pushen.
 
 ## Nächste sinnvolle Schritte
-1. **Empfohlen:** Echter Durchlauf mit eigenen Daten in der installierten App; gefundene Fehler mit `/bug` melden.
-2. Kleinere Backlog-Punkte angehen, z. B. Lauf-Kadenz verdoppeln (TCX/FIT liefert halbe Schrittfrequenz).
-3. Neue Version veröffentlichen: Version in `package.json` erhöhen, committen, `git tag vX.Y.Z && git push origin vX.Y.Z`.
+1. **Empfohlen:** App vom Branch starten (`npm run dev`), Einstellungen → Lokaler Coach: Adresse `http://192.168.0.66:11434`, „Verbindung testen“, `qwen3:8b`, Speichern → Coach → „Lokalen Coach fragen“. Dauer + Qualität ansehen.
+2. Wenn gut: `plan-auto-anpassung` + `lokaler-coach` nach `main` mergen, Version erhöhen, Release-Tag.
+3. Kleinere Rest-Punkte (unten) bei Gelegenheit.
 
 ## Gotchas, die neu gelernt wurden
-- Nie `electron-builder --publish always` im Release-Workflow: paralleler Upload → mehrere Releases pro Tag. Stattdessen `--publish never` + `gh release create`.
-- `--publish never` erzeugt trotzdem `latest.yml` und `.blockmap`.
-- Sync-Probelauf gegen echtes Konto: Electron-Skript entschlüsselt Schlüssel (Kopie von `Local State`) und startet temporären vitest-Test mit `PROBE_DB=<DB-Kopie>`.
-- intervals.icu-Konto lässt sich nur lesend prüfen über Electron-Skript mit Kopie von `Local State` als userData (safeStorage/DPAPI) + DB-Kopie – echte Daten nie direkt.
-- Tag-Push (öffentliches Release) kann von der Auto-Mode-Prüfung blockiert werden → Kerim pusht dann selbst oder erlaubt es ausdrücklich.
+- Ollama-`format` (JSON-Schema): Felder der Änderungen explizit als optionale Properties angeben, sonst lässt die Grammatik sie evtl. nicht zu.
+- Probeläufe mit echten Daten an einen Netzwerk-Dienst blockiert die Auto-Mode-Prüfung → Kerim führt sie selbst aus.
+- Zwei `ChangeReview` auf der Coach-Seite (lokal + Claude) haben gleiche Beschriftungen → E2E-Locators auf den Abschnitt eingrenzen.
+
+## Rest-Kleinigkeiten (aus Reviews, nicht dringend)
+- `OLLAMA_MARK_APPLIED` ohne `createdAt`-Abgleich; Fehler beim Markieren wird verschluckt.
+- Weiterleitung/Lesefehler werden als „nicht erreichbar“ gemeldet.
+- Coach-Seite liest „Lokaler Coach an?“ nur beim Öffnen.
 
 ## Wichtige Dateien
-`.github/workflows/release.yml`, `package.json` (`version`, `build.publish`, `nsis.artifactName`), `electron/updater.ts`
+`electron/lib/ollamaClient.ts`, `ollamaPrompt.ts`, `ollamaJob.ts`, `electron/ipc/ollama.ts`, `src/shared/ollamaUrl.ts`, `src/components/settings/OllamaSettings.tsx`, `src/components/coach/LocalCoachSection.tsx`, `src/components/coach/ChangeReview.tsx`, `e2e/localCoach.spec.ts`, `e2e/fakeOllama.ts`
