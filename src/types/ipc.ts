@@ -46,6 +46,15 @@ export const IPC = {
   INTERVALS_CLEAR_KEY: 'intervals:clearKey',
   INTERVALS_SYNC: 'intervals:sync',
 
+  // Lokaler Coach (Ollama)
+  OLLAMA_SETTINGS_GET: 'ollama:settingsGet',
+  OLLAMA_SETTINGS_SET: 'ollama:settingsSet',
+  OLLAMA_TEST: 'ollama:test',
+  OLLAMA_START: 'ollama:start',
+  OLLAMA_STATUS: 'ollama:status',
+  OLLAMA_CANCEL: 'ollama:cancel',
+  OLLAMA_LAST_RESULT: 'ollama:lastResult',
+
   // Plans
   PLANS_CREATE: 'plans:create',
   PLANS_CREATE_EMPTY: 'plans:createEmpty',
@@ -387,6 +396,9 @@ export interface RecoveryLog {
   createdAt: number
   updatedAt: number
 }
+
+/** Einstellungen des lokalen KI-Coachs (Ollama). */
+export interface OllamaSettings { enabled: boolean; url: string; model: string }
 
 /** Zustand des lokalen KI-Coachs (Ollama), wird im Main gehalten. */
 export type LocalCoachStatus =

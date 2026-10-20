@@ -3,6 +3,9 @@
  */
 export type OllamaErrorKind = 'unreachable' | 'model_missing' | 'http' | 'format' | 'timeout' | 'cancelled'
 
+import { normalizeOllamaUrl } from '../../src/shared/ollamaUrl'
+export { normalizeOllamaUrl }
+
 export class OllamaError extends Error {
   constructor(public readonly kind: OllamaErrorKind, message: string, public readonly status?: number) {
     super(message)
@@ -42,19 +45,6 @@ export interface OllamaClientOptions {
 const IDLE_TIMEOUT_MS = 2 * 60_000
 const TOTAL_TIMEOUT_MS = 15 * 60_000
 const TAGS_TIMEOUT_MS = 10_000
-
-/** Nur http/https mit Host (+ Port), ohne Pfad, Query, Anker oder Zugangsdaten. */
-export function normalizeOllamaUrl(input: string): string {
-  let u: URL
-  try { u = new URL(input.trim()) } catch { throw new Error('Ungültige Adresse') }
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('Nur http:// oder https:// erlaubt')
-  if (!u.hostname) throw new Error('Adresse ohne Host')
-  if (u.username || u.password) throw new Error('Keine Zugangsdaten in der Adresse')
-  if ((u.pathname !== '/' && u.pathname !== '') || u.search || u.hash) {
-    throw new Error('Adresse darf keinen Pfad oder Parameter enthalten')
-  }
-  return `${u.protocol}//${u.host}`
-}
 
 export function createOllamaClient(opts: OllamaClientOptions): OllamaClient {
   const doFetch = opts.fetch ?? globalThis.fetch

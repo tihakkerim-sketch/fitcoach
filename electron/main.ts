@@ -6,6 +6,7 @@ import { registerPlanHandlers } from './ipc/plans'
 import { registerProfileHandlers } from './ipc/profile'
 import { registerGarminHandlers } from './ipc/garmin'
 import { registerIntervalsHandlers } from './ipc/intervals'
+import { registerOllamaHandlers } from './ipc/ollama'
 import { registerDataHandlers } from './ipc/data'
 import { registerSummaryHandlers } from './ipc/summary'
 import { registerCoachHandlers } from './ipc/coach'
@@ -138,6 +139,7 @@ function startApp() {
     registerProfileHandlers()
     registerGarminHandlers()
     registerIntervalsHandlers()
+    registerOllamaHandlers()
     registerDataHandlers()
     registerSummaryHandlers()
     registerCoachHandlers()

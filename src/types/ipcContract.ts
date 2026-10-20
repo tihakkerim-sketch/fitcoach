@@ -12,11 +12,12 @@
 import { z } from 'zod'
 import { IPC } from './ipc'
 import { isMonday } from '../shared/planCalendar'
+import { normalizeOllamaUrl } from '../shared/ollamaUrl'
 import type {
   IpcChannel,
   ActivityRow, PlanRow, PlanDetail, PlanTodayResult, SessionRow, AdaptPlanResult, UserProfile, HrZone,
   StatsResult, DailyCheckin, RecoveryLog, ActivitySplit, ActivityStreams, ImportFileResult,
-  IntervalsStatus, SyncResult, Shoe, UpdateStatus,
+  IntervalsStatus, SyncResult, Shoe, UpdateStatus, OllamaSettings, LocalCoachStatus, LocalCoachResult,
 } from './ipc'
 import type { CoachStatus } from '../shared/coach/types'
 import type { PaceStatusView, PendingFeedback, ProposalView } from '../shared/adapt/views'
@@ -332,6 +333,16 @@ const adaptIdSchema = z.object({ id })
 export const summarySchema = z.object({ dateFrom: dateString, dateTo: dateString })
 export type SummaryPayload = z.infer<typeof summarySchema>
 
+export const ollamaUrlSchema = z.string().trim().max(200).transform((s, ctx) => {
+  try { return normalizeOllamaUrl(s) } catch (e) {
+    ctx.addIssue({ code: 'custom', message: (e as Error).message })
+    return z.NEVER
+  }
+})
+export const ollamaModelSchema = z.string().trim().min(1).max(100).regex(/^[\w.:\/-]+$/, 'Ungültiger Modellname')
+export const ollamaSettingsSchema = z.object({ enabled: z.boolean(), url: ollamaUrlSchema, model: ollamaModelSchema })
+export const ollamaTestSchema = z.object({ url: ollamaUrlSchema })
+
 export const saveMdSchema = z.object({
   content: z.string().max(MAX_EXPORT_CONTENT_CHARS),
   filename: z.string().min(1).max(200).refine(f => !/[\\/]/.test(f), 'Dateiname darf keinen Pfad enthalten'),
@@ -453,6 +464,14 @@ export const ipcInputs = {
   [IPC.INTERVALS_CLEAR_KEY]: z.undefined(),
   [IPC.INTERVALS_SYNC]: z.undefined(),
 
+  [IPC.OLLAMA_SETTINGS_GET]: z.undefined(),
+  [IPC.OLLAMA_SETTINGS_SET]: ollamaSettingsSchema,
+  [IPC.OLLAMA_TEST]: ollamaTestSchema,
+  [IPC.OLLAMA_START]: summarySchema,
+  [IPC.OLLAMA_STATUS]: z.undefined(),
+  [IPC.OLLAMA_CANCEL]: z.undefined(),
+  [IPC.OLLAMA_LAST_RESULT]: z.undefined(),
+
   [IPC.PLANS_CREATE]: createPlanSchema,
   [IPC.PLANS_CREATE_EMPTY]: createEmptyPlanSchema,
   [IPC.PLANS_UPDATE]: updatePlanSchema,
@@ -535,6 +554,14 @@ export interface IpcResults {
   [IPC.INTERVALS_SET_KEY]: { athleteName?: string }
   [IPC.INTERVALS_CLEAR_KEY]: void
   [IPC.INTERVALS_SYNC]: SyncResult
+
+  [IPC.OLLAMA_SETTINGS_GET]: OllamaSettings
+  [IPC.OLLAMA_SETTINGS_SET]: void
+  [IPC.OLLAMA_TEST]: { models: { name: string; sizeGb: number }[] }
+  [IPC.OLLAMA_START]: void
+  [IPC.OLLAMA_STATUS]: LocalCoachStatus
+  [IPC.OLLAMA_CANCEL]: void
+  [IPC.OLLAMA_LAST_RESULT]: LocalCoachResult | null
 
   [IPC.PLANS_CREATE]: PlanRow
   [IPC.PLANS_CREATE_EMPTY]: PlanRow
