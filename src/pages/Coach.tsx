@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { CoachStatusTiles } from '@/components/coach/CoachStatusTiles'
@@ -9,6 +10,8 @@ import { ReportSection } from '@/components/coach/ReportSection'
 import { LocalCoachSection } from '@/components/coach/LocalCoachSection'
 import { ChangeReview } from '@/components/coach/ChangeReview'
 import { useCoachStatus } from '@/hooks/useCoachStatus'
+import { invoke } from '@/lib/ipc'
+import { IPC } from '@/types/ipc'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -24,6 +27,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function Coach() {
   const navigate = useNavigate()
+  const [localEnabled, setLocalEnabled] = useState(false)
+  useEffect(() => {
+    let alive = true
+    invoke(IPC.OLLAMA_SETTINGS_GET).then(s => { if (alive) setLocalEnabled(s.enabled) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
   const { status, error, loading } = useCoachStatus()
   const r = status?.recovery
   const hasRecovery = !!r && [r.hrvToday, r.hrv30, r.rhr7, r.rhr30, r.sleep7, r.sleep30].some(v => v != null)
@@ -66,7 +75,7 @@ export default function Coach() {
       )}
 
       <Section title="Coach-Bericht für Claude"><ReportSection /></Section>
-      <LocalCoachSection Section={Section} />
+      {localEnabled && <Section title="Lokaler Coach"><LocalCoachSection /></Section>}
       <Section title="Antwort von Claude einfügen"><ChangeReview /></Section>
     </div>
   )

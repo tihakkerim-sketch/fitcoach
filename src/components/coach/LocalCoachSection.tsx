@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { ComponentType, ReactNode } from 'react'
 import { format } from 'date-fns'
 import { Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -19,11 +18,9 @@ function mmss(ms: number): string {
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
 
-type SectionComponent = ComponentType<{ title: string; children: ReactNode }>
-
-export function LocalCoachSection({ Section }: { Section: SectionComponent }) {
+export function LocalCoachSection() {
   const today = getToday()
-  const [enabled, setEnabled] = useState(false)
+  const [starting, setStarting] = useState(false)
   const [status, setStatus] = useState<LocalCoachStatus>({ state: 'idle' })
   const [result, setResult] = useState<LocalCoachResult | null>(null)
   const [dateFrom, setDateFrom] = useState(() => addDaysStr(today, -6))
@@ -32,7 +29,7 @@ export function LocalCoachSection({ Section }: { Section: SectionComponent }) {
   const [now, setNow] = useState(() => Date.now())
   const [copied, setCopied] = useState(false)
   const alive = useRef(true)
-  const prevState = useRef<string>('idle')
+  const prevKey = useRef<string>('idle')
 
   const loadResult = useCallback(() => {
     invoke(IPC.OLLAMA_LAST_RESULT).then(r => { if (alive.current) setResult(r) }).catch(() => {})
@@ -44,7 +41,6 @@ export function LocalCoachSection({ Section }: { Section: SectionComponent }) {
 
   useEffect(() => {
     alive.current = true
-    invoke(IPC.OLLAMA_SETTINGS_GET).then(s => { if (alive.current) setEnabled(s.enabled) }).catch(() => {})
     loadStatus()
     loadResult()
     return () => { alive.current = false }
@@ -58,21 +54,27 @@ export function LocalCoachSection({ Section }: { Section: SectionComponent }) {
     return () => clearInterval(t)
   }, [running, loadStatus])
 
+  // Ergebnis neu laden, wenn ein Lauf endet (auch Lauf-zu-Lauf: anderes startedAt)
   useEffect(() => {
-    if (status.state === 'done' && prevState.current !== 'done') loadResult()
-    prevState.current = status.state
-  }, [status.state, loadResult])
-
-  if (!enabled) return null
+    const key = status.state === 'done' ? `done-${status.startedAt}` : status.state
+    const ended = status.state === 'done' || status.state === 'error' || status.state === 'cancelled'
+    if (ended && key !== prevKey.current) loadResult()
+    prevKey.current = key
+  }, [status, loadResult])
 
   const start = async () => {
-    setError(null)
+    if (starting) return
+    setError(null); setStarting(true)
     try {
       await invoke(IPC.OLLAMA_START, { dateFrom, dateTo })
-      setNow(Date.now())
+      const t0 = Date.now()
+      setNow(t0)
+      if (alive.current) setStatus({ state: 'connecting', startedAt: t0 })
       loadStatus()
     } catch (e) {
-      setError(errText(e, 'Der lokale Coach konnte nicht gestartet werden.'))
+      if (alive.current) setError(errText(e, 'Der lokale Coach konnte nicht gestartet werden.'))
+    } finally {
+      if (alive.current) setStarting(false)
     }
   }
 
@@ -89,10 +91,12 @@ export function LocalCoachSection({ Section }: { Section: SectionComponent }) {
     } catch { /* Zwischenablage nicht verfügbar */ }
   }
 
+  const showResult = !!result && !running && !starting
+  const isFallback = status.state === 'error' || status.state === 'cancelled'
   const changes = result?.answer.fitcoachChanges.changes ?? []
 
   return (
-    <Section title="Lokaler Coach">
+    <>
       <div className="vspace-3">
         <p className="text-sm text-muted-foreground">
           Schickt den Bericht an dein lokales KI-Modell. Die Antwort erscheint hier mit den vorgeschlagenen Plan-Änderungen.
@@ -109,7 +113,7 @@ export function LocalCoachSection({ Section }: { Section: SectionComponent }) {
             </div>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <Button onClick={start} disabled={running || !dateFrom || !dateTo}>Lokalen Coach fragen</Button>
+            <Button onClick={start} disabled={running || starting || !dateFrom || !dateTo}>Lokalen Coach fragen</Button>
             {running && <Button variant="outline" onClick={cancel}>Abbrechen</Button>}
           </div>
 
@@ -143,12 +147,17 @@ export function LocalCoachSection({ Section }: { Section: SectionComponent }) {
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
 
-        {result && (
+        {result && !showResult && (
+          <p className="text-sm text-muted-foreground">Vorherige Antwort wird ersetzt …</p>
+        )}
+        {result && showResult && (
           <div className="vspace-3">
             <div className="rounded-lg border bg-card p-4 vspace-2">
               <p className="text-sm whitespace-pre-wrap">{result.answer.explanation}</p>
               <p className="text-xs text-muted-foreground">
-                Modell {result.model} · {format(new Date(result.createdAt), 'dd.MM.yyyy HH:mm')}
+                {isFallback
+                  ? `Letzte gültige Antwort vom ${format(new Date(result.createdAt), 'dd.MM.yyyy HH:mm')} · Modell ${result.model}`
+                  : `Modell ${result.model} · ${format(new Date(result.createdAt), 'dd.MM.yyyy HH:mm')}`}
               </p>
             </div>
             {changes.length === 0 ? (
@@ -162,6 +171,6 @@ export function LocalCoachSection({ Section }: { Section: SectionComponent }) {
           </div>
         )}
       </div>
-    </Section>
+    </>
   )
 }

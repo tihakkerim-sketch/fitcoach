@@ -38,7 +38,7 @@ export function OllamaSettings() {
           ? 'Verbunden, aber kein Modell installiert. Auf dem PC: ollama pull qwen3:8b'
           : `Verbunden. ${res.models.length} Modell(e) gefunden.`,
       })
-      if (res.models.length > 0 && !res.models.some(m => m.name === s.model)) {
+      if (res.models.length > 0 && !s.model) {
         setS({ ...s, model: res.models[0].name })
       }
     } catch (e) {

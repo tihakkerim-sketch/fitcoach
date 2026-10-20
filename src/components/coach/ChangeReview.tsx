@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -19,6 +19,9 @@ export function ChangeReview({ initialText }: { initialText?: string } = {}) {
   const [success, setSuccess] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  const alive = useRef(true)
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+
   const reset = () => { setItems(null); setSummary(null); setPlanId(null); setSelected(new Set()) }
 
   const preview = async (source: string = text) => {
@@ -27,7 +30,9 @@ export function ChangeReview({ initialText }: { initialText?: string } = {}) {
       const plans = await invoke(IPC.PLANS_LIST)
       const active = plans.find(p => p.isActive)
       if (!active) { setError('Es gibt keinen aktiven Trainingsplan. Aktiviere zuerst einen Plan unter „Plans“.'); return }
+      if (!alive.current) return
       const plan = await invoke(IPC.PLANS_GET, active.id)
+      if (!alive.current) return
       if (!plan) { setError('Der aktive Plan konnte nicht geladen werden.'); return }
       const res = parseCoachChanges(source, plan, today())
       setPlanId(plan.id)
@@ -35,9 +40,10 @@ export function ChangeReview({ initialText }: { initialText?: string } = {}) {
       setItems(res.items)
       setSelected(new Set(res.items.filter(i => !i.error).map(i => i.index)))
     } catch (e) {
+      if (!alive.current) return
       setError(e instanceof Error ? e.message : 'Die Antwort konnte nicht gelesen werden.')
     } finally {
-      setBusy(false)
+      if (alive.current) setBusy(false)
     }
   }
 
