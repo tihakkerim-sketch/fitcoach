@@ -31,52 +31,53 @@
 
 ### Task 1: Ollama-Client
 **Files:** Create `electron/lib/ollamaClient.ts`, `electron/lib/ollamaClient.test.ts`
-- [ ] `createOllamaClient({ baseUrl, fetch })` mit `listModels()` (`GET /api/tags`) und `chatStream({ model, messages, format, numCtx, signal, onChunk })` (`POST /api/chat`, NDJSON-Stream zeilenweise lesen, `message.content` anhängen, `done: true` beendet).
-- [ ] Fehlerklasse `OllamaError(kind: 'unreachable'|'model_missing'|'http'|'format'|'timeout'|'cancelled')`; 404 mit „model … not found“ → `model_missing`.
-- [ ] `redirect: 'error'`; Leerlauf-Timeout 2 min zwischen Chunks, Gesamt 15 min (AbortController).
-- [ ] `normalizeOllamaUrl(s)`: nur http/https, kein Pfad/Query, Port erlaubt → sonst wirft.
-- [ ] Tests mit Fake-fetch: Stream in mehreren Stücken (auch Zeile über Chunk-Grenze), 404-Modell, Netzwerkfehler, Abbruch, Leerlauf-Timeout (Fake-Timer), URL-Prüfung.
+- [x] `createOllamaClient({ baseUrl, fetch })` mit `listModels()` (`GET /api/tags`) und `chatStream({ model, messages, format, numCtx, signal, onChunk })` (`POST /api/chat`, NDJSON-Stream zeilenweise lesen, `message.content` anhängen, `done: true` beendet).
+- [x] Fehlerklasse `OllamaError(kind: 'unreachable'|'model_missing'|'http'|'format'|'timeout'|'cancelled')`; 404 mit „model … not found“ → `model_missing`.
+- [x] `redirect: 'error'`; Leerlauf-Timeout 2 min zwischen Chunks, Gesamt 15 min (AbortController).
+- [x] `normalizeOllamaUrl(s)`: nur http/https, kein Pfad/Query, Port erlaubt → sonst wirft.
+- [x] Tests mit Fake-fetch: Stream in mehreren Stücken (auch Zeile über Chunk-Grenze), 404-Modell, Netzwerkfehler, Abbruch, Leerlauf-Timeout (Fake-Timer), URL-Prüfung.
 
 ### Task 2: Prompt + Antwort-Prüfung
 **Files:** Create `electron/lib/ollamaPrompt.ts`, `electron/lib/ollamaPrompt.test.ts`
-- [ ] `buildLocalCoachMessages(report: string)`: System-Anweisung Deutsch (Rolle Lauf-Coach, vorsichtig, Wade/Verletzungsschutz, max. 10 %/Woche, nur Einheiten aus dem Bericht per `#id`, lieber keine Änderung als eine riskante) + `COACH_CHANGES_FORMAT` + Bericht.
-- [ ] `LOCAL_COACH_SCHEMA` (JSON-Schema für Ollama `format`) und Zod-Gegenstück `localCoachAnswerSchema` = `{ explanation: string (1–2000), fitcoachChanges: { fitcoachChanges: 1, summary, changes[] } }`.
-- [ ] `parseLocalCoachAnswer(raw)`: JSON lesen (auch aus ```json-Block), Zod prüfen → `{ ok, answer } | { ok:false, message }`.
-- [ ] Tests: gültig, leere `changes`, Text um JSON herum, kaputtes JSON, falscher Typ.
+- [x] `buildLocalCoachMessages(report: string)`: System-Anweisung Deutsch (Rolle Lauf-Coach, vorsichtig, Wade/Verletzungsschutz, max. 10 %/Woche, nur Einheiten aus dem Bericht per `#id`, lieber keine Änderung als eine riskante) + `COACH_CHANGES_FORMAT` + Bericht.
+- [x] `LOCAL_COACH_SCHEMA` (JSON-Schema für Ollama `format`) und Zod-Gegenstück `localCoachAnswerSchema` = `{ explanation: string (1–2000), fitcoachChanges: { fitcoachChanges: 1, summary, changes[] } }`.
+- [x] `parseLocalCoachAnswer(raw)`: JSON lesen (auch aus ```json-Block), Zod prüfen → `{ ok, answer } | { ok:false, message }`.
+- [x] Tests: gültig, leere `changes`, Text um JSON herum, kaputtes JSON, falscher Typ.
 
 ### Task 3: Job (Hintergrund-Lauf)
 **Files:** Create `electron/lib/ollamaJob.ts`, `electron/lib/ollamaJob.test.ts`
-- [ ] Zustandsautomat ohne `electron`: `idle → connecting → generating(chars) → done(answer) | error(message, raw?) | cancelled`; `start(deps)` lehnt ab, wenn schon läuft; `cancel()`.
-- [ ] Ablauf: Bericht bauen (Callback) → `chatStream` → `parseLocalCoachAnswer`; bei Formatfehler **ein** zweiter Versuch mit Zusatz-Nachricht „Deine Antwort war kein gültiges JSON: …“.
-- [ ] Bei `done` Callback `saveResult(json)` (Main speichert in `ollama.lastResult` mit Zeitstempel + Modell).
-- [ ] Tests: Erfolg, zweiter Versuch klappt, zweimal kaputt → error mit Rohtext, Doppelstart, Abbruch, nicht erreichbar.
+- [x] Zustandsautomat ohne `electron`: `idle → connecting → generating(chars) → done(answer) | error(message, raw?) | cancelled`; `start(deps)` lehnt ab, wenn schon läuft; `cancel()`.
+- [x] Ablauf: Bericht bauen (Callback) → `chatStream` → `parseLocalCoachAnswer`; bei Formatfehler **ein** zweiter Versuch mit Zusatz-Nachricht „Deine Antwort war kein gültiges JSON: …“.
+- [x] Bei `done` Callback `saveResult(json)` (Main speichert in `ollama.lastResult` mit Zeitstempel + Modell).
+- [x] Tests: Erfolg, zweiter Versuch klappt, zweimal kaputt → error mit Rohtext, Doppelstart, Abbruch, nicht erreichbar.
 
 ### Task 4: IPC
 **Files:** Create `electron/ipc/ollama.ts`; Modify `src/types/ipc.ts`, `src/types/ipcContract.ts`, `electron/main.ts`
-- [ ] Kanäle: `OLLAMA_SETTINGS_GET`, `OLLAMA_SETTINGS_SET` ({enabled, url, model}, URL per `normalizeOllamaUrl` in Zod-`transform`), `OLLAMA_TEST` (→ Modelle mit Größe oder Fehlertext), `OLLAMA_START` ({dateFrom, dateTo} wie `summarySchema`), `OLLAMA_STATUS`, `OLLAMA_CANCEL`, `OLLAMA_LAST_RESULT`.
-- [ ] `OLLAMA_START` nutzt `buildCoachReport(getDb(), appToday(getDb()), range)`; wenn deaktiviert → Fehler „Lokaler Coach ist ausgeschaltet“.
-- [ ] `electron/ipc/contract.test.ts` muss grün bleiben.
+- [x] Kanäle: `OLLAMA_SETTINGS_GET`, `OLLAMA_SETTINGS_SET` ({enabled, url, model}, URL per `normalizeOllamaUrl` in Zod-`transform`), `OLLAMA_TEST` (→ Modelle mit Größe oder Fehlertext), `OLLAMA_START` ({dateFrom, dateTo} wie `summarySchema`), `OLLAMA_STATUS`, `OLLAMA_CANCEL`, `OLLAMA_LAST_RESULT`.
+- [x] `OLLAMA_START` nutzt `buildCoachReport(getDb(), appToday(getDb()), range)`; wenn deaktiviert → Fehler „Lokaler Coach ist ausgeschaltet“.
+- [x] `electron/ipc/contract.test.ts` muss grün bleiben.
 
 ### Task 5: Einstellungen-UI
 **Files:** Create `src/components/settings/OllamaSettings.tsx`; Modify `src/pages/Settings.tsx`
-- [ ] Abschnitt „Lokaler Coach (Ollama)“: Schalter, Adresse, „Verbindung testen“ → Modell-Auswahl (Name + GB), Speichern, Datenschutz-Hinweis aus Spec, Kurz-Anleitung mit Link-Text `ollama pull qwen3:8b`.
+- [x] Abschnitt „Lokaler Coach (Ollama)“: Schalter, Adresse, „Verbindung testen“ → Modell-Auswahl (Name + GB), Speichern, Datenschutz-Hinweis aus Spec, Kurz-Anleitung mit Link-Text `ollama pull qwen3:8b`.
 
 ### Task 6: Coach-Seite
 **Files:** Create `src/components/coach/LocalCoachSection.tsx`; Modify `src/pages/Coach.tsx`, `src/components/coach/ChangeReview.tsx`
-- [ ] Nur sichtbar, wenn aktiviert. Zeitraum-Felder (wie `ReportSection`), Knopf „Lokalen Coach fragen“, Status mit Zeichenzähler + vergangener Zeit, „Abbrechen“.
-- [ ] Ergebnis: Erklärung als Textkarte (`whitespace-pre-wrap`, kein HTML) + Modell/Zeitpunkt; Änderungen → `ChangeReview` per neuer Prop `initialText` (setzt Textarea + startet Vorschau automatisch).
-- [ ] Beim Öffnen der Seite `OLLAMA_STATUS` + `OLLAMA_LAST_RESULT` laden (läuft weiter nach Seitenwechsel).
+- [x] Nur sichtbar, wenn aktiviert. Zeitraum-Felder (wie `ReportSection`), Knopf „Lokalen Coach fragen“, Status mit Zeichenzähler + vergangener Zeit, „Abbrechen“.
+- [x] Ergebnis: Erklärung als Textkarte (`whitespace-pre-wrap`, kein HTML) + Modell/Zeitpunkt; Änderungen → `ChangeReview` per neuer Prop `initialText` (setzt Textarea + startet Vorschau automatisch).
+- [x] Beim Öffnen der Seite `OLLAMA_STATUS` + `OLLAMA_LAST_RESULT` laden (läuft weiter nach Seitenwechsel).
 
 ### Task 7: E2E mit Fake-Ollama
 **Files:** Create `e2e/localCoach.spec.ts`, `e2e/fakeOllama.ts`
-- [ ] Node-`http`-Server auf freiem Port: `/api/tags` + `/api/chat` streamt eine feste Antwort (1 Änderung an einer Einheit des Test-Plans) in 3 Stücken mit kleinen Pausen.
-- [ ] Ablauf: Profil + Plan per invoke → Einstellungen: Adresse setzen, testen, Modell wählen → Coach: fragen → Erklärung sichtbar → Vorschau zeigt Änderung → Übernehmen → Einheit geändert.
-- [ ] Zweiter Test: Server liefert kaputtes JSON → Fehlertext sichtbar, nichts geändert.
+- [x] Node-`http`-Server auf freiem Port: `/api/tags` + `/api/chat` streamt eine feste Antwort (1 Änderung an einer Einheit des Test-Plans) in 3 Stücken mit kleinen Pausen.
+- [x] Ablauf: Profil + Plan per invoke → Einstellungen: Adresse setzen, testen, Modell wählen → Coach: fragen → Erklärung sichtbar → Vorschau zeigt Änderung → Übernehmen → Einheit geändert.
+- [x] Zweiter Test: Server liefert kaputtes JSON → Fehlertext sichtbar, nichts geändert.
 
 ### Task 8: Doku + Abschluss
-- [ ] `CLAUDE.md` Gotchas (Ollama-Schlüssel in `app_settings`, Fake-Server in E2E), `docs/AUDIT-2026-10.md` §8 Entscheidung aktualisieren, `docs/BACKLOG.md`.
-- [ ] Typechecks, `npx vitest run`, `npm run build`, `npx playwright test` grün → Version erhöhen → Release (Tag pusht Kerim).
-- [ ] Echter Test auf dem PC mit `qwen3:8b` und Kopie der DB: Dauer messen, Qualität der Vorschläge ansehen.
+- [x] `CLAUDE.md` Gotchas (Ollama-Schlüssel in `app_settings`, Fake-Server in E2E), `docs/AUDIT-2026-10.md` §8 Entscheidung aktualisieren, `docs/BACKLOG.md`.
+- [x] Typechecks, `npx vitest run` (484), `npm run build`, `npx playwright test` (8) grün – 2026-10-20.
+- [ ] Merge nach `main`, Version erhöhen → Release (Tag pusht Kerim).
+- [ ] (Kerim) Echter Test auf dem PC mit `qwen3:8b` und Kopie der DB: Dauer messen, Qualität der Vorschläge ansehen.
 
 ---
 
