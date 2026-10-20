@@ -55,10 +55,10 @@ export function createOllamaJob(): OllamaJob {
       if (!parsed.ok) {
         const retry: OllamaChatMessage[] = [
           ...messages,
-          { role: 'assistant', content: raw },
+          { role: 'assistant', content: raw.slice(0, 4000) },
           { role: 'user', content: `Deine Antwort war kein gültiges JSON: ${parsed.message}. Antworte nur mit dem JSON-Objekt im verlangten Format.` },
         ]
-        raw = await stream(retry, numCtx)
+        raw = await stream(retry, chooseNumCtx(retry.reduce((n, m) => n + m.content.length, 0)))
         if (ctrl.signal.aborted) { status = { state: 'cancelled' }; return }
         parsed = parseLocalCoachAnswer(raw)
         if (!parsed.ok) {

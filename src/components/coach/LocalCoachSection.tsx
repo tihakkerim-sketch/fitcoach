@@ -91,6 +91,13 @@ export function LocalCoachSection() {
     } catch { /* Zwischenablage nicht verfügbar */ }
   }
 
+  // Nach erfolgreichem Übernehmen vermerken, damit dasselbe Ergebnis nicht erneut angewendet wird
+  const markApplied = () => {
+    invoke(IPC.OLLAMA_MARK_APPLIED)
+      .then(() => { if (alive.current) loadResult() })
+      .catch(() => {})
+  }
+
   const showResult = !!result && !running && !starting
   const isFallback = status.state === 'error' || status.state === 'cancelled'
   const changes = result?.answer.fitcoachChanges.changes ?? []
@@ -160,12 +167,17 @@ export function LocalCoachSection() {
                   : `Modell ${result.model} · ${format(new Date(result.createdAt), 'dd.MM.yyyy HH:mm')}`}
               </p>
             </div>
-            {changes.length === 0 ? (
+            {result.appliedAt ? (
+              <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                Änderungen übernommen am {format(new Date(result.appliedAt), 'dd.MM.yyyy HH:mm')}.
+              </p>
+            ) : changes.length === 0 ? (
               <p className="text-sm text-muted-foreground">Keine Plan-Änderungen vorgeschlagen.</p>
             ) : (
               <ChangeReview
                 key={result.createdAt}
                 initialText={JSON.stringify(result.answer.fitcoachChanges, null, 2)}
+                onApplied={markApplied}
               />
             )}
           </div>

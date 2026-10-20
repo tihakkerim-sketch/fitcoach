@@ -62,11 +62,18 @@ test.describe('Lokaler Coach (Fake-Ollama)', () => {
     expect(JSON.stringify(fake.chatCalls[0].messages)).toContain(`#${sessionId}`)
 
     await sec.getByRole('button', { name: 'Übernehmen' }).click()
-    await expect(sec.getByText('1 Änderung übernommen')).toBeVisible()
+    await expect(sec.getByText('Änderungen übernommen am')).toBeVisible()
 
     const detail = await invoke<PlanDetail>(page, 'plans:get', planId)
     const s = detail.weeks.flatMap(w => w.sessions).find(x => x.id === sessionId)!
     expect(s.targetDistanceKm).toBe(7)
+
+    // Wieder öffnen: dasselbe Ergebnis darf nicht erneut angewendet werden
+    await page.getByRole('navigation').getByRole('link', { name: 'Einstellungen' }).click()
+    await page.getByRole('navigation').getByRole('link', { name: 'Coach', exact: true }).click()
+    const sec2 = localSection(page)
+    await expect(sec2.getByText('Änderungen übernommen am')).toBeVisible()
+    await expect(sec2.getByRole('button', { name: 'Übernehmen' })).toHaveCount(0)
   })
 
   test('kaputtes JSON → Fehlertext, nichts geändert', async ({ page }) => {

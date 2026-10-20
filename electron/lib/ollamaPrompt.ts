@@ -4,7 +4,7 @@
 import { z } from 'zod'
 import { COACH_CHANGES_FORMAT } from '../../src/shared/coach/changesFormat'
 import type { OllamaChatMessage } from './ollamaClient'
-import type { LocalCoachAnswer } from '../../src/types/ipc'
+import type { LocalCoachAnswer, LocalCoachResult } from '../../src/types/ipc'
 
 const SYSTEM_PROMPT = `Du bist ein erfahrener, vorsichtiger Lauf-Coach. Du bekommst den Trainingsbericht eines Läufers und schlägst höchstens kleine Anpassungen am Plan vor.
 
@@ -105,4 +105,31 @@ export function parseLocalCoachAnswer(raw: string): ParsedLocalCoachAnswer {
     return { ok: false, message: `Die Antwort hat das falsche Format (${issues}).` }
   }
   return { ok: true, answer: parsed.data }
+}
+
+const isStr = (v: unknown): v is string => typeof v === 'string'
+
+/** Gespeichertes Ergebnis prüfen; ungültig oder fehlend → null. */
+export function parseStoredLocalCoachResult(raw: string | null): LocalCoachResult | null {
+  if (!raw) return null
+  try {
+    const r = JSON.parse(raw) as Record<string, unknown> | null
+    if (!r || typeof r !== 'object') return null
+    const answer = localCoachAnswerSchema.safeParse(r.answer)
+    if (!answer.success) return null
+    if (!isStr(r.model) || !isStr(r.createdAt) || !isStr(r.dateFrom) || !isStr(r.dateTo)) return null
+    if (r.appliedAt !== undefined && !isStr(r.appliedAt)) return null
+    return {
+      answer: answer.data, model: r.model, createdAt: r.createdAt, dateFrom: r.dateFrom, dateTo: r.dateTo,
+      ...(r.appliedAt !== undefined ? { appliedAt: r.appliedAt } : {}),
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Setzt `appliedAt` im gespeicherten Ergebnis; null, wenn nichts Gültiges gespeichert ist. */
+export function markStoredResultApplied(raw: string | null, appliedAt: string): string | null {
+  const r = parseStoredLocalCoachResult(raw)
+  return r ? JSON.stringify({ ...r, appliedAt }) : null
 }

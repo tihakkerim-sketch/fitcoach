@@ -9,7 +9,7 @@ import { emitDataChanged } from '@/lib/dataEvents'
 import { parseCoachChanges, type ChangeItem } from '@/lib/coachChanges'
 import { cn } from '@/lib/utils'
 
-export function ChangeReview({ initialText }: { initialText?: string } = {}) {
+export function ChangeReview({ initialText, onApplied }: { initialText?: string; onApplied?: () => void } = {}) {
   const [text, setText] = useState(initialText ?? '')
   const [planId, setPlanId] = useState<number | null>(null)
   const [summary, setSummary] = useState<string | null>(null)
@@ -68,6 +68,7 @@ export function ChangeReview({ initialText }: { initialText?: string } = {}) {
       setSuccess(`${applied} ${applied === 1 ? 'Änderung' : 'Änderungen'} übernommen`)
       setText(''); reset()
       emitDataChanged()
+      onApplied?.()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Änderungen konnten nicht übernommen werden.')
     } finally {
@@ -80,9 +81,11 @@ export function ChangeReview({ initialText }: { initialText?: string } = {}) {
   return (
     <div className="vspace-3">
       <p className="text-sm text-muted-foreground">
-        Füge hier die Antwort von Claude ein (JSON mit Änderungen am Plan). Du siehst vorher, was sich ändern würde.
+        {initialText
+          ? 'Antwort des lokalen Coachs (bearbeitbar). Du siehst vorher, was sich ändern würde.'
+          : 'Füge hier die Antwort von Claude ein (JSON mit Änderungen am Plan). Du siehst vorher, was sich ändern würde.'}
       </p>
-      <Textarea rows={6} value={text} onChange={e => setText(e.target.value)} placeholder="Antwort von Claude hier einfügen…" className="font-mono text-xs" />
+      <Textarea rows={6} value={text} onChange={e => setText(e.target.value)} placeholder={initialText ? 'Antwort des lokalen Coachs (bearbeitbar)' : 'Antwort von Claude hier einfügen…'} className="font-mono text-xs" />
       <div className="flex gap-2">
         <Button variant="outline" onClick={() => preview()} disabled={busy || !text.trim()}>Vorschau</Button>
       </div>

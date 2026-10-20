@@ -7,6 +7,8 @@ import { appToday } from '../lib/today'
 import { buildCoachReport } from '../lib/coachExport'
 import { createOllamaClient } from '../lib/ollamaClient'
 import { createOllamaJob } from '../lib/ollamaJob'
+import { markStoredResultApplied, parseStoredLocalCoachResult } from '../lib/ollamaPrompt'
+import { runInTransaction } from '../lib/transaction'
 
 const K_ENABLED = 'ollama.enabled'
 const K_URL = 'ollama.url'
@@ -27,16 +29,7 @@ function readSettings(): OllamaSettings {
 }
 
 function readLastResult(): LocalCoachResult | null {
-  const raw = getSetting(getDb(), K_LAST)
-  if (!raw) return null
-  try {
-    const r = JSON.parse(raw) as Partial<LocalCoachResult> | null
-    if (!r || typeof r !== 'object' || !r.answer || typeof r.answer.explanation !== 'string' ||
-        typeof r.model !== 'string' || typeof r.createdAt !== 'string') return null
-    return r as LocalCoachResult
-  } catch {
-    return null
-  }
+  return parseStoredLocalCoachResult(getSetting(getDb(), K_LAST))
 }
 
 export function registerOllamaHandlers() {
@@ -44,9 +37,11 @@ export function registerOllamaHandlers() {
 
   handle(IPC.OLLAMA_SETTINGS_SET, ({ enabled, url, model }) => {
     const db = getDb()
-    setSetting(db, K_ENABLED, enabled ? '1' : '0')
-    setSetting(db, K_URL, url)
-    setSetting(db, K_MODEL, model)
+    runInTransaction(db, () => {
+      setSetting(db, K_ENABLED, enabled ? '1' : '0')
+      setSetting(db, K_URL, url)
+      setSetting(db, K_MODEL, model)
+    })
   })
 
   handle(IPC.OLLAMA_TEST, async ({ url }) => {
@@ -70,4 +65,11 @@ export function registerOllamaHandlers() {
   handle(IPC.OLLAMA_STATUS, () => job.status())
   handle(IPC.OLLAMA_CANCEL, () => { job.cancel() })
   handle(IPC.OLLAMA_LAST_RESULT, () => readLastResult())
+  handle(IPC.OLLAMA_MARK_APPLIED, () => {
+    const db = getDb()
+    runInTransaction(db, () => {
+      const next = markStoredResultApplied(getSetting(db, K_LAST), new Date().toISOString())
+      if (next) setSetting(db, K_LAST, next)
+    })
+  })
 }

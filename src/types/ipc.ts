@@ -54,6 +54,7 @@ export const IPC = {
   OLLAMA_STATUS: 'ollama:status',
   OLLAMA_CANCEL: 'ollama:cancel',
   OLLAMA_LAST_RESULT: 'ollama:lastResult',
+  OLLAMA_MARK_APPLIED: 'ollama:markApplied',
 
   // Plans
   PLANS_CREATE: 'plans:create',
@@ -423,4 +424,6 @@ export interface LocalCoachResult {
   createdAt: string
   dateFrom: string
   dateTo: string
+  /** ISO-Zeitstempel, sobald die Änderungen übernommen wurden */
+  appliedAt?: string
 }

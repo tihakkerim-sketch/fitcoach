@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { COACH_CHANGES_FORMAT } from '../../src/shared/coach/changesFormat'
-import { buildLocalCoachMessages, chooseNumCtx, LOCAL_COACH_SCHEMA, localCoachAnswerSchema, parseLocalCoachAnswer } from './ollamaPrompt'
+import { markStoredResultApplied, parseStoredLocalCoachResult, buildLocalCoachMessages, chooseNumCtx, LOCAL_COACH_SCHEMA, localCoachAnswerSchema, parseLocalCoachAnswer } from './ollamaPrompt'
 
 const answer = {
   explanation: 'Die Woche war ruhig, ich kürze den langen Lauf leicht.',
@@ -102,5 +102,35 @@ describe('parseLocalCoachAnswer', () => {
       expect(r.message).toContain('explanation')
       expect(r.message).toContain('fitcoachChanges.changes')
     }
+  })
+})
+
+describe('parseStoredLocalCoachResult / markStoredResultApplied', () => {
+  const stored = { answer, model: 'qwen3:8b', createdAt: '2026-10-20T10:00:00.000Z', dateFrom: '2026-10-14', dateTo: '2026-10-20' }
+
+  it('accepts a valid stored result', () => {
+    expect(parseStoredLocalCoachResult(JSON.stringify(stored))).toEqual(stored)
+  })
+
+  it('rejects null, garbage and incomplete data', () => {
+    expect(parseStoredLocalCoachResult(null)).toBeNull()
+    expect(parseStoredLocalCoachResult('{kaputt')).toBeNull()
+    expect(parseStoredLocalCoachResult('42')).toBeNull()
+    expect(parseStoredLocalCoachResult(JSON.stringify({ ...stored, model: 1 }))).toBeNull()
+    expect(parseStoredLocalCoachResult(JSON.stringify({ ...stored, dateFrom: undefined }))).toBeNull()
+    expect(parseStoredLocalCoachResult(JSON.stringify({ ...stored, appliedAt: 5 }))).toBeNull()
+  })
+
+  it('rejects an answer without fitcoachChanges.changes', () => {
+    const bad = { ...stored, answer: { explanation: 'x', fitcoachChanges: { fitcoachChanges: 1, summary: 's' } } }
+    expect(parseStoredLocalCoachResult(JSON.stringify(bad))).toBeNull()
+    expect(parseStoredLocalCoachResult(JSON.stringify({ ...stored, answer: { explanation: 'x' } }))).toBeNull()
+  })
+
+  it('marks a result as applied and keeps the rest', () => {
+    const next = markStoredResultApplied(JSON.stringify(stored), '2026-10-21T08:00:00.000Z')!
+    expect(parseStoredLocalCoachResult(next)).toEqual({ ...stored, appliedAt: '2026-10-21T08:00:00.000Z' })
+    expect(markStoredResultApplied(null, 'x')).toBeNull()
+    expect(markStoredResultApplied('{"answer":1}', 'x')).toBeNull()
   })
 })

@@ -76,6 +76,15 @@ describe('createOllamaJob', () => {
     expect(saved).toHaveLength(1)
   })
 
+  it('truncates a huge broken answer in the retry and recomputes numCtx', async () => {
+    const job = createOllamaJob()
+    const { deps, calls } = setup(async (_o, n) => (n === 1 ? 'x'.repeat(50_000) : goodRaw), { buildReport: () => 'y'.repeat(14_000) })
+    await job.start(deps)
+    expect(calls[0].numCtx).toBe(8192)
+    expect(calls[1].messages[2].content).toHaveLength(4000)
+    expect(calls[1].numCtx).toBe(12288)
+  })
+
   it('errors with the raw text after two broken answers', async () => {
     const job = createOllamaJob()
     const { deps, calls, saved } = setup(async (_o, n) => (n === 1 ? 'eins' : 'zwei {'))
