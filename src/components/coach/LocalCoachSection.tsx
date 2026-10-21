@@ -11,6 +11,7 @@ import type { LocalCoachResult, LocalCoachStatus } from '@/types/ipc'
 import { today as getToday } from '@/lib/today'
 import { addDaysStr } from '@/shared/planCalendar'
 import { ChangeReview } from '@/components/coach/ChangeReview'
+import { LocalCoachHistory } from '@/components/coach/LocalCoachHistory'
 
 const errText = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback)
 
@@ -211,6 +212,7 @@ export function LocalCoachSection() {
             )}
           </div>
         )}
+        <LocalCoachHistory reloadKey={`${result?.createdAt ?? ''}|${result?.appliedAt ?? ''}`} />
       </div>
     </>
   )

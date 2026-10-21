@@ -79,3 +79,4 @@ Chat/Rückfragen, automatische Anfrage nach jedem Lauf, mehrere Modelle vergleic
 - Die Nachricht geht als letzte User-Nachricht („Meine Nachricht: …“) an das Modell; der Bericht wird immer frisch gebaut.
 - Bei einer Nachfrage kommen die vorherige Nachricht und Antwort als Verlauf davor; ohne gespeicherte Antwort läuft es als normale Anfrage.
 - Das Ergebnis speichert `message` und `followUp` und zeigt sie als „Du: …“ / „Coach: …“ an. Kein dauerhafter Chat, nur der letzte Austausch.
+- Verlauf: `app_settings` `ollama.history` hält die letzten 10 Antworten (neueste zuerst, mit „übernommen“-Vermerk); in der UI als aufklappbarer, schreibgeschützter Bereich „Verlauf (n)“ mit „Verlauf löschen“ (`lastResult` bleibt).

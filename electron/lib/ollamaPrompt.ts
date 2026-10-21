@@ -137,24 +137,29 @@ export function parseLocalCoachAnswer(raw: string): ParsedLocalCoachAnswer {
 
 const isStr = (v: unknown): v is string => typeof v === 'string'
 
+/** Ein bereits geparstes Ergebnis-Objekt prüfen; ungültig → null. */
+export function validateLocalCoachResult(r: unknown): LocalCoachResult | null {
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return null
+  const o = r as Record<string, unknown>
+  const answer = localCoachAnswerSchema.safeParse(o.answer)
+  if (!answer.success) return null
+  if (!isStr(o.model) || !isStr(o.createdAt) || !isStr(o.dateFrom) || !isStr(o.dateTo)) return null
+  if (o.appliedAt !== undefined && !isStr(o.appliedAt)) return null
+  if (o.message !== undefined && !isStr(o.message)) return null
+  if (o.followUp !== undefined && typeof o.followUp !== 'boolean') return null
+  return {
+    answer: answer.data, model: o.model, createdAt: o.createdAt, dateFrom: o.dateFrom, dateTo: o.dateTo,
+    ...(o.appliedAt !== undefined ? { appliedAt: o.appliedAt } : {}),
+    ...(o.message !== undefined ? { message: o.message } : {}),
+    ...(o.followUp !== undefined ? { followUp: o.followUp } : {}),
+  }
+}
+
 /** Gespeichertes Ergebnis prüfen; ungültig oder fehlend → null. */
 export function parseStoredLocalCoachResult(raw: string | null): LocalCoachResult | null {
   if (!raw) return null
   try {
-    const r = JSON.parse(raw) as Record<string, unknown> | null
-    if (!r || typeof r !== 'object') return null
-    const answer = localCoachAnswerSchema.safeParse(r.answer)
-    if (!answer.success) return null
-    if (!isStr(r.model) || !isStr(r.createdAt) || !isStr(r.dateFrom) || !isStr(r.dateTo)) return null
-    if (r.appliedAt !== undefined && !isStr(r.appliedAt)) return null
-    if (r.message !== undefined && !isStr(r.message)) return null
-    if (r.followUp !== undefined && typeof r.followUp !== 'boolean') return null
-    return {
-      answer: answer.data, model: r.model, createdAt: r.createdAt, dateFrom: r.dateFrom, dateTo: r.dateTo,
-      ...(r.appliedAt !== undefined ? { appliedAt: r.appliedAt } : {}),
-      ...(r.message !== undefined ? { message: r.message } : {}),
-      ...(r.followUp !== undefined ? { followUp: r.followUp } : {}),
-    }
+    return validateLocalCoachResult(JSON.parse(raw))
   } catch {
     return null
   }

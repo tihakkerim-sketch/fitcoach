@@ -2,18 +2,20 @@ import { IPC } from '../../src/types/ipc'
 import type { LocalCoachResult, OllamaSettings } from '../../src/types/ipc'
 import { handle } from './handle'
 import { getDb } from '../../db/index'
-import { getSetting, setSetting } from '../lib/appSettings'
+import { getSetting, setSetting, deleteSetting } from '../lib/appSettings'
 import { appToday } from '../lib/today'
 import { buildCoachReport } from '../lib/coachExport'
 import { createOllamaClient } from '../lib/ollamaClient'
 import { createOllamaJob } from '../lib/ollamaJob'
 import { pickPreviousForFollowUp, markStoredResultApplied, parseStoredLocalCoachResult } from '../lib/ollamaPrompt'
+import { parseStoredHistory, appendHistory, markHistoryApplied } from '../lib/ollamaHistory'
 import { runInTransaction } from '../lib/transaction'
 
 const K_ENABLED = 'ollama.enabled'
 const K_URL = 'ollama.url'
 const K_MODEL = 'ollama.model'
 const K_LAST = 'ollama.lastResult'
+const K_HISTORY = 'ollama.history'
 const DEFAULT_URL = 'http://localhost:11434'
 const DEFAULT_MODEL = 'qwen3:8b'
 
@@ -62,7 +64,14 @@ export function registerOllamaHandlers() {
       message,
       previous,
       buildReport: () => buildCoachReport(getDb(), appToday(getDb()), range),
-      saveResult: (r) => setSetting(getDb(), K_LAST, JSON.stringify(r)),
+      // Aktuelle Antwort und Verlauf zusammen speichern
+      saveResult: (r) => {
+        const db = getDb()
+        runInTransaction(db, () => {
+          setSetting(db, K_LAST, JSON.stringify(r))
+          setSetting(db, K_HISTORY, JSON.stringify(appendHistory(parseStoredHistory(getSetting(db, K_HISTORY)), r)))
+        })
+      },
     })
   })
 
@@ -72,8 +81,16 @@ export function registerOllamaHandlers() {
   handle(IPC.OLLAMA_MARK_APPLIED, () => {
     const db = getDb()
     runInTransaction(db, () => {
-      const next = markStoredResultApplied(getSetting(db, K_LAST), new Date().toISOString())
+      const appliedAt = new Date().toISOString()
+      const last = parseStoredLocalCoachResult(getSetting(db, K_LAST))
+      const next = markStoredResultApplied(getSetting(db, K_LAST), appliedAt)
       if (next) setSetting(db, K_LAST, next)
+      if (last) {
+        const history = markHistoryApplied(parseStoredHistory(getSetting(db, K_HISTORY)), last.createdAt, appliedAt)
+        setSetting(db, K_HISTORY, JSON.stringify(history))
+      }
     })
   })
+  handle(IPC.OLLAMA_HISTORY, () => parseStoredHistory(getSetting(getDb(), K_HISTORY)))
+  handle(IPC.OLLAMA_HISTORY_CLEAR, () => { deleteSetting(getDb(), K_HISTORY) })
 }

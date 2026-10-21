@@ -81,6 +81,10 @@ test.describe('Lokaler Coach (Fake-Ollama)', () => {
     const sec2 = localSection(page)
     await expect(sec2.getByText('Änderungen übernommen am')).toBeVisible()
     await expect(sec2.getByRole('button', { name: 'Übernehmen' })).toHaveCount(0)
+
+    // Verlauf zeigt den Eintrag als übernommen
+    await sec2.getByText('Verlauf (1)').click()
+    await expect(sec2.getByLabel('Verlauf').getByText(/1 Änderung vorgeschlagen · übernommen am/)).toBeVisible()
   })
 
   test('Nachfrage schickt die vorherige Antwort mit', async ({ page }) => {
@@ -112,6 +116,15 @@ test.describe('Lokaler Coach (Fake-Ollama)', () => {
     expect(msgs[msgs.length - 1]).toMatchObject({ role: 'user', content: 'Meine Nachricht: Und was ist mit morgen?' })
     await expect(sec.getByText('Du: Und was ist mit morgen?')).toBeVisible()
     await expect(sec.getByText('Nachfrage', { exact: true })).toBeVisible()
+
+    // Verlauf: beide Austausche, neueste zuerst
+    await sec.getByText('Verlauf (2)').click()
+    const hist = sec.getByLabel('Verlauf')
+    await expect(hist.getByText('Du: Und was ist mit morgen?')).toBeVisible()
+    await expect(hist.getByText('Zweite Antwort zur Nachfrage.')).toBeVisible()
+    await expect(hist.getByText('Erste Antwort vom Coach.')).toBeVisible()
+    await expect(hist.getByText('Keine Änderungen vorgeschlagen')).toHaveCount(2)
+    await expect(hist.getByText(/· Nachfrage/)).toHaveCount(1)
   })
 
   test('kaputtes JSON → Fehlertext, nichts geändert', async ({ page }) => {

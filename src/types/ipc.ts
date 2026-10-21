@@ -55,6 +55,8 @@ export const IPC = {
   OLLAMA_CANCEL: 'ollama:cancel',
   OLLAMA_LAST_RESULT: 'ollama:lastResult',
   OLLAMA_MARK_APPLIED: 'ollama:markApplied',
+  OLLAMA_HISTORY: 'ollama:history',
+  OLLAMA_HISTORY_CLEAR: 'ollama:historyClear',
 
   // Plans
   PLANS_CREATE: 'plans:create',

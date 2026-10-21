@@ -481,6 +481,8 @@ export const ipcInputs = {
   [IPC.OLLAMA_CANCEL]: z.undefined(),
   [IPC.OLLAMA_LAST_RESULT]: z.undefined(),
   [IPC.OLLAMA_MARK_APPLIED]: z.undefined(),
+  [IPC.OLLAMA_HISTORY]: z.undefined(),
+  [IPC.OLLAMA_HISTORY_CLEAR]: z.undefined(),
 
   [IPC.PLANS_CREATE]: createPlanSchema,
   [IPC.PLANS_CREATE_EMPTY]: createEmptyPlanSchema,
@@ -573,6 +575,8 @@ export interface IpcResults {
   [IPC.OLLAMA_CANCEL]: void
   [IPC.OLLAMA_LAST_RESULT]: LocalCoachResult | null
   [IPC.OLLAMA_MARK_APPLIED]: void
+  [IPC.OLLAMA_HISTORY]: LocalCoachResult[]
+  [IPC.OLLAMA_HISTORY_CLEAR]: void
 
   [IPC.PLANS_CREATE]: PlanRow
   [IPC.PLANS_CREATE_EMPTY]: PlanRow
