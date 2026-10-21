@@ -1,36 +1,28 @@
 # Übergabe – FitCoach – 2026-10-21
 
-> **Nächstes Ziel: Release 1.1.0 → Schritt-für-Schritt in `docs/SHIP-LOKALER-COACH.md`.** Seit 20.10. dazugekommen: Nachricht + Nachfrage an den lokalen Coach, Verlauf der letzten 10 Antworten (Branch `lokaler-coach`, HEAD `1d67b21`, vitest 501, E2E 9/9).
-
 ## Ziel der letzten Session
-Plan `docs/superpowers/plans/2026-10-20-lokaler-coach.md` umsetzen: Knopf „Lokalen Coach fragen“ schickt den Coach-Bericht an Ollama (`qwen3:8b` auf Kerims PC), Antwort landet in der Übernehmen-Vorschau.
+Ship-Auftrag `docs/SHIP-LOKALER-COACH.md`: Plan-Auto-Anpassung + lokaler KI-Coach (Ollama) als Release 1.1.0 veröffentlichen.
 
 ## Stand
-- Branch **`lokaler-coach`** (von `plan-auto-anpassung` abgezweigt, 13 Commits seit `b13185d`), **nicht** nach `main` gemergt, nicht released.
-- Fertig: Client/Prompt/Job (`electron/lib/ollama*.ts`), IPC (`electron/ipc/ollama.ts`, 8 Kanäle inkl. `OLLAMA_MARK_APPLIED`), Einstellungen „Lokaler Coach (Ollama)“, Coach-Abschnitt „Lokaler Coach“, E2E mit Fake-Ollama.
-- Geprüft: Typecheck (beide), vitest 484/484, Build, Playwright 8/8 grün. Jede Aufgabe einzeln + Gesamtprüfung durch Reviewer, Befunde behoben.
-- Übernommenes Ergebnis wird als „Änderungen übernommen am …“ markiert und nicht erneut angeboten (sonst doppelte `add`-Einheiten).
-- Hinweis: `main` enthält auch die Plan-Auto-Anpassung noch nicht (Branch `plan-auto-anpassung` ist ebenfalls offen).
+- **Release v1.1.0 live** auf GitHub (genau ein Release: `FitCoach-Setup-1.1.0.exe`, `.blockmap`, `latest.yml`; als „latest“ markiert). Release-Workflow + CI auf `main` grün.
+- `main` = `4deeb91` (Fast-Forward von `lokaler-coach` + `chore: Version 1.1.0`), gepusht. Branches `plan-auto-anpassung` und `lokaler-coach` lokal gelöscht.
+- Vor dem Ship geprüft: beide Typechecks, vitest 501/501, Build, Playwright 9/9.
+- Rauchtest der **gepackten** App (`release/win-unpacked`, leeres Temp-Profil): Heute/Plan/Coach/Einstellungen laden, beide Coach-Abschnitte da, keine Konsolenfehler, Version 1.0.3 (vor dem Hochzählen gebaut). Ollama-Aufruf aus dem Main gegen Fake-Server auf 127.0.0.1: Verbindungstest, Anfrage, Antwort ok.
 
 ## Offen / angefangen
-- **Echter Test mit eigenen Daten** (Kerim): Probelauf mit DB-Kopie gegen den PC wurde von der Auto-Mode-Prüfung blockiert (echte Gesundheitsdaten übers Netz) → Kerim testet in der App.
-- Bericht-Länge in Tokens messen; `num_ctx` ist automatisch 8192 bzw. 12288 bei langem Bericht.
-- Merge nach `main`, Version erhöhen (1.0.3 → 1.1.0), Tag pushen.
+- **Kerim:** installierte App auf 1.1.0 aktualisieren (Einstellungen → „App & Updates“ oder Installer). Beim ersten Start läuft Migration v6 (`plan_proposals`), vorher automatische Sicherung `backups/vor-migration-*.db`.
+- **Kerim:** danach Einstellungen → Lokaler Coach: `http://192.168.0.66:11434`, „Verbindung testen“, `qwen3:8b`, Speichern; einmal „Lokalen Coach fragen“ mit echten Daten (Dauer + Qualität ansehen).
+- Echter Durchlauf Plan-Anpassung (Feedback nach Lauf → Vorschlag) mit eigenen Daten steht noch aus.
 
 ## Nächste sinnvolle Schritte
-1. **Empfohlen:** App vom Branch starten (`npm run dev`), Einstellungen → Lokaler Coach: Adresse `http://192.168.0.66:11434`, „Verbindung testen“, `qwen3:8b`, Speichern → Coach → „Lokalen Coach fragen“. Dauer + Qualität ansehen.
-2. Wenn gut: `plan-auto-anpassung` + `lokaler-coach` nach `main` mergen, Version erhöhen, Release-Tag.
-3. Kleinere Rest-Punkte (unten) bei Gelegenheit.
+1. **Empfohlen:** Rückmeldung aus dem echten Test (Coach-Antwortqualität, Vorschläge nach Läufen) → Fehler mit `/bug` melden.
+2. Bericht-Länge mit echten Daten messen (`num_ctx` 8192 / 12288).
+3. Kleinere Backlog-Punkte, z. B. Lauf-Kadenz verdoppeln, Zuordnung ±1 Tag.
 
 ## Gotchas, die neu gelernt wurden
-- Ollama-`format` (JSON-Schema): Felder der Änderungen explizit als optionale Properties angeben, sonst lässt die Grammatik sie evtl. nicht zu.
-- Probeläufe mit echten Daten an einen Netzwerk-Dienst blockiert die Auto-Mode-Prüfung → Kerim führt sie selbst aus.
-- Zwei `ChangeReview` auf der Coach-Seite (lokal + Claude) haben gleiche Beschriftungen → E2E-Locators auf den Abschnitt eingrenzen.
-
-## Rest-Kleinigkeiten (aus Reviews, nicht dringend)
-- `OLLAMA_MARK_APPLIED` ohne `createdAt`-Abgleich; Fehler beim Markieren wird verschluckt.
-- Weiterleitung/Lesefehler werden als „nicht erreichbar“ gemeldet.
-- Coach-Seite liest „Lokaler Coach an?“ nur beim Öffnen.
+- Gepackte App per Playwright: `_electron.launch({ executablePath: 'release/win-unpacked/FitCoach.exe', args: ['--user-data-dir=<temp>'] })`; Skripte im Scratchpad brauchen `NODE_PATH=<repo>/node_modules`. Lazy Seiten → vor `count()` auf Text warten.
+- Ollama-Pfad der gepackten App lässt sich ohne Netz gegen einen Mini-Fake-Server (`/api/tags`, `/api/chat` NDJSON) auf 127.0.0.1 prüfen.
+- Alte Phasen-Branches (`phase-*`) liegen noch lokal – alle in `main` enthalten.
 
 ## Wichtige Dateien
-`electron/lib/ollamaClient.ts`, `ollamaPrompt.ts`, `ollamaJob.ts`, `electron/ipc/ollama.ts`, `src/shared/ollamaUrl.ts`, `src/components/settings/OllamaSettings.tsx`, `src/components/coach/LocalCoachSection.tsx`, `src/components/coach/ChangeReview.tsx`, `e2e/localCoach.spec.ts`, `e2e/fakeOllama.ts`
+`docs/SHIP-LOKALER-COACH.md`, `.github/workflows/{ci,release}.yml`, `package.json` (Version 1.1.0), `electron/lib/ollama*.ts`, `electron/lib/planProposals.ts`, `src/shared/adapt/`
