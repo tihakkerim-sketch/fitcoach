@@ -62,6 +62,30 @@ describe('createOllamaJob', () => {
     expect(calls[0].messages[1]).toEqual({ role: 'user', content: 'BERICHT' })
   })
 
+  it('passes message and previous to the prompt and stores them in the result', async () => {
+    const job = createOllamaJob()
+    const { deps, calls, saved } = setup(async () => goodRaw, { message: 'Lauf verpasst', previous: { message: 'Erst', answer: goodAnswer } })
+    await job.start(deps)
+    expect(calls[0].messages.map(m => m.role)).toEqual(['system', 'user', 'user', 'assistant', 'user'])
+    expect(calls[0].messages[4].content).toBe('Meine Nachricht: Lauf verpasst')
+    expect(saved[0]).toMatchObject({ message: 'Lauf verpasst', followUp: true })
+  })
+
+  it('stores a plain message without followUp', async () => {
+    const job = createOllamaJob()
+    const { deps, saved } = setup(async () => goodRaw, { message: 'Hallo' })
+    await job.start(deps)
+    expect(saved[0].message).toBe('Hallo')
+    expect(saved[0].followUp).toBeUndefined()
+  })
+
+  it('counts message and previous answer for numCtx', async () => {
+    const job = createOllamaJob()
+    const { deps, calls } = setup(async () => goodRaw, { buildReport: () => 'y'.repeat(17_000), message: 'm'.repeat(1000) })
+    await job.start(deps)
+    expect(calls[0].numCtx).toBe(12288)
+  })
+
   it('retries once with the broken answer and a hint, then succeeds', async () => {
     const job = createOllamaJob()
     const { deps, calls, saved } = setup(async (_o, n) => (n === 1 ? 'kein json' : goodRaw))

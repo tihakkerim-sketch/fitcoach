@@ -73,3 +73,9 @@ Fehlerhinweis, danach Status `error` mit Rohtext zum Kopieren.
 
 ## Nicht in v1
 Chat/Rückfragen, automatische Anfrage nach jedem Lauf, mehrere Modelle vergleichen, Mac-Version von FitCoach.
+
+## v1.1 – Nachricht und Nachfrage
+- `OLLAMA_START` nimmt zusätzlich `message` (getrimmt, höchstens 1000 Zeichen, leer = keine) und `followUp`; eine Nachfrage ohne Text wird abgelehnt.
+- Die Nachricht geht als letzte User-Nachricht („Meine Nachricht: …“) an das Modell; der Bericht wird immer frisch gebaut.
+- Bei einer Nachfrage kommen die vorherige Nachricht und Antwort als Verlauf davor; ohne gespeicherte Antwort läuft es als normale Anfrage.
+- Das Ergebnis speichert `message` und `followUp` und zeigt sie als „Du: …“ / „Coach: …“ an. Kein dauerhafter Chat, nur der letzte Austausch.

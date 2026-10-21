@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { invoke } from '@/lib/ipc'
 import { IPC } from '@/types/ipc'
@@ -28,6 +29,7 @@ export function LocalCoachSection() {
   const [error, setError] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [copied, setCopied] = useState(false)
+  const [message, setMessage] = useState('')
   const alive = useRef(true)
   const prevKey = useRef<string>('idle')
 
@@ -62,11 +64,12 @@ export function LocalCoachSection() {
     prevKey.current = key
   }, [status, loadResult])
 
-  const start = async () => {
+  const start = async (followUp: boolean) => {
     if (starting) return
     setError(null); setStarting(true)
     try {
-      await invoke(IPC.OLLAMA_START, { dateFrom, dateTo })
+      await invoke(IPC.OLLAMA_START, { dateFrom, dateTo, message: message.trim() || undefined, followUp: followUp || undefined })
+      if (alive.current) setMessage('')
       const t0 = Date.now()
       setNow(t0)
       if (alive.current) setStatus({ state: 'connecting', startedAt: t0 })
@@ -119,8 +122,24 @@ export function LocalCoachSection() {
               <Input id="local-date-to" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} max={today} />
             </div>
           </div>
+          <div className="vspace-1">
+            <Label htmlFor="local-coach-message">Deine Nachricht an den Coach (optional)</Label>
+            <Textarea
+              id="local-coach-message"
+              placeholder="z. B. Ich habe den Lauf gestern verpasst und laufe heute – bitte Plan anpassen."
+              maxLength={1000}
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground text-right">{message.length}/1000</p>
+          </div>
           <div className="flex gap-2 items-center flex-wrap">
-            <Button onClick={start} disabled={running || starting || !dateFrom || !dateTo}>Lokalen Coach fragen</Button>
+            <Button onClick={() => start(false)} disabled={running || starting || !dateFrom || !dateTo}>Lokalen Coach fragen</Button>
+            {result && (
+              <Button variant="outline" onClick={() => start(true)} disabled={running || starting || !dateFrom || !dateTo || !message.trim()}>
+                Nachfrage stellen
+              </Button>
+            )}
             {running && <Button variant="outline" onClick={cancel}>Abbrechen</Button>}
           </div>
 
@@ -160,7 +179,14 @@ export function LocalCoachSection() {
         {result && showResult && (
           <div className="vspace-3">
             <div className="rounded-lg border bg-card p-4 vspace-2">
-              <p className="text-sm whitespace-pre-wrap">{result.answer.explanation}</p>
+              {result.message && (
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">Du: {result.message}</p>
+              )}
+              {result.followUp && <p className="text-xs text-muted-foreground">Nachfrage</p>}
+              <p className="text-sm whitespace-pre-wrap">
+                {result.message && <span className="font-medium">Coach: </span>}
+                {result.answer.explanation}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {isFallback
                   ? `Letzte gültige Antwort vom ${format(new Date(result.createdAt), 'dd.MM.yyyy HH:mm')} · Modell ${result.model}`

@@ -23,6 +23,31 @@ describe('buildLocalCoachMessages', () => {
     expect(msgs[0].content).toContain(COACH_CHANGES_FORMAT)
     expect(msgs[1]).toEqual({ role: 'user', content: 'BERICHT #5 Lauf' })
   })
+
+  it('mentions the runner message in the system prompt', () => {
+    const sys = buildLocalCoachMessages('B')[0].content
+    expect(sys).toContain('Nachricht')
+    expect(sys).toContain('explanation')
+  })
+
+  it('appends the runner message as last user message', () => {
+    const msgs = buildLocalCoachMessages('B', { message: 'Ich habe gestern verpasst' })
+    expect(msgs).toHaveLength(3)
+    expect(msgs[2]).toEqual({ role: 'user', content: 'Meine Nachricht: Ich habe gestern verpasst' })
+  })
+
+  it('follow-up: report, previous message, previous answer, new message', () => {
+    const msgs = buildLocalCoachMessages('B', { message: 'Und morgen?', previous: { message: 'Erst', answer } })
+    expect(msgs.map(m => m.role)).toEqual(['system', 'user', 'user', 'assistant', 'user'])
+    expect(msgs[2].content).toBe('Meine Nachricht: Erst')
+    expect(msgs[3].content).toBe(JSON.stringify(answer))
+    expect(msgs[4].content).toBe('Meine Nachricht: Und morgen?')
+  })
+
+  it('previous without message skips the previous user message', () => {
+    const msgs = buildLocalCoachMessages('B', { message: 'Nachfrage', previous: { answer } })
+    expect(msgs.map(m => m.role)).toEqual(['system', 'user', 'assistant', 'user'])
+  })
 })
 
 describe('chooseNumCtx', () => {
@@ -110,6 +135,13 @@ describe('parseStoredLocalCoachResult / markStoredResultApplied', () => {
 
   it('accepts a valid stored result', () => {
     expect(parseStoredLocalCoachResult(JSON.stringify(stored))).toEqual(stored)
+  })
+
+  it('keeps message and followUp, rejects wrong types', () => {
+    const withMsg = { ...stored, message: 'Hallo', followUp: true }
+    expect(parseStoredLocalCoachResult(JSON.stringify(withMsg))).toEqual(withMsg)
+    expect(parseStoredLocalCoachResult(JSON.stringify({ ...stored, message: 5 }))).toBeNull()
+    expect(parseStoredLocalCoachResult(JSON.stringify({ ...stored, followUp: 'ja' }))).toBeNull()
   })
 
   it('rejects null, garbage and incomplete data', () => {

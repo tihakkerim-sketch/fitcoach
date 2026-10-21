@@ -29,6 +29,15 @@ describe('Lokaler Coach: Eingaben', () => {
   it('Start nimmt Zeitraum, Rest keine Eingabe', () => {
     expect(ok(IPC.OLLAMA_START, { dateFrom: '2026-10-01', dateTo: '2026-10-20' })).toBe(true)
     expect(ok(IPC.OLLAMA_START, { dateFrom: 'x', dateTo: '2026-10-20' })).toBe(false)
+    const r = { dateFrom: '2026-10-01', dateTo: '2026-10-20' }
+    expect(ipcInputs[IPC.OLLAMA_START].parse({ ...r, message: '  Hallo  ' }).message).toBe('Hallo')
+    expect(ipcInputs[IPC.OLLAMA_START].parse({ ...r, message: '   ' }).message).toBeUndefined()
+    expect(ok(IPC.OLLAMA_START, { ...r, message: 'x'.repeat(1000) })).toBe(true)
+    expect(ok(IPC.OLLAMA_START, { ...r, message: 'x'.repeat(1001) })).toBe(false)
+    expect(ok(IPC.OLLAMA_START, { ...r, followUp: true, message: 'Und morgen?' })).toBe(true)
+    const bad = ipcInputs[IPC.OLLAMA_START].safeParse({ ...r, followUp: true })
+    expect(bad.success ? '' : bad.error.issues[0].message).toBe('Bitte eine Nachfrage eingeben.')
+    expect(ok(IPC.OLLAMA_START, { ...r, followUp: true, message: ' ' })).toBe(false)
     for (const c of [IPC.OLLAMA_SETTINGS_GET, IPC.OLLAMA_STATUS, IPC.OLLAMA_CANCEL, IPC.OLLAMA_LAST_RESULT]) {
       expect(ok(c, undefined)).toBe(true)
       expect(ok(c, { x: 1 })).toBe(false)

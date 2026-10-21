@@ -333,6 +333,15 @@ const adaptIdSchema = z.object({ id })
 export const summarySchema = z.object({ dateFrom: dateString, dateTo: dateString })
 export type SummaryPayload = z.infer<typeof summarySchema>
 
+export const ollamaStartSchema = z.object({
+  dateFrom: dateString,
+  dateTo: dateString,
+  message: z.string().trim().max(1000).optional(),
+  followUp: z.boolean().optional(),
+})
+  .transform(v => ({ ...v, message: v.message || undefined }))
+  .refine(v => !v.followUp || !!v.message, { message: 'Bitte eine Nachfrage eingeben.', path: ['message'] })
+
 export const ollamaUrlSchema = z.string().trim().max(200).transform((s, ctx) => {
   try { return normalizeOllamaUrl(s) } catch (e) {
     ctx.addIssue({ code: 'custom', message: (e as Error).message })
@@ -467,7 +476,7 @@ export const ipcInputs = {
   [IPC.OLLAMA_SETTINGS_GET]: z.undefined(),
   [IPC.OLLAMA_SETTINGS_SET]: ollamaSettingsSchema,
   [IPC.OLLAMA_TEST]: ollamaTestSchema,
-  [IPC.OLLAMA_START]: summarySchema,
+  [IPC.OLLAMA_START]: ollamaStartSchema,
   [IPC.OLLAMA_STATUS]: z.undefined(),
   [IPC.OLLAMA_CANCEL]: z.undefined(),
   [IPC.OLLAMA_LAST_RESULT]: z.undefined(),

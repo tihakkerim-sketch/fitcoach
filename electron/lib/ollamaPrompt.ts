@@ -14,17 +14,35 @@ Wichtige Regeln:
 - Ändere nur Einheiten, die im Bericht stehen, und verweise immer per #id (sessionId) auf sie. Erfinde keine IDs.
 - Lieber keine Änderung (leere "changes") als eine riskante.
 
+Der Läufer kann dir eine Nachricht mit Wünschen schreiben ("Meine Nachricht: …"). Beantworte sie direkt in "explanation".
+- Setze den Wunsch als Plan-Änderung um, wenn das sicher ist (gleiche Regeln: nur Einheiten ab heute per #id, höchstens etwa 10 % Steigerung pro Woche, Verletzungsschutz, verpasste Einheiten nie durch doppelte Belastung nachholen).
+- Ist der Wunsch nicht sicher oder nicht möglich (z. B. vergangene Einheiten lassen sich nicht ändern), erkläre in "explanation" warum und schlage eine sichere Alternative vor.
+- Ohne Nachricht verhältst du dich wie oben beschrieben.
+
 Antworte auf Deutsch als JSON mit zwei Feldern:
 - "explanation": kurze, verständliche Erklärung in einfachen Worten (höchstens etwa 1200 Zeichen).
 - "fitcoachChanges": die Plan-Änderungen im folgenden Format.
 
 ${COACH_CHANGES_FORMAT}`
 
-export function buildLocalCoachMessages(report: string): OllamaChatMessage[] {
-  return [
+export interface LocalCoachPrompt {
+  message?: string
+  /** Vorheriger Austausch bei einer Nachfrage */
+  previous?: { message?: string; answer: LocalCoachAnswer }
+}
+
+export function buildLocalCoachMessages(report: string, opts: LocalCoachPrompt = {}): OllamaChatMessage[] {
+  const msgs: OllamaChatMessage[] = [
     { role: 'system', content: SYSTEM_PROMPT },
     { role: 'user', content: report },
   ]
+  const { message, previous } = opts
+  if (previous) {
+    if (previous.message) msgs.push({ role: 'user', content: `Meine Nachricht: ${previous.message}` })
+    msgs.push({ role: 'assistant', content: JSON.stringify(previous.answer) })
+  }
+  if (message) msgs.push({ role: 'user', content: `Meine Nachricht: ${message}` })
+  return msgs
 }
 
 /** Kontextgröße für Ollama: 8192, bei sehr langen Berichten 12288 (grob 3 Zeichen je Token + Platz für die Antwort). */
@@ -119,9 +137,13 @@ export function parseStoredLocalCoachResult(raw: string | null): LocalCoachResul
     if (!answer.success) return null
     if (!isStr(r.model) || !isStr(r.createdAt) || !isStr(r.dateFrom) || !isStr(r.dateTo)) return null
     if (r.appliedAt !== undefined && !isStr(r.appliedAt)) return null
+    if (r.message !== undefined && !isStr(r.message)) return null
+    if (r.followUp !== undefined && typeof r.followUp !== 'boolean') return null
     return {
       answer: answer.data, model: r.model, createdAt: r.createdAt, dateFrom: r.dateFrom, dateTo: r.dateTo,
       ...(r.appliedAt !== undefined ? { appliedAt: r.appliedAt } : {}),
+      ...(r.message !== undefined ? { message: r.message } : {}),
+      ...(r.followUp !== undefined ? { followUp: r.followUp } : {}),
     }
   } catch {
     return null

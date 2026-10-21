@@ -426,4 +426,8 @@ export interface LocalCoachResult {
   dateTo: string
   /** ISO-Zeitstempel, sobald die Änderungen übernommen wurden */
   appliedAt?: string
+  /** Nachricht des Läufers an den Coach (falls vorhanden) */
+  message?: string
+  /** true = Nachfrage zur vorherigen Antwort */
+  followUp?: boolean
 }

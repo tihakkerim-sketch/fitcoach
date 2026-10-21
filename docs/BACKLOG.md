@@ -25,6 +25,6 @@ Reihenfolge laut `docs/AUDIT-2026-10.md` Abschnitt 7.
 - [ ] Recovery: Befinden-Verlauf als eigene Liste/Diagramm (jetzt nur im Tooltip)
 - [ ] Rückgängig für gelöschte Plan-Einheiten / Recovery-Einträge (bisher nur Aktivitäten)
 - [ ] Lokaler Coach: Bericht-Länge mit echten Daten messen (Tokens) und `num_ctx` prüfen (jetzt 8192, ab langem Bericht automatisch 12288)
-- [ ] Lokaler Coach: Rückfragen/Chat, automatische Anfrage nach jedem Lauf (bewusst nicht in v1)
+- [ ] Lokaler Coach: automatische Anfrage nach jedem Lauf (bewusst nicht in v1)
 - [ ] Lokaler Coach: Echter Test mit eigenen Daten in der App (Dauer, Qualität), danach Merge + Release 1.1.0
 - [ ] Lokaler Coach Kleinigkeiten: MARK_APPLIED mit createdAt-Abgleich, Weiterleitung eigene Fehlermeldung, Abschnitt erscheint erst nach Neu-Öffnen der Coach-Seite

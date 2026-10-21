@@ -49,14 +49,18 @@ export function registerOllamaHandlers() {
     return { models: models.map(m => ({ name: m.name, sizeGb: Math.round((m.size / 1e9) * 10) / 10 })) }
   })
 
-  handle(IPC.OLLAMA_START, (range) => {
+  handle(IPC.OLLAMA_START, ({ message, followUp, ...range }) => {
     const s = readSettings()
     if (!s.enabled) throw new Error('Lokaler Coach ist ausgeschaltet')
+    // Nachfrage: letzte gültige Antwort mitschicken (ohne gespeicherte Antwort normale Anfrage)
+    const last = followUp ? readLastResult() : null
     // Nicht awaiten: wirft synchron, wenn schon einer läuft; Fehler des Laufs landen im Status.
     void job.start({
       client: createOllamaClient({ baseUrl: s.url }),
       model: s.model,
       range,
+      message,
+      previous: last ? { message: last.message, answer: last.answer } : undefined,
       buildReport: () => buildCoachReport(getDb(), appToday(getDb()), range),
       saveResult: (r) => setSetting(getDb(), K_LAST, JSON.stringify(r)),
     })

@@ -3,7 +3,7 @@
  * `start()` wirft sofort, wenn schon ein Lauf aktiv ist; das zurückgegebene Promise
  * endet immer ohne Fehler – alle Fehler stehen in `status()`.
  */
-import type { LocalCoachResult, LocalCoachStatus } from '../../src/types/ipc'
+import type { LocalCoachAnswer, LocalCoachResult, LocalCoachStatus } from '../../src/types/ipc'
 import { OllamaError, type OllamaChatMessage, type OllamaClient } from './ollamaClient'
 import { buildLocalCoachMessages, chooseNumCtx, LOCAL_COACH_SCHEMA, parseLocalCoachAnswer } from './ollamaPrompt'
 
@@ -12,6 +12,10 @@ export interface OllamaJobDeps {
   model: string
   range: { dateFrom: string; dateTo: string }
   buildReport: () => string
+  /** Nachricht des Läufers (optional) */
+  message?: string
+  /** Vorheriger Austausch bei einer Nachfrage */
+  previous?: { message?: string; answer: LocalCoachAnswer }
   saveResult: (r: LocalCoachResult) => void
   now?: () => number
   idleTimeoutMs?: number
@@ -46,7 +50,7 @@ export function createOllamaJob(): OllamaJob {
 
     try {
       const report = deps.buildReport()
-      const messages = buildLocalCoachMessages(report)
+      const messages = buildLocalCoachMessages(report, { message: deps.message, previous: deps.previous })
       const numCtx = chooseNumCtx(messages.reduce((n, m) => n + m.content.length, 0))
 
       let raw = await stream(messages, numCtx)
@@ -72,6 +76,8 @@ export function createOllamaJob(): OllamaJob {
         model: deps.model,
         createdAt: new Date(now()).toISOString(),
         ...deps.range,
+        ...(deps.message ? { message: deps.message } : {}),
+        ...(deps.previous ? { followUp: true } : {}),
       })
       status = { state: 'done', startedAt, finishedAt: now() }
     } catch (e) {

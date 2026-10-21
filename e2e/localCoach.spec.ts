@@ -54,12 +54,19 @@ test.describe('Lokaler Coach (Fake-Ollama)', () => {
     await page.getByRole('navigation').getByRole('link', { name: 'Coach', exact: true }).click()
 
     const sec = localSection(page)
+    await expect(sec.getByRole('button', { name: 'Nachfrage stellen' })).toHaveCount(0)
+    await sec.locator('#local-coach-message').fill('Ich habe gestern verpasst, bitte anpassen.')
     await sec.getByRole('button', { name: 'Lokalen Coach fragen' }).click()
     await expect(sec.getByText('Der lange Lauf wird etwas kürzer, damit du dich erholst.')).toBeVisible({ timeout: 20_000 })
+    await expect(sec.locator('#local-coach-message')).toHaveValue('')
 
     expect(fake.chatCalls).toHaveLength(1)
     expect(fake.chatCalls[0].model).toBe('qwen3:8b')
     expect(JSON.stringify(fake.chatCalls[0].messages)).toContain(`#${sessionId}`)
+    const msgs0 = fake.chatCalls[0].messages as { role: string; content: string }[]
+    expect(msgs0[msgs0.length - 1].role).toBe('user')
+    expect(msgs0[msgs0.length - 1].content).toContain('Ich habe gestern verpasst, bitte anpassen.')
+    await expect(sec.getByText('Du: Ich habe gestern verpasst, bitte anpassen.')).toBeVisible()
 
     await sec.getByRole('button', { name: 'Übernehmen' }).click()
     await expect(sec.getByText('Änderungen übernommen am')).toBeVisible()
@@ -74,6 +81,37 @@ test.describe('Lokaler Coach (Fake-Ollama)', () => {
     const sec2 = localSection(page)
     await expect(sec2.getByText('Änderungen übernommen am')).toBeVisible()
     await expect(sec2.getByRole('button', { name: 'Übernehmen' })).toHaveCount(0)
+  })
+
+  test('Nachfrage schickt die vorherige Antwort mit', async ({ page }) => {
+    await skipOnboarding(page)
+    await createPlan(page)
+    const answer = (text: string) => JSON.stringify({
+      explanation: text,
+      fitcoachChanges: { fitcoachChanges: 1, summary: 'Keine Änderung', changes: [] },
+    })
+    fake.setAnswer(answer('Erste Antwort vom Coach.'))
+
+    await configureOllama(page, fake.url)
+    await page.getByRole('navigation').getByRole('link', { name: 'Coach', exact: true }).click()
+
+    const sec = localSection(page)
+    await sec.getByRole('button', { name: 'Lokalen Coach fragen' }).click()
+    await expect(sec.getByText('Erste Antwort vom Coach.')).toBeVisible({ timeout: 20_000 })
+
+    const follow = sec.getByRole('button', { name: 'Nachfrage stellen' })
+    await expect(follow).toBeDisabled()
+    fake.setAnswer(answer('Zweite Antwort zur Nachfrage.'))
+    await sec.locator('#local-coach-message').fill('Und was ist mit morgen?')
+    await follow.click()
+    await expect(sec.getByText('Zweite Antwort zur Nachfrage.')).toBeVisible({ timeout: 20_000 })
+
+    expect(fake.chatCalls).toHaveLength(2)
+    const msgs = fake.chatCalls[1].messages as { role: string; content: string }[]
+    expect(msgs.some(m => m.role === 'assistant' && m.content.includes('Erste Antwort vom Coach.'))).toBe(true)
+    expect(msgs[msgs.length - 1]).toMatchObject({ role: 'user', content: 'Meine Nachricht: Und was ist mit morgen?' })
+    await expect(sec.getByText('Du: Und was ist mit morgen?')).toBeVisible()
+    await expect(sec.getByText('Nachfrage', { exact: true })).toBeVisible()
   })
 
   test('kaputtes JSON → Fehlertext, nichts geändert', async ({ page }) => {
