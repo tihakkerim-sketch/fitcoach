@@ -1,4 +1,6 @@
-# Übergabe – FitCoach – 2026-10-20
+# Übergabe – FitCoach – 2026-10-21
+
+> **Nächstes Ziel: Release 1.1.0 → Schritt-für-Schritt in `docs/SHIP-LOKALER-COACH.md`.** Seit 20.10. dazugekommen: Nachricht + Nachfrage an den lokalen Coach, Verlauf der letzten 10 Antworten (Branch `lokaler-coach`, HEAD `1d67b21`, vitest 501, E2E 9/9).
 
 ## Ziel der letzten Session
 Plan `docs/superpowers/plans/2026-10-20-lokaler-coach.md` umsetzen: Knopf „Lokalen Coach fragen“ schickt den Coach-Bericht an Ollama (`qwen3:8b` auf Kerims PC), Antwort landet in der Übernehmen-Vorschau.
