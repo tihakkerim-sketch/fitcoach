@@ -7,7 +7,7 @@ import { appToday } from '../lib/today'
 import { buildCoachReport } from '../lib/coachExport'
 import { createOllamaClient } from '../lib/ollamaClient'
 import { createOllamaJob } from '../lib/ollamaJob'
-import { markStoredResultApplied, parseStoredLocalCoachResult } from '../lib/ollamaPrompt'
+import { pickPreviousForFollowUp, markStoredResultApplied, parseStoredLocalCoachResult } from '../lib/ollamaPrompt'
 import { runInTransaction } from '../lib/transaction'
 
 const K_ENABLED = 'ollama.enabled'
@@ -52,15 +52,15 @@ export function registerOllamaHandlers() {
   handle(IPC.OLLAMA_START, ({ message, followUp, ...range }) => {
     const s = readSettings()
     if (!s.enabled) throw new Error('Lokaler Coach ist ausgeschaltet')
-    // Nachfrage: letzte gültige Antwort mitschicken (ohne gespeicherte Antwort normale Anfrage)
-    const last = followUp ? readLastResult() : null
+    // Nachfrage: letzte gültige Antwort mitschicken (ohne passende gespeicherte Antwort normale Anfrage)
+    const previous = followUp ? pickPreviousForFollowUp(readLastResult(), range) : undefined
     // Nicht awaiten: wirft synchron, wenn schon einer läuft; Fehler des Laufs landen im Status.
     void job.start({
       client: createOllamaClient({ baseUrl: s.url }),
       model: s.model,
       range,
       message,
-      previous: last ? { message: last.message, answer: last.answer } : undefined,
+      previous,
       buildReport: () => buildCoachReport(getDb(), appToday(getDb()), range),
       saveResult: (r) => setSetting(getDb(), K_LAST, JSON.stringify(r)),
     })

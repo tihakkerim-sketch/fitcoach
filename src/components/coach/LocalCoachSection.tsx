@@ -31,6 +31,7 @@ export function LocalCoachSection() {
   const [copied, setCopied] = useState(false)
   const [message, setMessage] = useState('')
   const alive = useRef(true)
+  const startLock = useRef(false)
   const prevKey = useRef<string>('idle')
 
   const loadResult = useCallback(() => {
@@ -65,7 +66,8 @@ export function LocalCoachSection() {
   }, [status, loadResult])
 
   const start = async (followUp: boolean) => {
-    if (starting) return
+    if (startLock.current) return
+    startLock.current = true
     setError(null); setStarting(true)
     try {
       await invoke(IPC.OLLAMA_START, { dateFrom, dateTo, message: message.trim() || undefined, followUp: followUp || undefined })
@@ -77,6 +79,7 @@ export function LocalCoachSection() {
     } catch (e) {
       if (alive.current) setError(errText(e, 'Der lokale Coach konnte nicht gestartet werden.'))
     } finally {
+      startLock.current = false
       if (alive.current) setStarting(false)
     }
   }

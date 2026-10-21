@@ -81,7 +81,13 @@ describe('createOllamaJob', () => {
 
   it('counts message and previous answer for numCtx', async () => {
     const job = createOllamaJob()
-    const { deps, calls } = setup(async () => goodRaw, { buildReport: () => 'y'.repeat(17_000), message: 'm'.repeat(1000) })
+    const long = { ...goodAnswer, explanation: 'e'.repeat(1900) }
+    const base = setup(async () => goodRaw, { buildReport: () => 'y'.repeat(15_000) })
+    await createOllamaJob().start(base.deps)
+    expect(base.calls[0].numCtx).toBe(8192)
+    const { deps, calls } = setup(async () => goodRaw, {
+      buildReport: () => 'y'.repeat(15_000), message: 'm'.repeat(1000), previous: { message: 'p'.repeat(500), answer: long },
+    })
     await job.start(deps)
     expect(calls[0].numCtx).toBe(12288)
   })
