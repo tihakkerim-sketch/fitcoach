@@ -6,10 +6,10 @@ Reihenfolge laut `docs/AUDIT-2026-10.md` Abschnitt 7.
 - [x] Phase 1 – Fundament (2026-10-11): Electron 44, node:sqlite + WAL, Migrationen, Zod-IPC-Vertrag, Module entfernt, Pakete aktuell
 - [x] Phase 2 – Trainingsplan neu (Startdatum, Kalender, Woche-für-Woche, Auto-Zuordnung) – 11.10.2026
 - [ ] Plan: Vorlagen / Woche kopieren / automatische Progression im Editor (bewusst nicht in Phase 2)
-- [ ] Plan: Zuordnung ±1 Tag (Einheit am Folgetag gelaufen) – derzeit nur gleicher Tag
+- [x] Plan: Zuordnung ±1 Tag (Einheit am Folgetag gelaufen) – derzeit nur gleicher Tag
 - [x] Phase 3 – Garmin (intervals.icu-Sync, Mehrfach-Import, Duplikate, Splits/Höhe/Verläufe) – 11.10.2026
 - [x] intervals.icu-Sync mit echtem Konto: Original-Dateien mit Splits kommen an (Probelauf 14.10.)
-- [ ] Lauf-Kadenz aus TCX/FIT ist halbe Schrittfrequenz (z. B. 67 statt 134 spm) – verdoppeln für Läufe
+- [x] Lauf-Kadenz aus TCX/FIT ist halbe Schrittfrequenz (z. B. 67 statt 134 spm) – verdoppeln für Läufe
 - [ ] Alte Läufe ohne Splits: Details nachberechnen durch erneuten Datei-Import (Duplikat ergänzt dann Details)
 - [ ] Ordner-Überwachung für Garmin-Dateien
 - [x] Phase 4 – Coach (Zonen auto, CTL/ATL/TSB, Steigerungswarnung, Prognose, Coach-Bericht + Änderungs-Vorschau) – 11.10.2026

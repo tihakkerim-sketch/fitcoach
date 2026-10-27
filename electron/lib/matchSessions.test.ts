@@ -113,8 +113,91 @@ describe('matchActivity', () => {
   })
 })
 
+describe('matchActivity ±1 Tag', () => {
+  let weekId: number
+  beforeEach(async () => {
+    db = await makeTestDb()
+    weekId = addWeek(addPlan(), 0) // Start Mo 05.10.
+  })
+
+  it('ordnet einen am Mittwoch nachgeholten Lauf der offenen Einheit vom Dienstag zu', () => {
+    const sid = addSession(weekId, 2)
+    expect(matchActivity(db, addActivity('2026-10-07'), NOW)).toBe(sid)
+    expect(session(sid).status).toBe('completed')
+  })
+
+  it('ordnet einen am Montag vorgezogenen Lauf der Einheit vom Dienstag zu', () => {
+    const sid = addSession(weekId, 2)
+    expect(matchActivity(db, addActivity('2026-10-05'), NOW)).toBe(sid)
+  })
+
+  it('gleicher Tag hat Vorrang vor Vortag und Folgetag', () => {
+    addSession(weekId, 2)
+    const same = addSession(weekId, 3)
+    addSession(weekId, 4)
+    expect(matchActivity(db, addActivity('2026-10-07'), NOW)).toBe(same)
+  })
+
+  it('Vortag hat Vorrang vor Folgetag', () => {
+    const prev = addSession(weekId, 2)
+    const next = addSession(weekId, 4)
+    expect(matchActivity(db, addActivity('2026-10-07'), NOW)).toBe(prev)
+    expect(session(next).status).toBe('planned')
+  })
+
+  it('nimmt am Vortag/Folgetag keine erledigte Einheit ohne Link', () => {
+    const prev = addSession(weekId, 2, { status: 'completed', completedAt: 5 })
+    const next = addSession(weekId, 4, { status: 'completed', completedAt: 5 })
+    expect(matchActivity(db, addActivity('2026-10-07'), NOW)).toBeNull()
+    expect(session(prev).linkedActivityId).toBeNull()
+    expect(session(next).linkedActivityId).toBeNull()
+  })
+
+  it('nimmt am gleichen Tag weiter eine erledigte Einheit ohne Link', () => {
+    const sid = addSession(weekId, 3, { status: 'completed', completedAt: 5 })
+    expect(matchActivity(db, addActivity('2026-10-07'), NOW)).toBe(sid)
+  })
+
+  it('fasst übersprungene Einheiten an Nachbartagen nie an', () => {
+    const prev = addSession(weekId, 2, { status: 'skipped' })
+    const next = addSession(weekId, 4, { status: 'skipped' })
+    expect(matchActivity(db, addActivity('2026-10-07'), NOW)).toBeNull()
+    expect(session(prev).status).toBe('skipped')
+    expect(session(next).status).toBe('skipped')
+  })
+
+  it('ordnet bei anderem Typ am Nachbartag nichts zu', () => {
+    addSession(weekId, 2)
+    addSession(weekId, 4)
+    expect(matchActivity(db, addActivity('2026-10-07', { type: 'cycling' }), NOW)).toBeNull()
+  })
+
+  it('findet nach Planende ohne Wochen-Zeile nichts', () => {
+    const last = addSession(weekId, 7) // 11.10. = letzter Plantag
+    expect(matchActivity(db, addActivity('2026-10-13'), NOW)).toBeNull() // Tag 12.10. ohne Woche
+    expect(matchActivity(db, addActivity('2026-10-12'), NOW)).toBe(last) // nachgeholt (Vortag liegt im Plan)
+  })
+
+  it('findet vor dem Planstart nichts', () => {
+    addSession(weekId, 1)
+    expect(matchActivity(db, addActivity('2026-10-03'), NOW)).toBeNull()
+  })
+})
+
 describe('releaseActivity', () => {
   beforeEach(async () => { db = await makeTestDb() })
+
+  it('Lauf am Folgetag bekommt die freigewordene Einheit', () => {
+    const w = addWeek(addPlan(), 0)
+    const sid = addSession(w, 2) // Di 06.10.
+    const a1 = addActivity('2026-10-06')
+    const a2 = addActivity('2026-10-07') // Mi, noch ohne Einheit
+    expect(matchActivity(db, a1, NOW)).toBe(sid)
+    expect(matchActivity(db, a2, NOW)).toBeNull()
+    releaseActivity(db, a1, NOW)
+    expect(session(sid).linkedActivityId).toBe(a2)
+    expect(session(sid).matchSource).toBe('auto')
+  })
 
   it('setzt eine auto-Einheit zurück auf geplant', () => {
     const w = addWeek(addPlan(), 0)
@@ -143,6 +226,23 @@ describe('releaseActivity', () => {
 
 describe('rematchPlan', () => {
   beforeEach(async () => { db = await makeTestDb() })
+
+  it('Läufe Mo und Di, Einheit nur am Di: der Di-Lauf bekommt sie', () => {
+    const planId = addPlan()
+    const sid = addSession(addWeek(planId, 0), 2) // Di 06.10.
+    addActivity('2026-10-05')
+    const di = addActivity('2026-10-06')
+    expect(rematchPlan(db, planId, NOW)).toEqual({ reset: 0, matched: 1 })
+    expect(session(sid).linkedActivityId).toBe(di)
+  })
+
+  it('ordnet einen Lauf einen Tag vor dem Planstart der Einheit am ersten Tag zu', () => {
+    const planId = addPlan()
+    const sid = addSession(addWeek(planId, 0), 1) // Mo 05.10.
+    const aid = addActivity('2026-10-04')
+    expect(rematchPlan(db, planId, NOW)).toEqual({ reset: 0, matched: 1 })
+    expect(session(sid).linkedActivityId).toBe(aid)
+  })
 
   it('tut nichts bei inaktivem Plan', () => {
     const planId = addPlan({ isActive: 0 })
