@@ -108,11 +108,6 @@ export function ImportPlanModal({ open, onClose, onSaved }: Props) {
                   onChange={e => { setJson(e.target.value); setParseError(null) }}
                   spellCheck={false}
                 />
-                {parseError && (
-                  <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-xs text-destructive">
-                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /><span>{parseError}</span>
-                  </div>
-                )}
               </div>
             </>
           )}
@@ -124,14 +119,16 @@ export function ImportPlanModal({ open, onClose, onSaved }: Props) {
               </p>
               <PlanPreview plan={parsed} />
               <StartDateField id="imp-start" value={start} onChange={setStart} />
-              {saveError && (
-                <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-xs text-destructive">
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /><span>{saveError}</span>
-                </div>
-              )}
             </>
           )}
         </div>
+
+        {/* Fehler direkt über den Knöpfen, damit sie nicht im Scrollbereich untergehen */}
+        {(step === 'paste' ? parseError : saveError) && (
+          <div role="alert" className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-xs text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" /><span>{step === 'paste' ? parseError : saveError}</span>
+          </div>
+        )}
 
         <DialogFooter className="pt-2 border-t">
           {step === 'paste' && (
