@@ -57,6 +57,10 @@ export function parsePaceField(v: unknown, where: string): { fast: number; slow:
   return range
 }
 
+/** Beschreibende Pace ohne Zahl wie „locker, RPE 2“ ist ein Hinweis, keine Pace → in die Notiz. */
+const isPaceText = (v: unknown): v is string => typeof v === 'string' && !/\d\s*:\s*\d/.test(v)
+const joinNote = (note: string | undefined, extra: string) => note ? `${note} · ${extra}` : extra
+
 function parseStep(raw: unknown, where: string): Obj {
   if (!isObj(raw)) return fail(where, 'Schritt muss ein Objekt sein.')
   const out: Obj = { kind: raw.kind }
@@ -68,6 +72,10 @@ function parseStep(raw: unknown, where: string): Obj {
   if (durationSec !== undefined) out.durationSec = durationSec
   if (hrZone !== undefined) out.hrZone = hrZone
   if (note !== undefined) out.note = note
+  if (isPaceText(raw.pace) && raw.pace.trim()) {
+    out.note = joinNote(note, raw.pace.trim())
+    return out
+  }
   const pace = parsePaceField(raw.pace, where)
   if (pace) { out.paceFastSec = pace.fast; out.paceSlowSec = pace.slow }
   else {
@@ -114,8 +122,12 @@ function parseSession(raw: unknown, where: string): SessionInput {
   if (distanceKm !== undefined) out.targetDistanceKm = distanceKm
   if (durationMin !== undefined) out.targetDurationMin = durationMin
   if (hrZone !== undefined) out.targetHrZone = hrZone
-  const pace = parsePaceField(raw.pace, where)
-  if (pace) { out.targetPaceFastSec = pace.fast; out.targetPaceSlowSec = pace.slow }
+  if (isPaceText(raw.pace) && raw.pace.trim()) {
+    out.coachingNote = joinNote(note, `Tempo: ${raw.pace.trim()}`)
+  } else {
+    const pace = parsePaceField(raw.pace, where)
+    if (pace) { out.targetPaceFastSec = pace.fast; out.targetPaceSlowSec = pace.slow }
+  }
   const steps = parseSteps(raw.steps, where)
   if (steps) out.steps = steps
 
@@ -171,7 +183,12 @@ export function parsePlanJson(raw: string): ParsedPlan {
   try {
     obj = JSON.parse(cleaned)
   } catch {
-    throw new Error('Das ist kein gültiges JSON. Bitte genau die Antwort von Claude einfügen (ohne zusätzlichen Text).')
+    // Handy/Notizen ersetzen " oft durch typografische Anführungszeichen → nur dann umwandeln
+    try {
+      obj = JSON.parse(cleaned.replace(/[“”„‟″]/g, '"'))
+    } catch {
+      throw new Error('Das ist kein gültiges JSON. Bitte genau die Antwort von Claude einfügen (ohne zusätzlichen Text).')
+    }
   }
 
   try {

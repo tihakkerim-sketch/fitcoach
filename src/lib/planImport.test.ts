@@ -93,8 +93,32 @@ describe('parsePlanJson – Fehler (deutsch, mit Position)', () => {
       .toThrow('Woche 1, Einheit 1: Pace "5:75" ist ungültig (Format 5:30 oder 5:30-5:50).')
   })
 
-  it('Pace "abc" wirft statt abzustürzen', () => {
-    expect(() => parsePlanJson(withSession({ day: 'Mo', type: 'running', pace: 'abc' }))).toThrow(/Pace "abc" ist ungültig/)
+  it('Pace "5:3x" wirft statt abzustürzen', () => {
+    expect(() => parsePlanJson(withSession({ day: 'Mo', type: 'running', pace: '5:3x' }))).toThrow(/Pace "5:3x" ist ungültig/)
+  })
+
+  it('beschreibende Pace ohne Zahl landet in der Notiz statt zu scheitern', () => {
+    const raw = withSession({
+      day: 'Do', type: 'running', note: 'Test', pace: 'zügig',
+      steps: [
+        { kind: 'warmup', durationSec: 900, pace: 'locker, RPE 2' },
+        { repeat: 3, steps: [{ kind: 'work', durationSec: 300, pace: '89–94 % LTHR, RPE 5–6' }] },
+      ],
+    })
+    const s = parsePlanJson(raw).weeks[0].sessions[0]
+    expect(s.coachingNote).toBe('Test · Tempo: zügig')
+    expect(s.targetPaceFastSec).toBeUndefined()
+    expect(s.steps).toEqual([
+      { kind: 'warmup', durationSec: 900, note: 'locker, RPE 2' },
+      { repeat: 3, steps: [{ kind: 'work', durationSec: 300, note: '89–94 % LTHR, RPE 5–6' }] },
+    ])
+  })
+
+  it('liest JSON mit typografischen Anführungszeichen (vom Handy kopiert)', () => {
+    const curly = '{“name”: “HM Linz”, “weeks”: [{“sessions”: [{“day”: “Do”, “type”: “running”, “note”: “‘locker’ laufen”}]}]}'
+    const p = parsePlanJson(curly)
+    expect(p.name).toBe('HM Linz')
+    expect(p.weeks[0].sessions[0].coachingNote).toBe('‘locker’ laufen')
   })
 
   it('Position zählt Wochen und Einheiten mit', () => {
