@@ -1,5 +1,14 @@
-# Übergabe – FitCoach – 2026-10-27
+# Übergabe – FitCoach – 2026-11-17
 
+## Diese Session: Release 1.1.3 (`main` = `711331b`, Feature `de79a75`)
+- **Lauf getauscht:** Kerim hat den Sonntags-Lauf am Dienstag statt des Dienstags-Laufs gemacht (2 Tage → ±1-Auto-Zuordnung greift nicht).
+  Einheit → „Lauf wählen“: Läufe, die an einer anderen Einheit hängen, zeigen „zählt für …“. Beim Wählen Rückfrage:
+  „Getauscht – als übersprungen markieren“ (andere Einheit `skipped` + `completionNote` „Getauscht – der Lauf zählt für die Einheit am TT.MM.“) oder „Offen lassen“ (alt: `planned`).
+- Technik: `linkSessionActivitySchema.previous` (`'planned' | 'skipped'`, optional), `linkSessionActivity` in `planWrite.ts`; Picker lädt `PLANS_GET` für die Zuordnung. `rematchPlan` lässt das unberührt (nur `auto` wird zurückgesetzt).
+- Geprüft: Typechecks, vitest 525/525, Build, Playwright 10/10 (neuer E2E in `e2e/plan.spec.ts`).
+- **Kerim:** auf 1.1.3 updaten, dann So 15.11. → „Lauf wählen“ → heutigen Lauf → „Getauscht“.
+
+## Davor (2026-10-27)
 ## Ziel der letzten Session
 1. Installierte App startete nicht (DB v6, App 1.0.3) → 1.1.0 neu installiert.
 2. Bug: Plan-Import „Mit Claude anpassen“ → „Vorschau“ ging nicht mit Kerims HM-Linz-Plan → behoben, Release 1.1.1.
