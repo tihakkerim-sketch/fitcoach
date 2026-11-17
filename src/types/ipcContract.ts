@@ -286,6 +286,8 @@ export type UpdateSessionStatusPayload = z.infer<typeof updateSessionStatusSchem
 export const linkSessionActivitySchema = z.object({
   sessionId: id,
   activityId: id.nullable(),
+  /** Hing der Lauf an einer anderen Einheit: die wird wieder 'planned' (Standard) oder 'skipped' (getauscht). */
+  previous: z.enum(['planned', 'skipped']).optional(),
 })
 export type LinkSessionActivityPayload = z.infer<typeof linkSessionActivitySchema>
 

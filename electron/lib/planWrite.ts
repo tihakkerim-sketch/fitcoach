@@ -267,9 +267,17 @@ export function linkSessionActivity(db: TxDb, p: LinkSessionActivityPayload, now
     const activity = db.select({ id: activities.id }).from(activities).where(eq(activities.id, p.activityId)).get()
     if (!activity) throw new Error('Aktivität nicht gefunden.')
 
-    // Hängt der Lauf schon an einer anderen Einheit, wird diese wieder geplant
+    // Hängt der Lauf schon an einer anderen Einheit, wird diese wieder geplant – oder bei
+    // „getauscht" übersprungen (mit Hinweis, für welchen Tag der Lauf jetzt zählt)
+    const target = getSessionRow(db, p.sessionId)
+    if (!target) throw new Error('Einheit nicht gefunden.')
+    const swapped = p.previous === 'skipped'
+    const [, mm, dd] = target.date.split('-')
     db.update(planSessions)
-      .set({ status: 'planned', linkedActivityId: null, matchSource: null, completedAt: null })
+      .set({
+        status: swapped ? 'skipped' : 'planned', linkedActivityId: null, matchSource: null, completedAt: null,
+        ...(swapped ? { completionNote: `Getauscht – der Lauf zählt für die Einheit am ${dd}.${mm}.` } : {}),
+      })
       .where(and(eq(planSessions.linkedActivityId, p.activityId), ne(planSessions.id, p.sessionId))).run()
     db.update(planSessions)
       .set({ status: 'completed', linkedActivityId: p.activityId, matchSource: 'manual', completedAt: now })

@@ -88,9 +88,10 @@ export function SessionDialog({ onClose, onChanged, plan, session, create, today
         {mode === 'pick' && session && (
           <ActivityPicker
             session={session}
+            planId={plan.id}
             onCancel={() => setMode('view')}
-            onPick={id => run(
-              () => invoke(IPC.SESSIONS_LINK_ACTIVITY, { sessionId: session.id, activityId: id }),
+            onPick={(id, previous) => run(
+              () => invoke(IPC.SESSIONS_LINK_ACTIVITY, { sessionId: session.id, activityId: id, previous }),
               () => setMode('view'),
             )}
             busy={busy}
@@ -193,6 +194,10 @@ function SessionView({ session: s, today, busy, confirmDelete, onConfirmDelete, 
         </div>
       )}
 
+      {s.status === 'skipped' && s.completionNote && (
+        <p className="text-xs text-muted-foreground">{s.completionNote}</p>
+      )}
+
       {s.status === 'completed' && !a && (
         <p className="text-xs text-muted-foreground">Manuell als erledigt markiert (keine Aktivität verknüpft).</p>
       )}
@@ -244,33 +249,76 @@ function SessionView({ session: s, today, busy, confirmDelete, onConfirmDelete, 
 
 // ── Aktivität wählen ──────────────────────────────────────────────────────────
 
-function ActivityPicker({ session, onPick, onCancel, busy }: {
+function ActivityPicker({ session, planId, onPick, onCancel, busy }: {
   session: SessionRow
-  onPick: (activityId: number) => void
+  planId: number
+  onPick: (activityId: number, previous?: 'planned' | 'skipped') => void
   onCancel: () => void
   busy: boolean
 }) {
   const [items, setItems] = useState<ActivityRow[] | null>(null)
+  /** Aktivität → Einheit (dieses Plans), an der sie gerade hängt. */
+  const [linkedTo, setLinkedTo] = useState<Map<number, SessionRow>>(new Map())
+  const [swap, setSwap] = useState<{ activityId: number; other: SessionRow } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    invoke(IPC.ACTIVITIES_LIST, {
-      dateFrom: addDaysStr(session.date, -3),
-      dateTo: addDaysStr(session.date, 3),
-      sortBy: 'date',
-      sortDir: 'asc',
-    })
-      .then(r => { if (!cancelled) setItems(r.activities.filter(x => x.type !== 'sleep')) })
+    Promise.all([
+      invoke(IPC.ACTIVITIES_LIST, {
+        dateFrom: addDaysStr(session.date, -3),
+        dateTo: addDaysStr(session.date, 3),
+        sortBy: 'date',
+        sortDir: 'asc',
+      }),
+      invoke(IPC.PLANS_GET, planId),
+    ])
+      .then(([r, detail]) => {
+        if (cancelled) return
+        const map = new Map<number, SessionRow>()
+        for (const w of detail?.weeks ?? []) {
+          for (const x of w.sessions) if (x.linkedActivityId !== null && x.id !== session.id) map.set(x.linkedActivityId, x)
+        }
+        setLinkedTo(map)
+        setItems(r.activities.filter(x => x.type !== 'sleep'))
+      })
       .catch(e => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)) })
     return () => { cancelled = true }
-  }, [session.date])
+  }, [session.date, session.id, planId])
+
+  const pick = (activityId: number) => {
+    const other = linkedTo.get(activityId)
+    if (other) setSwap({ activityId, other })
+    else onPick(activityId)
+  }
+
+  if (swap) {
+    const o = swap.other
+    const name = `${o.title || TYPE_LABEL[o.type]} am ${fmtDate(o.date, 'EEEE, dd.MM.')}`
+    return (
+      <div className="vspace-3">
+        <p className="text-sm">
+          Dieser Lauf zählt gerade für <span className="font-medium">{name}</span>.
+          Was passiert mit dieser Einheit?
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" disabled={busy} onClick={() => onPick(swap.activityId, 'skipped')} className="gap-1.5">
+            <SkipForward className="h-3.5 w-3.5" /> Getauscht – als übersprungen markieren
+          </Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => onPick(swap.activityId, 'planned')}>
+            Offen lassen (hole ich noch nach)
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => setSwap(null)}>Zurück</Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="vspace-3">
       <p className="text-sm text-muted-foreground">
         Aktivitäten vom {fmtDate(addDaysStr(session.date, -3), 'dd.MM.')} bis {fmtDate(addDaysStr(session.date, 3), 'dd.MM.yyyy')}.
-        Hängt ein Lauf schon an einer anderen Einheit, wird diese wieder frei.
+        Hängt ein Lauf schon an einer anderen Einheit, kannst du sie als getauscht (übersprungen) markieren oder offen lassen.
       </p>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {!items && !error && <p className="text-sm text-muted-foreground">Wird geladen …</p>}
@@ -283,10 +331,17 @@ function ActivityPicker({ session, onPick, onCancel, busy }: {
             key={x.id}
             type="button"
             disabled={busy}
-            onClick={() => onPick(x.id)}
+            onClick={() => pick(x.id)}
             className="w-full flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2 text-left text-sm hover:bg-muted/60 transition-colors disabled:opacity-50"
           >
-            <span className="font-medium">{ACTIVITY_LABEL[x.type] ?? x.type} · {fmtDate(x.date, 'EEE dd.MM.')}</span>
+            <span className="font-medium">
+              {ACTIVITY_LABEL[x.type] ?? x.type} · {fmtDate(x.date, 'EEE dd.MM.')}
+              {linkedTo.has(x.id) && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  zählt für {fmtDate(linkedTo.get(x.id)!.date, 'EEE dd.MM.')}
+                </span>
+              )}
+            </span>
             <span className="text-muted-foreground tabular-nums">
               {[
                 x.distanceKm != null ? `${num(x.distanceKm)} km` : null,

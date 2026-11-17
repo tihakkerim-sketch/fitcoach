@@ -8,6 +8,7 @@ import {
   deleteSession, setSessionStatus, linkSessionActivity,
 } from './planWrite'
 import { getPlanDetail } from './planRead'
+import { rematchPlan } from './matchSessions'
 
 const NOW = 1_800_000_000_000
 let db: TestDb
@@ -213,6 +214,25 @@ describe('Status und Verknüpfung', () => {
     linkSessionActivity(db, { sessionId: b.id, activityId: null }, NOW)
     expect(sess(b.id).status).toBe('planned')
     expect(sess(b.id).linkedActivityId).toBeNull()
+  })
+
+  it('linkSessionActivity mit previous=skipped: alte Einheit wird übersprungen (getauscht)', () => {
+    const act = addActivity('2026-10-06')
+    const plan = createPlan(db, twoWeeks(), NOW)
+    const [a, b] = getPlanDetail(db, plan.id)!.weeks[0].sessions
+    expect(a.linkedActivityId).toBe(act)
+
+    linkSessionActivity(db, { sessionId: b.id, activityId: act, previous: 'skipped' }, NOW)
+    expect(sess(a.id).status).toBe('skipped')
+    expect(sess(a.id).linkedActivityId).toBeNull()
+    expect(sess(a.id).completionNote).toBe(`Getauscht – der Lauf zählt für die Einheit am ${b.date.slice(8, 10)}.${b.date.slice(5, 7)}.`)
+    expect(sess(b.id).linkedActivityId).toBe(act)
+    expect(sess(b.id).status).toBe('completed')
+
+    // Neu zuordnen (z. B. nach Plan-Änderung) holt sich die übersprungene Einheit nicht zurück
+    rematchPlan(db, plan.id, NOW)
+    expect(sess(a.id).status).toBe('skipped')
+    expect(sess(b.id).linkedActivityId).toBe(act)
   })
 
   it('linkSessionActivity mit unbekannter Aktivität wirft', () => {
