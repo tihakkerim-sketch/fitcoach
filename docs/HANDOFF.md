@@ -1,6 +1,12 @@
-# Übergabe – FitCoach – 2026-11-17
+# Übergabe – FitCoach – 2026-11-23
 
-## Diese Session: Release 1.1.3 (`main` = `711331b`, Feature `de79a75`)
+## Diese Session: Release 1.1.4 (`main` = `f61fb0a`, Feature `a79c253`)
+- **Läufe für Claude kopieren:** Aktivitäten → „Für Claude kopieren“ → Dialog `src/components/activities/RunsExportDialog.tsx` (Von/Bis + Schnellwahl) → Kopieren in die Zwischenablage.
+- Logik `electron/lib/runsExport.ts` (`buildRunsExport`, nur `running`; Kontext, Wochen-Überblick, je Lauf Tabelle + Zonen-Zeit + Splits + Notiz/Schuh/Plan-Einheit, am Ende Auswertungs-Bitte). Punkt als Dezimaltrenner. Max. 366 Tage. IPC `EXPORT_RUNS` (`export:runs`, Handler in `electron/ipc/summary.ts`). Helfer aus `coachExport.ts` jetzt exportiert.
+- Geprüft: Typechecks, vitest 530/530, Build, Playwright 11/11.
+- **Kerim:** auf 1.1.4 updaten, Export mit echten Läufen in claude.ai testen.
+
+## Davor: Release 1.1.3 (2026-11-17)
 - **Lauf getauscht:** Kerim hat den Sonntags-Lauf am Dienstag statt des Dienstags-Laufs gemacht (2 Tage → ±1-Auto-Zuordnung greift nicht).
   Einheit → „Lauf wählen“: Läufe, die an einer anderen Einheit hängen, zeigen „zählt für …“. Beim Wählen Rückfrage:
   „Getauscht – als übersprungen markieren“ (andere Einheit `skipped` + `completionNote` „Getauscht – der Lauf zählt für die Einheit am TT.MM.“) oder „Offen lassen“ (alt: `planned`).
