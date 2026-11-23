@@ -94,6 +94,7 @@ export const IPC = {
 
   // Export
   EXPORT_GENERATE_SUMMARY: 'export:generateSummary',
+  EXPORT_RUNS: 'export:runs',
   EXPORT_SAVE_MD: 'export:saveMd',
 
   // Profile

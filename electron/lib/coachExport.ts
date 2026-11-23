@@ -21,12 +21,12 @@ const TYPE_DE: Record<string, string> = {
 }
 
 /** "dd.MM." aus YYYY-MM-DD */
-const short = (d: string): string => `${d.slice(8, 10)}.${d.slice(5, 7)}.`
-const dayName = (d: string): string => DAYS[(new Date(`${d}T12:00:00`).getDay() + 6) % 7]
+export const short = (d: string): string => `${d.slice(8, 10)}.${d.slice(5, 7)}.`
+export const dayName = (d: string): string => DAYS[(new Date(`${d}T12:00:00`).getDay() + 6) % 7]
 const nf = (n: number, digits = 1): string => n.toFixed(digits).replace('.', ',')
-const oneLine = (s: string): string => s.replace(/\s+/g, ' ').trim()
+export const oneLine = (s: string): string => s.replace(/\s+/g, ' ').trim()
 
-function fmtMin(min: number): string {
+export function fmtMin(min: number): string {
   const total = Math.round(min)
   const h = Math.floor(total / 60)
   const m = total % 60
@@ -34,7 +34,7 @@ function fmtMin(min: number): string {
 }
 
 /** Soll einer Einheit kompakt: "8 km · 6:00–6:20/km · Z2" */
-function targetText(s: SessionRow): string {
+export function targetText(s: SessionRow): string {
   const parts: string[] = []
   if (s.targetDistanceKm) parts.push(`${s.targetDistanceKm} km`)
   if (s.targetDurationMin) parts.push(`${s.targetDurationMin} min`)

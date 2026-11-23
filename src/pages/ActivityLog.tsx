@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Copy, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ActivityCard } from '@/components/activities/ActivityCard'
 import { ActivityFilters as ActivityFilterBar } from '@/components/activities/ActivityFilters'
 import { GarminDropZone } from '@/components/activities/GarminDropZone'
 import { IntervalsSyncBar } from '@/components/activities/IntervalsSyncBar'
+import { RunsExportDialog } from '@/components/activities/RunsExportDialog'
 import { LogActivityModal } from '@/components/activities/LogActivityModal'
 import { useActivities } from '@/hooks/useActivities'
 import { invoke } from '@/lib/ipc'
@@ -33,6 +34,7 @@ export default function ActivityLog() {
 
   const navigate = useNavigate()
   const [modalOpen, setModalOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [shoes, setShoes] = useState<Shoe[]>([])
   const shoeNames = useMemo(() => new Map(shoes.map(x => [x.id, x.name])), [shoes])
 
@@ -56,10 +58,16 @@ export default function ActivityLog() {
             {total} {total === 1 ? 'Aktivität' : 'Aktivitäten'}
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Aktivität erfassen
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setExportOpen(true)}>
+            <Copy className="h-4 w-4 mr-2" />
+            Für Claude kopieren
+          </Button>
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Aktivität erfassen
+          </Button>
+        </div>
       </div>
 
       <IntervalsSyncBar />
@@ -135,6 +143,7 @@ export default function ActivityLog() {
         </div>
       )}
 
+      <RunsExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <LogActivityModal
         open={modalOpen}
         onClose={handleModalClose}

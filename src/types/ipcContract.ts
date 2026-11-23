@@ -517,6 +517,7 @@ export const ipcInputs = {
   [IPC.ADAPT_SET_PERFORMANCE]: adaptPerformanceSchema,
 
   [IPC.EXPORT_GENERATE_SUMMARY]: summarySchema,
+  [IPC.EXPORT_RUNS]: summarySchema,
   [IPC.EXPORT_SAVE_MD]: saveMdSchema,
 
   [IPC.PROFILE_GET]: z.undefined(),
@@ -611,6 +612,7 @@ export interface IpcResults {
   [IPC.ADAPT_SET_PERFORMANCE]: { current10kSec: number; scaled: number }
 
   [IPC.EXPORT_GENERATE_SUMMARY]: string
+  [IPC.EXPORT_RUNS]: string
   [IPC.EXPORT_SAVE_MD]: string
 
   [IPC.PROFILE_GET]: UserProfile | null
